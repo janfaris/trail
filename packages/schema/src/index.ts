@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-export const ToolKind = z.enum(["claude-code", "codex", "cursor", "aider"]);
+export const ToolKind = z.enum([
+  "claude-code",
+  "codex",
+  "cursor",
+  "aider",
+  "hermes",
+  "copilot-cli",
+  "copilot-chat",
+]);
 
 export const EventKind = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("prompt"), at: z.string(), text: z.string() }),
