@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ["@trail/schema", "@trail/anonymize", "@trail/client"],
 };
 
 export default nextConfig;
