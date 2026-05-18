@@ -1,6 +1,25 @@
 # trail
 
-Record and share your AI coding sessions. A local CLI ingests Claude Code / Codex / Cursor session logs into SQLite, and a web app lets you publish anonymized sessions at `/u/<handle>/<slug>`.
+Record and share your AI coding sessions. A local CLI ingests Claude Code, Codex, Cursor, Hermes, Copilot CLI, and Copilot Chat session logs into SQLite, and a web app lets you publish anonymized sessions at `/u/<handle>/<slug>`.
+
+## Why I made this
+
+I do most of my real work inside AI coding tools now — Claude Code, Codex, Cursor, Copilot, Hermes. Every session has hours of prompts, decisions, and diffs that just vanish when I close the terminal. There's no way to find that fix from two weeks ago, no way to show a friend exactly how I solved something, no way to prove to a hiring manager that I actually know how to think with these tools.
+
+So I built Trail. It tails the log files the tools already write — no proxying, no hooks, no slowdown. Sessions live in `~/.trail/db.sqlite` on your machine. Search across all your work in 2 seconds. Optionally share any session as a public link with secrets and absolute paths scrubbed first.
+
+It's local-first. Nothing leaves your machine unless you explicitly run `trail share`. The model companies will eventually ship their own viewers, but only for their own tool. Trail is the cross-vendor, portable, social layer they won't build.
+
+Built by [@jankarlo.faris](https://github.com/janfaris). Open source. Tell me if it's useful.
+
+## Example sessions
+
+- [Vantage codebase exploration](http://localhost:3000/u/jankarlo.faris/rwny7k24) — Claude Code, 116 events
+- [Listing archival strategy design](http://localhost:3000/u/jankarlo.faris/og9nz2hm) — Claude Code, 111 events
+- [Condosync repo setup with GitHub MCP](http://localhost:3000/u/jankarlo.faris/1xpcd992) — Cursor, 111 events
+- [Artemis friend events bug](http://localhost:3000/u/jankarlo.faris/b73v7y0n) — Cursor, 83 events
+- [usableai Spanish tone tuning](http://localhost:3000/u/jankarlo.faris/ziqxbxfp) — Copilot Chat, 89 events
+- [Lupa pricing market research](http://localhost:3000/u/jankarlo.faris/057smo2q) — Claude Code, 41 events
 
 ## Quick start
 
