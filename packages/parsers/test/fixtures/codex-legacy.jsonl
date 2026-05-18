@@ -1,0 +1,4 @@
+{"id":"7990a183-f64c-4798-8c0f-1da46b637711","timestamp":"2026-03-05T21:57:38.270Z","instructions":null,"git":{"commit_hash":"abc","branch":"main","repository_url":"https://github.com/u/proj.git"}}
+{"record_type":"state"}
+{"type":"message","id":null,"role":"user","content":[{"type":"input_text","text":"update"}]}
+{"type":"message","id":"m1","role":"assistant","content":[{"type":"output_text","text":"What should I update?"}]}
