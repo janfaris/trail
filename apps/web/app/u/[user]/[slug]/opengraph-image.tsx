@@ -19,14 +19,15 @@ export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Trail session";
 
-export default async function Image({ params }: { params: { user: string; slug: string } }) {
+export default async function Image({ params }: { params: Promise<{ user: string; slug: string }> }) {
+  const { user, slug } = await params;
   const fonts = await loadOgFonts();
 
   const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.handle, params.user),
+    where: eq(schema.user.handle, user),
   });
 
-  let title = params.slug;
+  let title = slug;
   let tool = "claude-code";
   let eventCount = 0;
   let dateLabel = "";
@@ -36,7 +37,7 @@ export default async function Image({ params }: { params: { user: string; slug: 
     const sessionRow = await db.query.trailSession.findFirst({
       where: and(
         eq(schema.trailSession.userId, userRow.id),
-        eq(schema.trailSession.slug, params.slug),
+        eq(schema.trailSession.slug, slug),
       ),
     });
     if (sessionRow) {
@@ -115,7 +116,7 @@ export default async function Image({ params }: { params: { user: string; slug: 
             <ToolSvg name={tool} size={26} color="#d4d4d8" />
             <span style={{ color: COLORS.text }}>{tool}</span>
             <span style={{ color: COLORS.textFaint }}>·</span>
-            <span>@{params.user}</span>
+            <span>@{user}</span>
             <span style={{ color: COLORS.textFaint }}>·</span>
             <span>
               <span style={{ color: COLORS.text }}>{eventCount}</span>{" "}

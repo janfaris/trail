@@ -16,15 +16,27 @@ export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Trail profile";
 
-export default async function Image({ params }: { params: { user: string } }) {
+export default async function Image({ params }: { params: Promise<{ user: string }> }) {
+  const { user } = await params;
   const fonts = await loadOgFonts();
   const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.handle, params.user),
+    where: eq(schema.user.handle, user),
   });
 
-  const handle = userRow?.handle ?? params.user;
+  const handle = userRow?.handle ?? user;
   const name = userRow?.name && userRow.name !== handle ? userRow.name : undefined;
-  const avatar = userRow?.image ?? githubAvatar(handle, 512);
+  const avatarUrl = userRow?.image ?? githubAvatar(handle, 512);
+  let avatarDataUri: string | null = null;
+  try {
+    const res = await fetch(avatarUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      const ct = res.headers.get("content-type") ?? "image/png";
+      avatarDataUri = `data:${ct};base64,${buf.toString("base64")}`;
+    }
+  } catch {
+    avatarDataUri = null;
+  }
 
   let sessionCount = 0;
   let eventCount = 0;
@@ -127,15 +139,11 @@ export default async function Image({ params }: { params: { user: string } }) {
               display: "flex",
               width: 256,
               height: 256,
-              borderRadius: 9999,
-              overflow: "hidden",
-              border: `1px solid ${COLORS.border}`,
+              borderRadius: 128,
               background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`,
             }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatar} alt="" width={256} height={256} />
-          </div>
+          />
         </div>
 
         <Footer />
