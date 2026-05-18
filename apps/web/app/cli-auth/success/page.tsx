@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCliAuthPayload } from "./actions";
 
@@ -18,6 +19,22 @@ function isValidCallback(cb: string | null): cb is string {
   } catch {
     return false;
   }
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="inline-flex font-mono text-[15px] font-semibold tracking-tight mb-8"
+        >
+          <span className="text-[#a7f300]">/</span>trail
+        </Link>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-8">{children}</div>
+      </div>
+    </div>
+  );
 }
 
 export default function CliAuthSuccessPage() {
@@ -55,26 +72,17 @@ function CliAuthSuccessInner() {
         const res = await fetch(callback, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            cookie: payload.cookie,
-            userHandle: payload.userHandle,
-          }),
+          body: JSON.stringify({ cookie: payload.cookie, userHandle: payload.userHandle }),
         });
         if (cancelled) return;
         if (!res.ok) {
-          setState({
-            kind: "error",
-            message: `CLI callback responded ${res.status}`,
-          });
+          setState({ kind: "error", message: `CLI callback responded ${res.status}` });
           return;
         }
         setState({ kind: "success", handle: payload.userHandle });
       } catch (e) {
         if (cancelled) return;
-        setState({
-          kind: "error",
-          message: (e as Error).message || "Failed to authorize",
-        });
+        setState({ kind: "error", message: (e as Error).message || "Failed to authorize" });
       }
     })();
     return () => {
@@ -82,42 +90,65 @@ function CliAuthSuccessInner() {
     };
   }, [callback, router]);
 
+  useEffect(() => {
+    if (state.kind !== "success") return;
+    const t = setTimeout(() => {
+      try {
+        window.close();
+      } catch {
+        /* some browsers block */
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [state.kind]);
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6">
-      <div className="max-w-md w-full border border-zinc-900 rounded-lg p-8 text-center">
-        {state.kind === "loading" && (
-          <>
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-[#a7f300]" />
-            <h1 className="text-lg font-semibold">Authorizing CLI…</h1>
-            <p className="text-sm text-zinc-400 mt-2">
-              Sending credentials to your terminal.
-            </p>
-          </>
-        )}
-        {state.kind === "success" && (
-          <>
-            <div className="mx-auto mb-4 text-3xl text-[#a7f300]">✓</div>
-            <h1 className="text-lg font-semibold">
-              Logged in as{" "}
-              <span className="text-[#a7f300]">@{state.handle}</span>
-            </h1>
-            <p className="text-sm text-zinc-400 mt-2">
-              You can close this tab and return to your terminal.
-            </p>
-          </>
-        )}
-        {state.kind === "error" && (
-          <>
-            <div className="mx-auto mb-4 text-3xl text-red-400">✗</div>
-            <h1 className="text-lg font-semibold">Failed to authorize</h1>
-            <p className="text-sm text-zinc-400 mt-2">{state.message}</p>
-            <p className="text-xs text-zinc-500 mt-4">
-              Run <code className="text-zinc-300">trail login</code> again in
-              your terminal.
-            </p>
-          </>
-        )}
-      </div>
-    </div>
+    <Shell>
+      {state.kind === "loading" && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-500 animate-pulse" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+              authorizing
+            </span>
+          </div>
+          <h1 className="text-lg font-semibold tracking-tight mb-2">Authorizing CLI…</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Sending credentials back to your terminal.
+          </p>
+        </>
+      )}
+      {state.kind === "success" && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a7f300]">
+              authorized
+            </span>
+          </div>
+          <h1 className="text-lg font-semibold tracking-tight mb-2">
+            Logged in as <span className="text-[#a7f300]">@{state.handle}</span>
+          </h1>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            You can close this tab and return to your terminal.
+          </p>
+        </>
+      )}
+      {state.kind === "error" && (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+              error
+            </span>
+          </div>
+          <h1 className="text-lg font-semibold tracking-tight mb-2">Failed to authorize</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed">{state.message}</p>
+          <p className="text-[11px] font-mono text-zinc-500 mt-5">
+            Run <code className="text-zinc-300">trail login</code> again.
+          </p>
+        </>
+      )}
+    </Shell>
   );
 }
