@@ -145,6 +145,15 @@ export default async function Home() {
               </a>
             )}
             <Link
+              href="/install"
+              className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"
+            >
+              Install
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+            <Link
               href={EXAMPLE_HREF}
               className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"
             >
