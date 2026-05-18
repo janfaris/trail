@@ -1,0 +1,40 @@
+{
+  "name": "@trail/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "@trail/schema": "workspace:*",
+    "better-auth": "^1.2.7",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-diff-viewer-continued": "^4.0.0",
+    "react-dom": "19.2.4",
+    "shiki": "^1.24.0",
+    "tailwind-merge": "^2.5.5",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/ws": "^8.5.13",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.4",
+    "pg": "^8.21.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
