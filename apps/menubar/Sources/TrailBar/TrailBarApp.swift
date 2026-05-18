@@ -6,13 +6,16 @@ struct TrailBarApp: App {
     @StateObject private var store = SessionStore()
 
     var body: some Scene {
-        MenuBarExtra("Trail", systemImage: "list.bullet.rectangle") {
-            Text("\(store.recent.count) sessions loaded")
-            Text("Today: \(store.todayCount) · Total: \(store.totalCount)")
-            Divider()
-            Button("Refresh") { store.refresh() }
-            Button("Quit") { NSApplication.shared.terminate(nil) }
-                .keyboardShortcut("q")
+        MenuBarExtra {
+            MenuView(store: store)
+        } label: {
+            let n = store.todayCount
+            if n > 0 {
+                Image(systemName: "list.bullet.rectangle")
+                Text(" \(n)")
+            } else {
+                Image(systemName: "list.bullet.rectangle")
+            }
         }
     }
 }
