@@ -97,7 +97,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                     />
                     <ToolIcon name={s.tool} className="hidden md:block text-zinc-500 group-hover:text-zinc-200" />
                     <span className="text-sm text-zinc-200 truncate group-hover:text-zinc-50">
-                      {s.title || s.summary?.slice(0, 80) || s.slug}
+                      {s.title || s.slug}
                     </span>
                     <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
                       {s.eventCount}

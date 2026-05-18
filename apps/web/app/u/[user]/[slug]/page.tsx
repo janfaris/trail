@@ -8,6 +8,7 @@ import { CopyButton } from "@/components/copy-button";
 import { RelativeTime } from "@/components/relative-time";
 import { absoluteTime, durationBetween } from "@/lib/time";
 import { shareUrl, tweetIntent } from "@/lib/share";
+import { deriveTitle } from "@/lib/derive-title";
 import { headers } from "next/headers";
 
 export default async function SessionView({
@@ -37,7 +38,15 @@ export default async function SessionView({
   const fullUrl = shareUrl(user, slug, `${proto}://${host}`);
 
   const duration = durationBetween(sessionRow.startedAt, sessionRow.endedAt);
-  const title = sessionRow.title || sessionRow.summary?.slice(0, 80) || sessionRow.slug;
+  const firstPrompt = events.find((e) => {
+    const d = e.data as EventData;
+    return d.kind === "prompt";
+  });
+  const firstPromptText =
+    firstPrompt && (firstPrompt.data as EventData).kind === "prompt"
+      ? (firstPrompt.data as { kind: "prompt"; text: string }).text
+      : undefined;
+  const title = sessionRow.title || deriveTitle(firstPromptText, sessionRow.slug);
 
   return (
     <div className="min-h-screen">

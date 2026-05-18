@@ -4,6 +4,7 @@ import { db, schema } from "@/db/client";
 import { Session as SessionSchema } from "@trail/schema";
 import { type UploadSessionResponse } from "@trail/client";
 import { anonymize } from "@trail/anonymize";
+import { deriveTitle } from "@/lib/derive-title";
 import { eq } from "drizzle-orm";
 
 function genSlug() {
@@ -49,7 +50,10 @@ export async function POST(req: NextRequest) {
     tool: s.tool,
     repo: s.repo,
     summary: s.summary,
-    title: s.events.find((e) => e.kind === "prompt")?.text?.slice(0, 80) ?? null,
+    title: deriveTitle(
+      s.events.find((e) => e.kind === "prompt")?.text,
+      s.id.slice(0, 8),
+    ),
     eventCount: s.events.length,
     startedAt: new Date(s.startedAt),
     endedAt: s.endedAt ? new Date(s.endedAt) : null,
