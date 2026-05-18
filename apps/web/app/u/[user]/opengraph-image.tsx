@@ -10,7 +10,6 @@ import {
   Wordmark,
   loadOgFonts,
 } from "@/lib/og";
-import { githubAvatar } from "@/lib/share";
 
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
@@ -25,18 +24,6 @@ export default async function Image({ params }: { params: Promise<{ user: string
 
   const handle = userRow?.handle ?? user;
   const name = userRow?.name && userRow.name !== handle ? userRow.name : undefined;
-  const avatarUrl = userRow?.image ?? githubAvatar(handle, 512);
-  let avatarDataUri: string | null = null;
-  try {
-    const res = await fetch(avatarUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      const ct = res.headers.get("content-type") ?? "image/png";
-      avatarDataUri = `data:${ct};base64,${buf.toString("base64")}`;
-    }
-  } catch {
-    avatarDataUri = null;
-  }
 
   let sessionCount = 0;
   let eventCount = 0;
@@ -122,14 +109,20 @@ export default async function Image({ params }: { params: Promise<{ user: string
                 <span>events</span>
               </span>
               {tools.length > 0 ? (
-                <>
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
                   <span style={{ color: COLORS.textFaint }}>·</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     {tools.slice(0, 6).map((t) => (
                       <ToolSvg key={t} name={t} size={26} color="#d4d4d8" />
                     ))}
                   </span>
-                </>
+                </span>
               ) : null}
             </div>
           </div>
