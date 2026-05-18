@@ -10,6 +10,6 @@ export default defineConfig({
   splitting: false,
   sourcemap: false,
   banner: { js: "#!/usr/bin/env node" },
-  noExternal: ["@trail/parsers", "@trail/schema"],
+  noExternal: ["@trail/parsers", "@trail/schema", "@trail/anonymize", "@trail/client"],
   external: ["better-sqlite3"],
 });
