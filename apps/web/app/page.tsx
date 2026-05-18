@@ -28,6 +28,7 @@ const captures: { name: string; label: string }[] = [
   { name: "hermes", label: "Hermes" },
   { name: "copilot-cli", label: "Copilot CLI" },
   { name: "copilot-chat", label: "Copilot Chat" },
+  { name: "cursor", label: "Cursor" },
 ];
 
 const faqs = [
@@ -128,7 +129,6 @@ export default function Home() {
                 <span className="text-zinc-400">{c.label}</span>
               </span>
             ))}
-            <span className="text-zinc-700">· Cursor coming soon</span>
           </div>
         </section>
 
