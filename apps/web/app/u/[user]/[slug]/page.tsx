@@ -10,6 +10,39 @@ import { absoluteTime, durationBetween } from "@/lib/time";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { deriveTitle } from "@/lib/derive-title";
 import { headers } from "next/headers";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ user: string; slug: string }>;
+}): Promise<Metadata> {
+  const { user, slug } = await params;
+  const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
+  if (!userRow) return {};
+  const sessionRow = await db.query.trailSession.findFirst({
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
+  });
+  if (!sessionRow) return {};
+  const firstPrompt = await db.query.event.findFirst({
+    where: eq(schema.event.sessionId, sessionRow.id),
+    orderBy: asc(schema.event.idx),
+  });
+  const fpText =
+    firstPrompt && (firstPrompt.data as EventData).kind === "prompt"
+      ? (firstPrompt.data as { kind: "prompt"; text: string }).text
+      : undefined;
+  const title = sessionRow.title || deriveTitle(fpText, sessionRow.slug);
+  const desc =
+    sessionRow.summary ||
+    `${sessionRow.tool} · ${sessionRow.eventCount} events · @${user}`;
+  return {
+    title: `${title} — @${user} on Trail`,
+    description: desc,
+    openGraph: { title, description: desc, type: "article" },
+    twitter: { card: "summary_large_image", title, description: desc },
+  };
+}
 
 export default async function SessionView({
   params,

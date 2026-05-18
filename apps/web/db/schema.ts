@@ -22,6 +22,10 @@ export const user = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     // trail-specific
     handle: text("handle").unique(), // github login, used in /u/[handle]
+    bio: text("bio"),
+    xHandle: text("x_handle"),
+    githubHandle: text("github_handle"),
+    website: text("website"),
   },
   (t) => ({
     handleIdx: uniqueIndex("user_handle_idx").on(t.handle),
@@ -82,6 +86,7 @@ export const trailSession = pgTable(
     summary: text("summary"),
     title: text("title"),
     eventCount: integer("event_count").notNull().default(0),
+    isFeatured: boolean("is_featured").notNull().default(false),
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
