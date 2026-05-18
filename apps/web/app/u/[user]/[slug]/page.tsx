@@ -2,15 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db/client";
 import { eq, and, asc } from "drizzle-orm";
-import { Badge } from "@/components/ui/badge";
-import { FileDiff } from "@/components/file-diff";
-
-type EventData =
-  | { kind: "prompt"; at: string; text: string }
-  | { kind: "completion"; at: string; text: string }
-  | { kind: "tool_call"; at: string; name: string; args: unknown; result?: unknown }
-  | { kind: "file_diff"; at: string; path: string; before: string; after: string }
-  | { kind: "decision"; at: string; note: string };
+import { TimelineEvent, type EventData } from "@/components/timeline-event";
+import { ToolIcon } from "@/components/tool-icon";
+import { CopyButton } from "@/components/copy-button";
+import { RelativeTime } from "@/components/relative-time";
+import { absoluteTime, durationBetween } from "@/lib/time";
+import { shareUrl, tweetIntent } from "@/lib/share";
+import { headers } from "next/headers";
 
 export default async function SessionView({
   params,
@@ -33,91 +31,98 @@ export default async function SessionView({
     .where(eq(schema.event.sessionId, sessionRow.id))
     .orderBy(asc(schema.event.idx));
 
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host = h.get("host") ?? "localhost:3000";
+  const fullUrl = shareUrl(user, slug, `${proto}://${host}`);
+
+  const duration = durationBetween(sessionRow.startedAt, sessionRow.endedAt);
+  const title = sessionRow.title || sessionRow.summary?.slice(0, 80) || sessionRow.slug;
+
   return (
     <div className="min-h-screen">
-      <header className="border-b border-zinc-900 sticky top-0 bg-zinc-950/80 backdrop-blur z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="font-mono text-lg font-semibold">
+      <header className="border-b border-zinc-900 sticky top-0 bg-zinc-950/85 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
+          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
             <span className="text-[#a7f300]">/</span>trail
           </Link>
-          <Link href={`/u/${user}`} className="text-sm text-zinc-400 hover:text-zinc-100 font-mono">
-            @{user}
-          </Link>
+          <nav className="flex items-center gap-1 text-sm font-mono text-zinc-500">
+            <Link href={`/u/${user}`} className="hover:text-zinc-100 transition-colors">
+              @{user}
+            </Link>
+            <span className="text-zinc-700">/</span>
+            <span className="text-zinc-300">{slug}</span>
+          </nav>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <div className="mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <Badge>{sessionRow.tool}</Badge>
-            {sessionRow.repo && <Badge>{sessionRow.repo}</Badge>}
-            <span className="text-xs text-zinc-500 font-mono">
-              {new Date(sessionRow.startedAt).toISOString().slice(0, 16).replace("T", " ")}
+      <main className="max-w-3xl mx-auto px-6 pt-12 pb-24">
+        <div className="mb-10">
+          <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 mb-4">
+            <ToolIcon name={sessionRow.tool} className="text-zinc-400" />
+            <span className="text-zinc-300">{sessionRow.tool}</span>
+            {sessionRow.repo && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span className="text-zinc-400">{sessionRow.repo}</span>
+              </>
+            )}
+            <span className="text-zinc-700">·</span>
+            <RelativeTime date={sessionRow.startedAt} className="text-zinc-400" />
+            {duration && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span className="text-zinc-400 tabular-nums">{duration}</span>
+              </>
+            )}
+            <span className="text-zinc-700">·</span>
+            <span className="text-zinc-400 tabular-nums">
+              {sessionRow.eventCount} event{sessionRow.eventCount === 1 ? "" : "s"}
             </span>
           </div>
-          <h1 className="text-3xl font-semibold mb-2">
-            {sessionRow.title || sessionRow.summary || sessionRow.slug}
+
+          <h1 className="text-3xl md:text-[34px] font-semibold tracking-tight leading-[1.15] text-zinc-50 mb-3">
+            {title}
           </h1>
           {sessionRow.summary && sessionRow.title && (
-            <p className="text-zinc-400">{sessionRow.summary}</p>
+            <p className="text-zinc-400 leading-relaxed max-w-2xl">{sessionRow.summary}</p>
           )}
         </div>
 
-        <div className="space-y-4">
-          {events.map((e) => {
-            const data = e.data as EventData;
-            switch (data.kind) {
-              case "prompt":
-                return (
-                  <div key={e.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-                    <div className="text-xs font-mono text-zinc-500 mb-2">prompt</div>
-                    <p className="whitespace-pre-wrap text-zinc-100">{data.text}</p>
-                  </div>
-                );
-              case "completion":
-                return (
-                  <div
-                    key={e.id}
-                    className="rounded-lg border border-zinc-800 border-l-2 border-l-[#a7f300] bg-zinc-950 p-5"
-                  >
-                    <div className="text-xs font-mono text-zinc-500 mb-2">completion</div>
-                    <p className="whitespace-pre-wrap text-zinc-200 leading-relaxed">{data.text}</p>
-                  </div>
-                );
-              case "tool_call":
-                return (
-                  <details
-                    key={e.id}
-                    className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 group"
-                  >
-                    <summary className="cursor-pointer text-sm font-mono text-zinc-400 hover:text-zinc-100">
-                      <span className="text-[#a7f300]">⟶</span> tool_call · {data.name}
-                    </summary>
-                    <pre className="mt-3 text-xs font-mono text-zinc-300 bg-zinc-950 p-3 rounded overflow-x-auto">
-                      {JSON.stringify(data.args, null, 2)}
-                    </pre>
-                    {data.result !== undefined && (
-                      <pre className="mt-2 text-xs font-mono text-zinc-400 bg-zinc-950 p-3 rounded overflow-x-auto">
-                        {typeof data.result === "string"
-                          ? data.result
-                          : JSON.stringify(data.result, null, 2)}
-                      </pre>
-                    )}
-                  </details>
-                );
-              case "file_diff":
-                return <FileDiff key={e.id} path={data.path} before={data.before} after={data.after} />;
-              case "decision":
-                return (
-                  <div key={e.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-                    <div className="text-xs font-mono text-zinc-500 mb-1">decision</div>
-                    <p className="text-sm text-zinc-300 italic">{data.note}</p>
-                  </div>
-                );
-              default:
-                return null;
-            }
-          })}
+        {/* Action strip */}
+        <div className="flex flex-wrap items-center gap-2 mb-12 pb-6 border-b border-zinc-900">
+          <CopyButton value={fullUrl} label="Copy link" copiedLabel="Copied" />
+          <a
+            href={tweetIntent(`${title} — a trail by @${user}`, fullUrl)}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
+          >
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <path d="M12.6 1.5h2.3L9.85 7.27 15.7 14.5h-4.66l-3.65-4.77L3.2 14.5H.88l5.4-6.17L.66 1.5h4.78l3.3 4.36zm-.81 11.6h1.27L4.27 2.82H2.9z" />
+            </svg>
+            Share to X
+          </a>
+          <button
+            type="button"
+            disabled
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-zinc-900 bg-zinc-900/30 text-xs font-mono text-zinc-600 cursor-not-allowed"
+            title="Coming soon"
+          >
+            Open in editor
+          </button>
+          <span
+            className="ml-auto text-[11px] font-mono text-zinc-600 tabular-nums"
+            title={absoluteTime(sessionRow.startedAt)}
+          >
+            {new Date(sessionRow.startedAt).toISOString().slice(0, 10)}
+          </span>
+        </div>
+
+        <div className="space-y-5">
+          {events.map((e) => (
+            <TimelineEvent key={e.id} idx={e.idx} data={e.data as EventData} />
+          ))}
         </div>
       </main>
     </div>
