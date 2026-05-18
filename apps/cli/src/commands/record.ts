@@ -3,13 +3,21 @@ import chalk from "chalk";
 import chokidar from "chokidar";
 import { homedir, userInfo } from "node:os";
 import path from "node:path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import {
   parseClaudeCodeSession,
   parseCodexSession,
   parseHermesSession,
   parseCopilotCliSession,
   parseCopilotChatDB,
+  parseCursorWorkspace,
 } from "@trail/parsers";
 import { saveSession } from "../db.js";
 
@@ -24,8 +32,27 @@ const COPILOT_CHAT_DB = path.join(
   "session-store.db",
 );
 
+const CURSOR_WORKSPACE_DIR = path.join(
+  homedir(),
+  "Library",
+  "Application Support",
+  "Cursor",
+  "User",
+  "workspaceStorage",
+);
+const CURSOR_GLOBAL_DB = path.join(
+  homedir(),
+  "Library",
+  "Application Support",
+  "Cursor",
+  "User",
+  "globalStorage",
+  "state.vscdb",
+);
+
 const TRAIL_DIR = path.join(homedir(), ".trail");
 const COPILOT_CHAT_CURSOR = path.join(TRAIL_DIR, "copilot-chat-cursor.json");
+const CURSOR_CURSORS = path.join(TRAIL_DIR, "cursor-cursors.json");
 
 function readCopilotChatWatermark(): string | undefined {
   try {
@@ -40,6 +67,22 @@ function readCopilotChatWatermark(): string | undefined {
 function writeCopilotChatWatermark(since: string): void {
   mkdirSync(TRAIL_DIR, { recursive: true });
   writeFileSync(COPILOT_CHAT_CURSOR, JSON.stringify({ since }, null, 2));
+}
+
+function readCursorCursors(): Record<string, number> {
+  try {
+    return JSON.parse(readFileSync(CURSOR_CURSORS, "utf8")) as Record<
+      string,
+      number
+    >;
+  } catch {
+    return {};
+  }
+}
+
+function writeCursorCursors(map: Record<string, number>): void {
+  mkdirSync(TRAIL_DIR, { recursive: true });
+  writeFileSync(CURSOR_CURSORS, JSON.stringify(map, null, 2));
 }
 
 export function recordCommand(): Command {
@@ -60,6 +103,13 @@ export function recordCommand(): Command {
       );
       if (existsSync(COPILOT_CHAT_DB)) {
         console.log(chalk.cyan("trail record"), "→ polling", COPILOT_CHAT_DB);
+      }
+      if (existsSync(CURSOR_WORKSPACE_DIR) && existsSync(CURSOR_GLOBAL_DB)) {
+        console.log(
+          chalk.cyan("trail record"),
+          "→ polling cursor workspaces in",
+          CURSOR_WORKSPACE_DIR,
+        );
       }
 
       const sep = path.sep;
@@ -120,6 +170,54 @@ export function recordCommand(): Command {
         }
       };
 
+      const pollCursor = async () => {
+        if (!existsSync(CURSOR_WORKSPACE_DIR) || !existsSync(CURSOR_GLOBAL_DB))
+          return;
+        let entries: string[] = [];
+        try {
+          entries = readdirSync(CURSOR_WORKSPACE_DIR);
+        } catch {
+          return;
+        }
+        const cursors = readCursorCursors();
+        let changed = false;
+        for (const entry of entries) {
+          const dbPath = path.join(CURSOR_WORKSPACE_DIR, entry, "state.vscdb");
+          if (!existsSync(dbPath)) continue;
+          let mtime: number;
+          try {
+            mtime = statSync(dbPath).mtimeMs;
+          } catch {
+            continue;
+          }
+          if (cursors[dbPath] && cursors[dbPath] >= mtime) continue;
+          try {
+            const sessions = await parseCursorWorkspace(dbPath, user, {
+              globalDbPath: CURSOR_GLOBAL_DB,
+              sinceMs: cursors[dbPath],
+            });
+            for (const s of sessions) {
+              if (s.events.length === 0) continue;
+              saveSession(s, dbPath);
+              console.log(
+                chalk.green("ingested"),
+                s.id,
+                chalk.dim(`(${s.tool}, ${s.events.length} events)`),
+              );
+            }
+            cursors[dbPath] = mtime;
+            changed = true;
+          } catch (err) {
+            console.error(
+              chalk.red("cursor error"),
+              dbPath,
+              (err as Error).message,
+            );
+          }
+        }
+        if (changed) writeCursorCursors(cursors);
+      };
+
       const watcher = chokidar.watch(
         [claudeDir, codexDir, hermesDir, copilotCliDir],
         {
@@ -137,12 +235,17 @@ export function recordCommand(): Command {
           watcher.on("ready", () => resolve()),
         );
         pollCopilotChat();
+        await pollCursor();
         await watcher.close();
         return;
       }
 
-      // Initial poll + interval for the copilot-chat sqlite db.
+      // Initial poll + interval for the sqlite-backed sources.
       pollCopilotChat();
+      void pollCursor();
       setInterval(pollCopilotChat, 30_000).unref();
+      setInterval(() => {
+        void pollCursor();
+      }, 30_000).unref();
     });
 }
