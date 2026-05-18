@@ -48,6 +48,30 @@ export function ToolIcon({ name, className, size = 14 }: Props) {
           <path d="M5.2 9.5h5.6" />
         </svg>
       );
+    case "hermes":
+      // Winged H — two uprights with a crossbar and tiny wings
+      return (
+        <svg {...common}>
+          <path d="M5 3v10M11 3v10M5 8h6" />
+          <path d="M2.5 6.5l2 1M13.5 6.5l-2 1" opacity="0.6" />
+        </svg>
+      );
+    case "copilot-cli":
+      // Terminal prompt $_
+      return (
+        <svg {...common}>
+          <rect x="2" y="3" width="12" height="10" rx="1.5" />
+          <path d="M4.5 6.5l2 1.5-2 1.5M8 10.5h3.5" />
+        </svg>
+      );
+    case "copilot-chat":
+      // Chat bubble with code </>
+      return (
+        <svg {...common}>
+          <path d="M2.5 4.5a1.5 1.5 0 0 1 1.5-1.5h8a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H7l-3 2.5V11H4a1.5 1.5 0 0 1-1.5-1.5z" />
+          <path d="M6.5 6L5 7.5 6.5 9M9.5 6L11 7.5 9.5 9" opacity="0.8" />
+        </svg>
+      );
     default:
       return (
         <svg {...common}>
