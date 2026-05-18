@@ -4,7 +4,7 @@ import chokidar from "chokidar";
 import { homedir } from "node:os";
 import path from "node:path";
 import { userInfo } from "node:os";
-import { parseClaudeCodeSession } from "@trail/parsers";
+import { parseClaudeCodeSession, parseCodexSession } from "@trail/parsers";
 import { saveSession } from "../db.js";
 
 export function recordCommand(): Command {
@@ -14,12 +14,16 @@ export function recordCommand(): Command {
     .action(async (opts: { once?: boolean }) => {
       const user = userInfo().username;
       const claudeDir = path.join(homedir(), ".claude", "projects");
-      console.log(chalk.cyan("trail record"), "→ watching", claudeDir);
+      const codexDir = path.join(homedir(), ".codex", "sessions");
+      console.log(chalk.cyan("trail record"), "→ watching", claudeDir, "+", codexDir);
 
       const ingest = async (filePath: string) => {
         if (!filePath.endsWith(".jsonl")) return;
         try {
-          const session = await parseClaudeCodeSession(filePath, user);
+          const isCodex = filePath.includes(`${path.sep}.codex${path.sep}`);
+          const session = isCodex
+            ? await parseCodexSession(filePath, user)
+            : await parseClaudeCodeSession(filePath, user);
           if (session.events.length === 0) return;
           saveSession(session, filePath);
           console.log(
@@ -32,7 +36,7 @@ export function recordCommand(): Command {
         }
       };
 
-      const watcher = chokidar.watch(claudeDir, {
+      const watcher = chokidar.watch([claudeDir, codexDir], {
         ignored: (p) => p.includes("/node_modules/"),
         persistent: !opts.once,
         ignoreInitial: false,
