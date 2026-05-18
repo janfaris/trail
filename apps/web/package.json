@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@trail/anonymize": "workspace:*",
+    "@trail/client": "workspace:*",
     "@trail/schema": "workspace:*",
     "better-auth": "^1.2.7",
     "clsx": "^2.1.1",

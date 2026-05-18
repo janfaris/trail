@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
 import { Session as SessionSchema } from "@trail/schema";
+import { type UploadSessionResponse } from "@trail/client";
+import { anonymize } from "@trail/anonymize";
 import { eq } from "drizzle-orm";
 
 function genSlug() {
@@ -29,7 +31,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid session", issues: parsed.error.issues }, { status: 400 });
   }
-  const s = parsed.data;
+  // Defense-in-depth: even if the CLI forgot to scrub, we scrub server-side too.
+  const { session: s } = anonymize(parsed.data);
 
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) });
   if (!userRow?.handle) {
@@ -66,8 +69,9 @@ export async function POST(req: NextRequest) {
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
-  return NextResponse.json({
+  const response: UploadSessionResponse = {
     url: `${baseUrl}/u/${userRow.handle}/${slug}`,
     slug,
-  });
+  };
+  return NextResponse.json(response);
 }
