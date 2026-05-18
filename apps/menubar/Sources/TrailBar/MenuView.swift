@@ -41,12 +41,34 @@ struct MenuView: View {
             .keyboardShortcut("q")
     }
 
-    // Placeholder action handlers; wired up properly in Task 6.
     private func handlePrimary(_ s: SessionSummary) {
-        if let url = s.shareURL { NSWorkspace.shared.open(url) }
+        if let url = s.shareURL {
+            NSWorkspace.shared.open(url)
+        } else {
+            handleShare(s)
+        }
     }
-    private func handleShare(_ s: SessionSummary) {}
-    private func handleView(_ s: SessionSummary) {}
+
+    private func handleShare(_ s: SessionSummary) {
+        NotificationHelper.info("Sharing \(s.id)…")
+        TrailCLI.share(id: s.id) { result in
+            switch result {
+            case .success(let url):
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .string)
+                NSWorkspace.shared.open(url)
+                NotificationHelper.info("Shared", url.absoluteString)
+                store.refresh()
+            case .failure(let err):
+                NotificationHelper.info("Share failed", "\(err)")
+            }
+        }
+    }
+
+    private func handleView(_ s: SessionSummary) {
+        TrailCLI.viewInTerminal(id: s.id)
+    }
+
     private func handleCopyURL(_ s: SessionSummary) {
         guard let url = s.shareURL else { return }
         NSPasteboard.general.clearContents()
