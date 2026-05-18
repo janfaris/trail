@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { ToolIcon } from "@/components/tool-icon";
+import { SignOutButton } from "@/components/sign-out-button";
+import { auth } from "@/lib/auth";
+import { db, schema } from "@/db/client";
 
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";
 const EXAMPLE_TITLE = "Lupa · pricing research session";
@@ -48,7 +53,13 @@ const faqs = [
 
 const INSTALL = "npm install -g @trail/cli";
 
-export default function Home() {
+export default async function Home() {
+  const sessionInfo = await auth.api.getSession({ headers: await headers() });
+  const userRow = sessionInfo?.user
+    ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
+    : null;
+  const handle = userRow?.handle ?? null;
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-zinc-900">
@@ -63,9 +74,21 @@ export default function Home() {
             >
               GitHub
             </a>
-            <a href="/api/auth/sign-in/github">
-              <Button size="sm">Sign in</Button>
-            </a>
+            {handle ? (
+              <>
+                <Link
+                  href={`/u/${handle}`}
+                  className="font-mono text-zinc-300 hover:text-[#a7f300] transition-colors"
+                >
+                  @{handle}
+                </Link>
+                <SignOutButton />
+              </>
+            ) : (
+              <a href="/api/auth/sign-in/github">
+                <Button size="sm">Sign in</Button>
+              </a>
+            )}
           </nav>
         </div>
       </header>
@@ -73,6 +96,12 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-6 pt-24 pb-16">
+          {handle && (
+            <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-[#a7f300] mb-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+              Signed in as @{handle}
+            </div>
+          )}
           <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500 mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
             v0.1 · open source
@@ -106,9 +135,15 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <a href="/api/auth/sign-in/github">
-              <Button size="default">Sign in with GitHub</Button>
-            </a>
+            {handle ? (
+              <Link href={`/u/${handle}`}>
+                <Button size="default">View your profile</Button>
+              </Link>
+            ) : (
+              <a href="/api/auth/sign-in/github">
+                <Button size="default">Sign in with GitHub</Button>
+              </a>
+            )}
             <Link
               href={EXAMPLE_HREF}
               className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"

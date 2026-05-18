@@ -1,16 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { db, schema } from "@/db/client";
 import { eq, desc } from "drizzle-orm";
 import { Avatar } from "@/components/ui/avatar";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
+import { SignOutButton } from "@/components/sign-out-button";
 import { githubAvatar } from "@/lib/share";
+import { auth } from "@/lib/auth";
 
 export default async function UserProfile({ params }: { params: Promise<{ user: string }> }) {
   const { user } = await params;
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
+
+  const sessionInfo = await auth.api.getSession({ headers: await headers() });
+  const isSelf = sessionInfo?.user?.id === userRow.id;
 
   const sessions = await db
     .select()
@@ -30,7 +36,17 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
           <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
             <span className="text-[#a7f300]">/</span>trail
           </Link>
-          <span className="text-sm font-mono text-zinc-500">@{userRow.handle}</span>
+                    <span className="text-sm font-mono text-zinc-500 flex items-center gap-4">
+            {isSelf && (
+              <>
+                <span className="text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+                  This is you
+                </span>
+                <SignOutButton className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs font-mono" />
+              </>
+            )}
+            <span>@{userRow.handle}</span>
+          </span>
         </div>
       </header>
 
