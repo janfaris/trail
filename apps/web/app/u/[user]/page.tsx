@@ -10,6 +10,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { FeaturedSessionCard } from "@/components/featured-session-card";
 import { FeatureToggle } from "@/components/feature-toggle";
 import { ProfileIntroCard } from "@/components/profile-intro-card";
+import { EmptyInstallCard } from "@/components/empty-install-card";
 import { githubAvatar } from "@/lib/share";
 import { auth } from "@/lib/auth";
 
@@ -167,11 +168,17 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
         )}
 
         {all.length === 0 ? (
-          <div className="border-t border-zinc-900 pt-10">
-            <p className="text-sm text-zinc-500">
-              @{userRow.handle} hasn&apos;t shared any sessions yet.
-            </p>
-          </div>
+          isSelf ? (
+            <div className="border-t border-zinc-900 pt-10">
+              <EmptyInstallCard />
+            </div>
+          ) : (
+            <div className="border-t border-zinc-900 pt-10">
+              <p className="text-sm text-zinc-500">
+                @{userRow.handle} hasn&apos;t shared any sessions yet.
+              </p>
+            </div>
+          )
         ) : recent.length > 0 ? (
           <div className="border-t border-zinc-900">
             <div className="hidden md:grid grid-cols-[7rem_1.5rem_1fr_5rem_2rem] gap-3 px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.14em] text-zinc-600 border-b border-zinc-900">
