@@ -22,8 +22,8 @@ export function FeatureToggle({
           void toggleFeatured(sessionId);
         });
       }}
-      aria-label={isFeatured ? "Unfeature session" : "Feature session"}
-      title={isFeatured ? "Unfeature" : "Feature on profile"}
+      aria-label={isFeatured ? "Hide from profile" : "Show on profile"}
+      title={isFeatured ? "Hide from profile" : "Show on profile"}
       className={
         "text-base leading-none px-1.5 py-0.5 rounded hover:bg-zinc-800 transition-colors " +
         (isFeatured ? "text-[#a7f300]" : "text-zinc-600 hover:text-zinc-300") +
