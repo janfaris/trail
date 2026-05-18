@@ -61,85 +61,67 @@ export default async function Image({ params }: { params: Promise<{ user: string
           style={{
             flex: 1,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 64,
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 78,
-                fontWeight: 600,
-                letterSpacing: "-0.035em",
-                color: COLORS.text,
-                lineHeight: 1,
-              }}
-            >
-              @{handle}
-            </div>
-            {name ? (
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 28,
-                  color: COLORS.textDim,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {name}
-              </div>
-            ) : null}
-
-            <div
-              style={{
-                marginTop: 40,
-                display: "flex",
-                alignItems: "center",
-                gap: 28,
-                fontFamily: "GeistMono",
-                fontSize: 22,
-                color: COLORS.textMute,
-              }}
-            >
-              <span style={{ display: "flex", gap: 8 }}>
-                <span style={{ color: COLORS.text }}>{sessionCount}</span>
-                <span>session{sessionCount === 1 ? "" : "s"}</span>
-              </span>
-              <span style={{ color: COLORS.textFaint }}>·</span>
-              <span style={{ display: "flex", gap: 8 }}>
-                <span style={{ color: COLORS.text }}>{eventCount}</span>
-                <span>events</span>
-              </span>
-              {tools.length > 0 ? (
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <span style={{ color: COLORS.textFaint }}>·</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {tools.slice(0, 6).map((t) => (
-                      <ToolSvg key={t} name={t} size={26} color="#d4d4d8" />
-                    ))}
-                  </span>
-                </span>
-              ) : null}
-            </div>
-          </div>
-
           <div
             style={{
               display: "flex",
-              width: 256,
-              height: 256,
-              borderRadius: 128,
-              background: COLORS.surface,
-              border: `1px solid ${COLORS.border}`,
+              fontSize: 78,
+              fontWeight: 600,
+              letterSpacing: "-0.035em",
+              color: COLORS.text,
+              lineHeight: 1,
             }}
-          />
+          >
+            @{handle}
+          </div>
+          {name ? (
+            <div
+              style={{
+                display: "flex",
+                marginTop: 14,
+                fontSize: 28,
+                color: COLORS.textDim,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {name}
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              marginTop: 40,
+              display: "flex",
+              alignItems: "center",
+              gap: 28,
+              fontFamily: "GeistMono",
+              fontSize: 22,
+              color: COLORS.textMute,
+            }}
+          >
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: COLORS.text }}>{sessionCount}</span>
+              <span>session{sessionCount === 1 ? "" : "s"}</span>
+            </div>
+            <span style={{ color: COLORS.textFaint }}>·</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: COLORS.text }}>{eventCount}</span>
+              <span>events</span>
+            </div>
+            {tools.length > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ color: COLORS.textFaint }}>·</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {tools.slice(0, 6).map((t) => (
+                    <ToolSvg key={t} name={t} size={26} color="#d4d4d8" />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <Footer />
