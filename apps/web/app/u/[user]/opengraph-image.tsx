@@ -18,9 +18,12 @@ export const alt = "Trail profile";
 export default async function Image({ params }: { params: Promise<{ user: string }> }) {
   const { user } = await params;
   const fonts = await loadOgFonts();
-  const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.handle, user),
-  });
+  const userRows = await db
+    .select()
+    .from(schema.user)
+    .where(eq(schema.user.handle, user))
+    .limit(1);
+  const userRow = userRows[0];
 
   const handle = userRow?.handle ?? user;
   const name = userRow?.name && userRow.name !== handle ? userRow.name : undefined;
