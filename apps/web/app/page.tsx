@@ -219,6 +219,38 @@ $ trail share latest
             Trail is free during the v0.1 preview. Pricing arrives with v1.0.
           </p>
         </section>
+
+        <section className="mt-24 max-w-2xl">
+          <h2 className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500 mb-5">
+            Why I made this
+          </h2>
+          <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
+            <p>
+              I do most of my real work inside AI coding tools now — Claude Code, Codex, Cursor,
+              Copilot, Hermes. Every session has hours of prompts, decisions, and diffs that just
+              vanish when I close the terminal.
+            </p>
+            <p>
+              No way to find that fix from two weeks ago. No way to show a friend exactly how I
+              solved something. No way to prove to a hiring manager that I actually know how to
+              think with these tools.
+            </p>
+            <p>
+              So I built Trail. It tails the log files the tools already write — no proxying, no
+              hooks, no slowdown. Sessions live on your machine. Search across all your work in
+              two seconds. Share any session as a public link with secrets scrubbed.
+            </p>
+            <p className="text-zinc-500">
+              Local-first. Open source. Tell me if it's useful.{" "}
+              <Link
+                href="/u/jankarlo.faris"
+                className="text-zinc-300 hover:text-[#a7f300] underline-offset-4 underline decoration-zinc-700"
+              >
+                @jankarlo.faris
+              </Link>
+            </p>
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-zinc-900 mt-10">
