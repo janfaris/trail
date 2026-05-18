@@ -3,11 +3,14 @@ import AppKit
 
 @main
 struct TrailBarApp: App {
-    init() {}
+    @StateObject private var store = SessionStore()
+
     var body: some Scene {
         MenuBarExtra("Trail", systemImage: "list.bullet.rectangle") {
-            Text("Hello")
+            Text("\(store.recent.count) sessions loaded")
+            Text("Today: \(store.todayCount) · Total: \(store.totalCount)")
             Divider()
+            Button("Refresh") { store.refresh() }
             Button("Quit") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
