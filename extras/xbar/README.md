@@ -1,5 +1,7 @@
 # Trail menu bar (xbar plugin)
 
+> **Prefer a real `.app`?** A native SwiftUI menu bar app is available at [`apps/menubar/`](../../apps/menubar/README.md). It shows the same data, ships as `TrailBar.app`, and doesn't need xbar.
+
 A tiny macOS menu bar widget for Trail. Shows recent sessions, today's count,
 and click-to-share actions — no Electron, no second app to maintain.
 

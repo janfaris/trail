@@ -104,6 +104,17 @@ because the user explicitly initiated `trail login`. A future phase will
 replace this with a dedicated `cli_tokens` table and short-lived bearer
 tokens scoped to upload-only (see TODO in `apps/web/app/cli-auth/success/actions.ts`).
 
+## Menu bar app (optional)
+
+A native SwiftUI menu bar app — `TrailBar.app` — shows your recent sessions in the macOS menu bar and lets you open or share them with one click. Source lives in [`apps/menubar/`](apps/menubar/README.md).
+
+```bash
+cd apps/menubar
+./scripts/install.sh
+```
+
+Requires macOS 13+. Unsigned in v0.2 (right-click → Open on first launch).
+
 ## Status
 
   Phase 0  monorepo scaffolding             done
