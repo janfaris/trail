@@ -12,7 +12,38 @@ import { FeatureToggle } from "@/components/feature-toggle";
 import { ProfileIntroCard } from "@/components/profile-intro-card";
 import { EmptyInstallCard } from "@/components/empty-install-card";
 import { githubAvatar } from "@/lib/share";
+import { formatRepoPath } from "@/lib/format";
 import { auth } from "@/lib/auth";
+
+function GitHubIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0"
+    >
+      <path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.57.1.78-.25.78-.55v-1.94c-3.2.7-3.88-1.37-3.88-1.37-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.07.78 2.16v3.2c0 .31.2.66.79.55A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z" />
+    </svg>
+  );
+}
+
+function XIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0"
+    >
+      <path d="M18.244 2H21.5l-7.5 8.57L23 22h-6.91l-4.84-6.34L5.7 22H2.44l8.03-9.18L1.5 2h7.06l4.37 5.79L18.244 2Zm-1.21 18h1.83L7.06 4H5.12l11.914 16Z" />
+    </svg>
+  );
+}
 
 export default async function UserProfile({ params }: { params: Promise<{ user: string }> }) {
   const { user } = await params;
@@ -46,11 +77,14 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const site = userRow.website;
   const hasSocials = Boolean(gh || x || site);
 
+  const heroFeatured = featured[0];
+  const compactFeatured = featured.slice(1);
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-zinc-900">
         <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
+          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight hover:underline underline-offset-4 decoration-zinc-700">
             <span className="text-[#a7f300]">/</span>trail
           </Link>
           <span className="text-sm font-mono text-zinc-500 flex items-center gap-4">
@@ -83,7 +117,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
               <p className="text-sm text-zinc-400 mt-0.5">{userRow.name}</p>
             )}
             {userRow.bio ? (
-              <p className="text-[15px] text-zinc-300 mt-2 leading-snug max-w-xl">{userRow.bio}</p>
+              <p className="text-[15px] text-zinc-300 mt-2 leading-snug max-w-2xl">{userRow.bio}</p>
             ) : isSelf ? (
               <Link
                 href="/settings"
@@ -100,8 +134,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                     href={`https://github.com/${gh}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="hover:text-zinc-100"
+                    className="inline-flex items-center gap-1.5 hover:text-zinc-100"
                   >
+                    <GitHubIcon size={14} />
                     GitHub
                   </a>
                 )}
@@ -112,8 +147,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                       href={`https://x.com/${x}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 hover:text-zinc-100"
                     >
+                      <XIcon size={13} />
                       X
                     </a>
                   </>
@@ -134,16 +170,20 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-xs font-mono text-zinc-500">
-              <span>
-                <span className="tabular-nums text-zinc-200">{all.length}</span>{" "}
-                session{all.length === 1 ? "" : "s"}
-              </span>
-              <span>
-                <span className="tabular-nums text-zinc-200">{totalEvents}</span> events
-              </span>
+            <div className="mt-4 text-xs font-mono text-zinc-500 space-y-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>
+                  <span className="tabular-nums text-zinc-200">{all.length}</span>{" "}
+                  session{all.length === 1 ? "" : "s"}
+                </span>
+                <span className="text-zinc-700">·</span>
+                <span>
+                  <span className="tabular-nums text-zinc-200">{totalEvents}</span> events
+                </span>
+              </div>
               {tools.length > 0 && (
-                <span className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-zinc-600">captures</span>
                   {tools.map((t) => (
                     <span
                       key={t}
@@ -153,16 +193,31 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                       {t}
                     </span>
                   ))}
-                </span>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {featured.length > 0 && (
-          <section className="mb-10 space-y-3">
-            {featured.map((s) => (
-              <FeaturedSessionCard key={s.id} session={s} handle={userRow.handle ?? user} />
+        {heroFeatured && (
+          <section className="mb-6">
+            <FeaturedSessionCard
+              session={heroFeatured}
+              handle={userRow.handle ?? user}
+              variant="hero"
+            />
+          </section>
+        )}
+
+        {compactFeatured.length > 0 && (
+          <section className="mb-10 space-y-2">
+            {compactFeatured.map((s) => (
+              <FeaturedSessionCard
+                key={s.id}
+                session={s}
+                handle={userRow.handle ?? user}
+                variant="compact"
+              />
             ))}
           </section>
         )}
@@ -180,44 +235,58 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
             </div>
           )
         ) : recent.length > 0 ? (
-          <div className="border-t border-zinc-900">
-            <div className="hidden md:grid grid-cols-[7rem_1.5rem_1fr_5rem_2rem] gap-3 px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.14em] text-zinc-600 border-b border-zinc-900">
-              <span>Date</span>
-              <span />
-              <span>Title</span>
-              <span className="text-right">Events</span>
-              <span />
+          <div>
+            <div className="flex items-center justify-between px-2 mb-2 mt-4">
+              <h3 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                Recent activity
+              </h3>
             </div>
-            <ul>
-              {recent.map((s) => (
-                <li key={s.id} className="border-b border-zinc-900 last:border-b-0">
-                  <Link
-                    href={`/u/${userRow.handle}/${s.slug}`}
-                    title={s.repo ? `${s.repo}` : undefined}
-                    className="grid md:grid-cols-[7rem_1.5rem_1fr_5rem_2rem] grid-cols-[1fr_4rem] gap-3 items-center px-2 py-3 hover:bg-zinc-900/60 border-l-2 border-transparent hover:border-l-[#a7f300] transition-colors duration-150 group"
-                  >
-                    <RelativeTime
-                      date={s.startedAt}
-                      className="hidden md:block text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300"
-                    />
-                    <ToolIcon name={s.tool} className="hidden md:block text-zinc-500 group-hover:text-zinc-200" />
-                    <span className="text-sm text-zinc-200 truncate group-hover:text-zinc-50">
-                      {s.title || s.slug}
-                    </span>
-                    <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
-                      {s.eventCount}
-                    </span>
-                    {isSelf ? (
-                      <span className="hidden md:flex justify-end">
-                        <FeatureToggle sessionId={s.id} isFeatured={s.isFeatured} />
-                      </span>
-                    ) : (
-                      <span className="hidden md:block" />
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="border-t border-zinc-900">
+              <div className="hidden md:grid grid-cols-[7rem_1.5rem_1fr_5rem_2rem] gap-3 px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.14em] text-zinc-600 border-b border-zinc-900">
+                <span>Date</span>
+                <span />
+                <span>Title</span>
+                <span className="text-right">Events</span>
+                <span />
+              </div>
+              <ul>
+                {recent.map((s) => {
+                  const repoShort = formatRepoPath(s.repo);
+                  const title = s.title || s.slug;
+                  return (
+                    <li key={s.id} className="border-b border-zinc-900 last:border-b-0">
+                      <Link
+                        href={`/u/${userRow.handle}/${s.slug}`}
+                        title={repoShort ? `${title} — ${repoShort}` : title}
+                        className="grid md:grid-cols-[7rem_1.5rem_1fr_5rem_2rem] grid-cols-[1fr_4rem] gap-3 items-center px-2 py-3 hover:bg-zinc-900/60 border-l-2 border-transparent hover:border-l-[#a7f300] transition-colors duration-150 group"
+                      >
+                        <RelativeTime
+                          date={s.startedAt}
+                          className="hidden md:block text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300"
+                        />
+                        <ToolIcon name={s.tool} className="hidden md:block text-zinc-500 group-hover:text-zinc-200" />
+                        <span
+                          className="text-sm text-zinc-200 truncate group-hover:text-zinc-50"
+                          title={title}
+                        >
+                          {title}
+                        </span>
+                        <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
+                          {s.eventCount}
+                        </span>
+                        {isSelf ? (
+                          <span className="hidden md:flex justify-end">
+                            <FeatureToggle sessionId={s.id} isFeatured={s.isFeatured} />
+                          </span>
+                        ) : (
+                          <span className="hidden md:block" />
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
         ) : null}
       </main>
