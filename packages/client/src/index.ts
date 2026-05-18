@@ -1,9 +1,9 @@
 import type { Session } from "@trail/schema";
-import { DEFAULT_TRAIL_API_URL, ENDPOINTS } from "./constants.js";
-import { UploadSessionResponse, type UploadSessionResponse as UploadOk } from "./contracts.js";
+import { DEFAULT_TRAIL_API_URL, ENDPOINTS } from "./constants";
+import { UploadSessionResponse, type UploadSessionResponse as UploadOk } from "./contracts";
 
-export * from "./constants.js";
-export * from "./contracts.js";
+export * from "./constants";
+export * from "./contracts";
 
 export type UploadError =
   | { kind: "unauthenticated" }

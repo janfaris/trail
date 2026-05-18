@@ -1,8 +1,8 @@
 import { Session } from "@trail/schema";
 import type { Session as SessionT } from "@trail/schema";
-import { DETECTORS, type RedactionCategory } from "./detectors.js";
+import { DETECTORS, type RedactionCategory } from "./detectors";
 
-export type { RedactionCategory } from "./detectors.js";
+export type { RedactionCategory } from "./detectors";
 
 export interface RedactionReport {
   total: number;
