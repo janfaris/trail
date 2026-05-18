@@ -255,11 +255,11 @@ $ trail share latest
           </p>
         </section>
 
-        <section className="mt-24 max-w-2xl">
-          <h2 className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500 mb-5">
+        <section className="max-w-5xl mx-auto px-6 py-20 border-t border-zinc-900">
+          <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-10">
             Why I made this
           </h2>
-          <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
+          <div className="max-w-2xl space-y-4 text-sm leading-relaxed text-zinc-400">
             <p>
               I do most of my real work inside AI coding tools now — Claude Code, Codex, Cursor,
               Copilot, Hermes. Every session has hours of prompts, decisions, and diffs that just
