@@ -34,6 +34,22 @@ const STATEMENTS: { name: string; sql: string }[] = [
     name: "trail_session.duration_seconds",
     sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS duration_seconds INTEGER`,
   },
+  {
+    name: "trail_session.tool_call_counts",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS tool_call_counts JSONB`,
+  },
+  {
+    name: "trail_session.distinct_files",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS distinct_files INTEGER`,
+  },
+  {
+    name: "trail_session.prompt_count",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS prompt_count INTEGER`,
+  },
+  {
+    name: "trail_session.failed_tool_calls",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS failed_tool_calls INTEGER`,
+  },
 ];
 
 export async function POST(req: NextRequest) {
