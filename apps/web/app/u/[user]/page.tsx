@@ -14,6 +14,9 @@ import { EmptyInstallCard } from "@/components/empty-install-card";
 import { githubAvatar } from "@/lib/share";
 import { formatRepoPath } from "@/lib/format";
 import { auth } from "@/lib/auth";
+import { formatDuration } from "@/lib/session-metrics";
+import { computeStreak } from "@/lib/streak";
+import { LanguagesBar, topLanguages } from "@/components/languages-bar";
 
 function GitHubIcon({ size = 16 }: { size?: number }) {
   return (
@@ -81,6 +84,28 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
   const heroFeatured = featured[0];
   const compactFeatured = featured.slice(1);
+
+  // Tier 1 metrics (computed at read time; 100-row cap is sub-ms).
+  const totalSeconds = all.reduce((n, s) => n + (s.durationSeconds ?? 0), 0);
+  const hoursLabel = (() => {
+    if (totalSeconds <= 0) return "0m";
+    if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m`;
+    return `${Math.floor(totalSeconds / 3600)}h`;
+  })();
+  const distinctRepos = new Set(all.map((s) => s.repo).filter(Boolean)).size;
+  const durations = all
+    .map((s) => s.durationSeconds)
+    .filter((n): n is number => typeof n === "number" && n > 0)
+    .sort((a, b) => a - b);
+  const median = durations.length
+    ? durations[Math.floor(durations.length / 2)]
+    : null;
+  const sharedDates = all
+    .map((s) => s.sharedAt)
+    .filter((d): d is Date => d instanceof Date)
+    .sort((a, b) => b.getTime() - a.getTime());
+  const streak = computeStreak(sharedDates);
+  const langs = topLanguages(all, 5);
 
   return (
     <div className="min-h-screen">
@@ -217,6 +242,40 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
           </div>
         </div>
 
+        {all.length > 0 && (
+          <section className="mb-8 border-t border-zinc-900 pt-4">
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
+              Stats
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-zinc-500">
+              <div>
+                <div className="text-zinc-200 tabular-nums text-lg">{hoursLabel}</div>
+                <div className="text-zinc-500">hours coded</div>
+              </div>
+              <div>
+                <div className="text-zinc-200 tabular-nums text-lg">
+                  {streak.current}
+                </div>
+                <div className="text-zinc-500">
+                  day streak{" "}
+                  <span className="text-zinc-600">(longest: {streak.longest})</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-zinc-200 tabular-nums text-lg">{distinctRepos}</div>
+                <div className="text-zinc-500">repos</div>
+              </div>
+              <div>
+                <div className="text-zinc-200 tabular-nums text-lg">
+                  {median ? formatDuration(median) : "—"}
+                </div>
+                <div className="text-zinc-500">median session</div>
+              </div>
+            </div>
+            {langs.length > 0 && <LanguagesBar langs={langs} />}
+          </section>
+        )}
+
         {heroFeatured && (
           <section className="mb-6">
             <FeaturedSessionCard
@@ -291,6 +350,11 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                         </span>
                         <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
                           {s.eventCount}
+                          {s.durationSeconds != null && (
+                            <span className="ml-1 text-zinc-600">
+                              · {formatDuration(s.durationSeconds)}
+                            </span>
+                          )}
                         </span>
                         {isSelf ? (
                           <span className="hidden md:flex justify-end">

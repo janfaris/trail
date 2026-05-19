@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
 import { formatRepoPath } from "@/lib/format";
+import { formatDuration } from "@/lib/session-metrics";
 
 type Session = {
   slug: string;
@@ -11,6 +12,7 @@ type Session = {
   repo: string | null;
   eventCount: number;
   startedAt: Date;
+  durationSeconds?: number | null;
 };
 
 export function FeaturedSessionCard({
@@ -47,6 +49,9 @@ export function FeaturedSessionCard({
             {repo && <span className="truncate max-w-[14rem]" title={session.repo ?? undefined}>{repo}</span>}
             <RelativeTime date={session.startedAt} className="tabular-nums" />
             <span className="tabular-nums">{session.eventCount} ev</span>
+            {session.durationSeconds != null && (
+              <span className="tabular-nums">{formatDuration(session.durationSeconds)}</span>
+            )}
           </div>
         </div>
         <span className="text-xs font-mono text-zinc-600 group-hover:text-[#a7f300] shrink-0">→</span>
@@ -80,6 +85,9 @@ export function FeaturedSessionCard({
         {repo && <span className="truncate max-w-[18rem]" title={session.repo ?? undefined}>{repo}</span>}
         <RelativeTime date={session.startedAt} className="tabular-nums" />
         <span className="tabular-nums">{session.eventCount} events</span>
+        {session.durationSeconds != null && (
+          <span className="tabular-nums">{formatDuration(session.durationSeconds)}</span>
+        )}
         <span className="ml-auto text-zinc-300 group-hover:text-[#a7f300]">
           View session →
         </span>
