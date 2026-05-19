@@ -17,6 +17,10 @@ import { auth } from "@/lib/auth";
 import { formatDuration } from "@/lib/session-metrics";
 import { computeStreak } from "@/lib/streak";
 import { LanguagesBar, topLanguages } from "@/components/languages-bar";
+import { ToolMixBar } from "@/components/tool-mix-bar";
+import { VelocitySparkline } from "@/components/velocity-sparkline";
+import { TopRepos } from "@/components/top-repos";
+import { computeUserStats } from "@/lib/aggregates";
 
 function GitHubIcon({ size = 16 }: { size?: number }) {
   return (
@@ -106,6 +110,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
     .sort((a, b) => b.getTime() - a.getTime());
   const streak = computeStreak(sharedDates);
   const langs = topLanguages(all, 5);
+  const tier2 = computeUserStats(all);
+  const showTier2 = all.length >= 3;
+  const failurePct = Math.round(tier2.failureRate * 1000) / 10;
 
   return (
     <div className="min-h-screen">
@@ -247,7 +254,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
             <h3 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
               Stats
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono text-zinc-500">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-mono text-zinc-500">
               <div>
                 <div className="text-zinc-200 tabular-nums text-lg">{hoursLabel}</div>
                 <div className="text-zinc-500">hours coded</div>
@@ -271,8 +278,39 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                 </div>
                 <div className="text-zinc-500">median session</div>
               </div>
+              {showTier2 && (
+                <div>
+                  <VelocitySparkline weeks={tier2.velocityWeekly} />
+                  <div className="text-zinc-500 mt-1">last 12 weeks</div>
+                </div>
+              )}
             </div>
             {langs.length > 0 && <LanguagesBar langs={langs} />}
+            {showTier2 && tier2.topToolCalls.length > 0 && (
+              <div className="mt-5">
+                <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                  Actions
+                </h4>
+                <ToolMixBar tools={tier2.topToolCalls} />
+              </div>
+            )}
+            {showTier2 && tier2.topRepos.length > 0 && (
+              <div className="mt-5">
+                <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                  Top repos
+                </h4>
+                <TopRepos items={tier2.topRepos} />
+              </div>
+            )}
+            {showTier2 && tier2.peakWeekday && (
+              <p className="mt-4 text-xs font-mono text-zinc-500 italic">
+                Most active on {tier2.peakWeekday}s
+                <span className="text-zinc-700"> · </span>
+                <span className="tabular-nums">{tier2.totalPrompts}</span> prompts
+                <span className="text-zinc-700"> · </span>
+                <span className="tabular-nums">{failurePct}%</span> tool-call errors
+              </p>
+            )}
           </section>
         )}
 
