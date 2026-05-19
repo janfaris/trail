@@ -99,6 +99,8 @@ export const trailSession = pgTable(
     embedding: vector("embedding", { dimensions: 1536 }),
     aiExplanation: text("ai_explanation"),
     aiExplanationGeneratedAt: timestamp("ai_explanation_generated_at"),
+    languages: jsonb("languages").$type<Record<string, number>>(),
+    durationSeconds: integer("duration_seconds"),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
