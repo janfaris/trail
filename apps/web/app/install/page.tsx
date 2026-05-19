@@ -124,6 +124,13 @@ export default function InstallPage() {
             ))}
           </dl>
         </section>
+
+        <section className="mt-12 border-t border-zinc-900 pt-8 text-sm text-zinc-500">
+          Already on Trail?{" "}
+          <Link href="/search" className="text-[#a7f300] hover:underline">
+            Search across all public sessions →
+          </Link>
+        </section>
       </main>
 
       <footer className="border-t border-zinc-900">
