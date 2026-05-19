@@ -101,6 +101,10 @@ export const trailSession = pgTable(
     aiExplanationGeneratedAt: timestamp("ai_explanation_generated_at"),
     languages: jsonb("languages").$type<Record<string, number>>(),
     durationSeconds: integer("duration_seconds"),
+    toolCallCounts: jsonb("tool_call_counts").$type<Record<string, number>>(),
+    distinctFiles: integer("distinct_files"),
+    promptCount: integer("prompt_count"),
+    failedToolCalls: integer("failed_tool_calls"),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
