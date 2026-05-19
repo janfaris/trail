@@ -10,6 +10,8 @@ import { absoluteTime, durationBetween } from "@/lib/time";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { deriveTitle } from "@/lib/derive-title";
 import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { ExplainButton } from "@/components/explain-button";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -69,6 +71,8 @@ export default async function SessionView({
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("host") ?? "localhost:3000";
   const fullUrl = shareUrl(user, slug, `${proto}://${host}`);
+  const viewer = await auth.api.getSession({ headers: h });
+  const canExplain = !!viewer?.user;
 
   const duration = durationBetween(sessionRow.startedAt, sessionRow.endedAt);
   const firstPrompt = events.find((e) => {
@@ -160,6 +164,13 @@ export default async function SessionView({
             {new Date(sessionRow.startedAt).toISOString().slice(0, 10)}
           </span>
         </div>
+
+        <ExplainButton
+          sessionId={sessionRow.id}
+          pathToRevalidate={`/u/${user}/${slug}`}
+          initialExplanation={sessionRow.aiExplanation}
+          canExplain={canExplain}
+        />
 
         <div className="space-y-5">
           {events.map((e) => (
