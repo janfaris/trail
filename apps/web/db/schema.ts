@@ -91,9 +91,9 @@ export const trailSession = pgTable(
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    // text-embedding-3-large = 3072 dims. pgvector indexes (ivfflat/hnsw) cap
-    // at 2000 dims so we skip the index — at <100 rows seq scan is fine.
-    embedding: vector("embedding", { dimensions: 3072 }),
+    // text-embedding-3-small = 1536 dims. HNSW index enables fast cosine
+    // similarity search.
+    embedding: vector("embedding", { dimensions: 1536 }),
     aiExplanation: text("ai_explanation"),
     aiExplanationGeneratedAt: timestamp("ai_explanation_generated_at"),
   },
