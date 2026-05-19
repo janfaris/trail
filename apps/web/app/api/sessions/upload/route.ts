@@ -5,6 +5,7 @@ import { Session as SessionSchema } from "@trail/schema";
 import { type UploadSessionResponse } from "@trail/client";
 import { anonymize } from "@trail/anonymize";
 import { deriveTitle } from "@/lib/derive-title";
+import { generateSessionMeta } from "@/lib/openai";
 import { eq } from "drizzle-orm";
 
 function genSlug() {
@@ -43,17 +44,25 @@ export async function POST(req: NextRequest) {
   const slug = s.shareSlug || genSlug();
   const sessionId = genId();
 
+  const firstPrompt = s.events.find((e) => e.kind === "prompt")?.text;
+  const heuristicTitle = deriveTitle(firstPrompt, s.id.slice(0, 8));
+
+  // Best-effort AI title + summary. Failures fall back silently to heuristic.
+  const prompts = s.events
+    .filter((e): e is typeof e & { text: string } => e.kind === "prompt" && typeof e.text === "string")
+    .slice(0, 3)
+    .map((e) => e.text);
+  const lastEventKinds = s.events.slice(-3).map((e) => e.kind);
+  const ai = prompts.length > 0 ? await generateSessionMeta(prompts, lastEventKinds) : null;
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: session.user.id,
     slug,
     tool: s.tool,
     repo: s.repo,
-    summary: s.summary,
-    title: deriveTitle(
-      s.events.find((e) => e.kind === "prompt")?.text,
-      s.id.slice(0, 8),
-    ),
+    summary: ai?.summary ?? s.summary,
+    title: ai?.title ?? heuristicTitle,
     eventCount: s.events.length,
     startedAt: new Date(s.startedAt),
     endedAt: s.endedAt ? new Date(s.endedAt) : null,
