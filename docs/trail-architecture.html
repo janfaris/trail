@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trail Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #a7f300; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container { background: rgba(15, 23, 42, 0.5); border-radius: 1rem; border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto; }
+    svg { width: 100%; min-width: 1100px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card-dot.trail { background: #a7f300; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Trail — Architecture</h1>
+      </div>
+      <p class="subtitle">Cross-vendor AI coding session recorder. Local-first capture, public sharing on demand.</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1200 1040">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrow-trail" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#a7f300" />
+          </marker>
+          <marker id="arrow-rose" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- USER MACHINE BOUNDARY -->
+        <rect x="20" y="30" width="1060" height="470" rx="12" fill="rgba(148, 163, 184, 0.04)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="36" y="52" fill="#94a3b8" font-size="11" font-weight="600">User's Machine — privacy-by-default, local-first</text>
+
+        <!-- AI TOOLS ROW (5 external sources) -->
+        <text x="36" y="78" fill="#64748b" font-size="9" font-weight="600">SOURCES — log files the tools already write</text>
+
+        <!-- Claude Code -->
+        <rect x="36" y="90" width="200" height="55" rx="6" fill="#0f172a"/>
+        <rect x="36" y="90" width="200" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="136" y="111" fill="white" font-size="11" font-weight="600" text-anchor="middle">Claude Code</text>
+        <text x="136" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">~/.claude/projects/**/*.jsonl</text>
+
+        <!-- Codex -->
+        <rect x="246" y="90" width="200" height="55" rx="6" fill="#0f172a"/>
+        <rect x="246" y="90" width="200" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="346" y="111" fill="white" font-size="11" font-weight="600" text-anchor="middle">Codex CLI</text>
+        <text x="346" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">~/.codex/sessions/</text>
+
+        <!-- Cursor -->
+        <rect x="456" y="90" width="200" height="55" rx="6" fill="#0f172a"/>
+        <rect x="456" y="90" width="200" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="556" y="111" fill="white" font-size="11" font-weight="600" text-anchor="middle">Cursor</text>
+        <text x="556" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">workspace + global vscdb</text>
+
+        <!-- Copilot -->
+        <rect x="666" y="90" width="200" height="55" rx="6" fill="#0f172a"/>
+        <rect x="666" y="90" width="200" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="766" y="111" fill="white" font-size="11" font-weight="600" text-anchor="middle">Copilot CLI + Chat</text>
+        <text x="766" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">events.jsonl + VSCode db</text>
+
+        <!-- Hermes -->
+        <rect x="876" y="90" width="188" height="55" rx="6" fill="#0f172a"/>
+        <rect x="876" y="90" width="188" height="55" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="970" y="111" fill="white" font-size="11" font-weight="600" text-anchor="middle">Hermes Agent</text>
+        <text x="970" y="128" fill="#94a3b8" font-size="9" text-anchor="middle">~/.hermes/sessions/*.json</text>
+
+        <!-- Arrows down from each tool into @trail/cli -->
+        <line x1="136" y1="146" x2="380" y2="218" stroke="#a7f300" stroke-width="1.2" marker-end="url(#arrow-trail)"/>
+        <line x1="346" y1="146" x2="430" y2="218" stroke="#a7f300" stroke-width="1.2" marker-end="url(#arrow-trail)"/>
+        <line x1="556" y1="146" x2="500" y2="218" stroke="#a7f300" stroke-width="1.2" marker-end="url(#arrow-trail)"/>
+        <line x1="766" y1="146" x2="570" y2="218" stroke="#a7f300" stroke-width="1.2" marker-end="url(#arrow-trail)"/>
+        <line x1="970" y1="146" x2="620" y2="218" stroke="#a7f300" stroke-width="1.2" marker-end="url(#arrow-trail)"/>
+        <text x="500" y="180" fill="#a7f300" font-size="8" text-anchor="middle">chokidar fs watch + 30s vscdb poll</text>
+
+        <!-- @trail/cli (Backend) - center -->
+        <rect x="280" y="220" width="540" height="80" rx="8" fill="#0f172a"/>
+        <rect x="280" y="220" width="540" height="80" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="550" y="244" fill="white" font-size="13" font-weight="700" text-anchor="middle">@trail/cli</text>
+        <text x="550" y="262" fill="#94a3b8" font-size="9" text-anchor="middle">Node 22 · commander · tsup-bundled ESM</text>
+        <text x="550" y="280" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">record · view · search · share · login · logout · whoami</text>
+        <text x="550" y="294" fill="#64748b" font-size="8" text-anchor="middle">~/.local/bin/trail</text>
+
+        <!-- LEFT — Packages stack -->
+        <text x="36" y="333" fill="#64748b" font-size="9" font-weight="600">PACKAGES — shared logic, workspace deps</text>
+
+        <rect x="36" y="345" width="220" height="42" rx="6" fill="#0f172a"/>
+        <rect x="36" y="345" width="220" height="42" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="146" y="362" fill="white" font-size="11" font-weight="600" text-anchor="middle">@trail/parsers</text>
+        <text x="146" y="378" fill="#94a3b8" font-size="8" text-anchor="middle">6 parsers — one per tool</text>
+
+        <rect x="36" y="393" width="220" height="42" rx="6" fill="#0f172a"/>
+        <rect x="36" y="393" width="220" height="42" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="146" y="410" fill="white" font-size="11" font-weight="600" text-anchor="middle">@trail/schema</text>
+        <text x="146" y="426" fill="#94a3b8" font-size="8" text-anchor="middle">zod Session + Event types</text>
+
+        <!-- @trail/anonymize (security) -->
+        <rect x="36" y="441" width="220" height="42" rx="6" fill="#0f172a"/>
+        <rect x="36" y="441" width="220" height="42" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="146" y="458" fill="white" font-size="11" font-weight="600" text-anchor="middle">@trail/anonymize</text>
+        <text x="146" y="474" fill="#fb7185" font-size="8" text-anchor="middle">scrub paths + secrets pre-upload</text>
+
+        <!-- CENTER — Local SQLite DB -->
+        <rect x="320" y="345" width="280" height="140" rx="8" fill="#0f172a"/>
+        <rect x="320" y="345" width="280" height="140" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="460" y="368" fill="white" font-size="12" font-weight="700" text-anchor="middle">~/.trail/db.sqlite</text>
+        <text x="460" y="386" fill="#94a3b8" font-size="9" text-anchor="middle">better-sqlite3 (native binding)</text>
+        <text x="460" y="408" fill="#a78bfa" font-size="9" text-anchor="middle">tables</text>
+        <text x="460" y="422" fill="#94a3b8" font-size="9" text-anchor="middle">• sessions(id, tool, started_at, share_slug)</text>
+        <text x="460" y="436" fill="#94a3b8" font-size="9" text-anchor="middle">• events(session_id, at, kind, payload)</text>
+        <text x="460" y="454" fill="#a78bfa" font-size="9" text-anchor="middle">virtual table</text>
+        <text x="460" y="468" fill="#94a3b8" font-size="9" text-anchor="middle">• events_fts (FTS5 over payload)</text>
+
+        <!-- RIGHT — Auth state + client -->
+        <text x="660" y="333" fill="#64748b" font-size="9" font-weight="600">UPLOAD CLIENT — used by `trail share`</text>
+
+        <rect x="660" y="345" width="404" height="42" rx="6" fill="#0f172a"/>
+        <rect x="660" y="345" width="404" height="42" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="862" y="362" fill="white" font-size="11" font-weight="600" text-anchor="middle">@trail/client</text>
+        <text x="862" y="378" fill="#94a3b8" font-size="8" text-anchor="middle">UploadSessionResponse zod contract · DEFAULT_TRAIL_API_URL</text>
+
+        <rect x="660" y="393" width="404" height="42" rx="6" fill="#0f172a"/>
+        <rect x="660" y="393" width="404" height="42" rx="6" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="862" y="410" fill="white" font-size="11" font-weight="600" text-anchor="middle">~/.trail/auth.json</text>
+        <text x="862" y="426" fill="#fb7185" font-size="8" text-anchor="middle">__Secure-better-auth.session_token (forwarded, 600 perms)</text>
+
+        <rect x="660" y="441" width="404" height="42" rx="6" fill="#0f172a"/>
+        <rect x="660" y="441" width="404" height="42" rx="6" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+        <text x="862" y="458" fill="white" font-size="11" font-weight="600" text-anchor="middle">localhost callback server</text>
+        <text x="862" y="474" fill="#94a3b8" font-size="8" text-anchor="middle">127.0.0.1:auto port — receives cookie from browser handoff</text>
+
+        <!-- CLI to SQLite arrow -->
+        <line x1="460" y1="300" x2="460" y2="343" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <text x="478" y="324" fill="#94a3b8" font-size="8">parsed events</text>
+
+        <!-- CLI to packages -->
+        <line x1="290" y1="300" x2="200" y2="343" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3"/>
+        <line x1="800" y1="300" x2="850" y2="343" stroke="#34d399" stroke-width="1.2" stroke-dasharray="3,3"/>
+
+        <!-- ============ NETWORK BAND ============ -->
+        <line x1="862" y1="485" x2="862" y2="540" stroke="#a7f300" stroke-width="2" marker-end="url(#arrow-trail)"/>
+        <text x="876" y="510" fill="#a7f300" font-size="9" font-weight="600">HTTPS POST</text>
+        <text x="876" y="523" fill="#94a3b8" font-size="8">/api/sessions/upload</text>
+
+        <!-- ============ VERCEL BOUNDARY ============ -->
+        <rect x="20" y="540" width="1060" height="380" rx="12" fill="rgba(167, 243, 0, 0.04)" stroke="#a7f300" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="36" y="562" fill="#a7f300" font-size="11" font-weight="600">Vercel — gettrail.vercel.app  ·  Next.js 15 App Router</text>
+
+        <!-- Next.js pages (Frontend) -->
+        <rect x="40" y="582" width="260" height="320" rx="8" fill="#0f172a"/>
+        <rect x="40" y="582" width="260" height="320" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="170" y="604" fill="white" font-size="12" font-weight="700" text-anchor="middle">Public Pages (RSC)</text>
+        <text x="170" y="620" fill="#94a3b8" font-size="9" text-anchor="middle">React Server Components</text>
+        <text x="170" y="634" fill="#94a3b8" font-size="9" text-anchor="middle">Tailwind v4 · Geist · #a7f300</text>
+        <text x="60" y="660" fill="#22d3ee" font-size="9" font-weight="600">routes</text>
+        <text x="60" y="676" fill="#94a3b8" font-size="9">• /</text>
+        <text x="60" y="690" fill="#94a3b8" font-size="9">• /install</text>
+        <text x="60" y="704" fill="#94a3b8" font-size="9">• /u/[user]</text>
+        <text x="60" y="718" fill="#94a3b8" font-size="9">• /u/[user]/[slug]</text>
+        <text x="60" y="732" fill="#94a3b8" font-size="9">• /cli-auth + /cli-auth/success</text>
+        <text x="60" y="746" fill="#94a3b8" font-size="9">• /settings</text>
+        <text x="60" y="772" fill="#22d3ee" font-size="9" font-weight="600">OG image routes (satori)</text>
+        <text x="60" y="788" fill="#94a3b8" font-size="9">• /opengraph-image</text>
+        <text x="60" y="802" fill="#94a3b8" font-size="9">• /u/.../opengraph-image</text>
+        <text x="60" y="816" fill="#94a3b8" font-size="9">• /u/.../[slug]/opengraph-image</text>
+        <text x="170" y="850" fill="#22d3ee" font-size="8" text-anchor="middle">cookie: __Secure-better-auth.session_token</text>
+        <text x="170" y="864" fill="#94a3b8" font-size="8" text-anchor="middle">SSR via getSession() on every render</text>
+        <text x="170" y="888" fill="#a7f300" font-size="9" text-anchor="middle">deploy: vercel --prod</text>
+
+        <!-- API routes (Backend) -->
+        <rect x="320" y="582" width="260" height="320" rx="8" fill="#0f172a"/>
+        <rect x="320" y="582" width="260" height="320" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="450" y="604" fill="white" font-size="12" font-weight="700" text-anchor="middle">API + Route Handlers</text>
+        <text x="450" y="620" fill="#94a3b8" font-size="9" text-anchor="middle">+ Server Actions</text>
+        <text x="340" y="650" fill="#34d399" font-size="9" font-weight="600">upload + share</text>
+        <text x="340" y="666" fill="#94a3b8" font-size="9">• POST /api/sessions/upload</text>
+        <text x="340" y="680" fill="#94a3b8" font-size="9">  → derive title → upsert</text>
+        <text x="340" y="704" fill="#34d399" font-size="9" font-weight="600">profile actions</text>
+        <text x="340" y="720" fill="#94a3b8" font-size="9">• feature toggle</text>
+        <text x="340" y="734" fill="#94a3b8" font-size="9">• bio / socials</text>
+        <text x="340" y="748" fill="#94a3b8" font-size="9">• dismissIntro cookie</text>
+        <text x="340" y="772" fill="#34d399" font-size="9" font-weight="600">distribution</text>
+        <text x="340" y="788" fill="#94a3b8" font-size="9">• GET /install.sh</text>
+        <text x="340" y="802" fill="#94a3b8" font-size="9">  text/plain bash installer</text>
+        <text x="340" y="816" fill="#94a3b8" font-size="9">  no-cache, ships instantly</text>
+        <text x="340" y="840" fill="#34d399" font-size="9" font-weight="600">cli handshake</text>
+        <text x="340" y="856" fill="#94a3b8" font-size="9">• cli-auth success action</text>
+        <text x="340" y="870" fill="#94a3b8" font-size="9">  reads __Secure- cookie</text>
+        <text x="340" y="884" fill="#94a3b8" font-size="9">  POSTs to localhost callback</text>
+
+        <!-- Auth (Security) -->
+        <rect x="600" y="582" width="220" height="195" rx="8" fill="#0f172a"/>
+        <rect x="600" y="582" width="220" height="195" rx="8" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1.5"/>
+        <text x="710" y="604" fill="white" font-size="12" font-weight="700" text-anchor="middle">better-auth</text>
+        <text x="710" y="620" fill="#94a3b8" font-size="9" text-anchor="middle">OAuth · sessions · cookies</text>
+        <text x="620" y="650" fill="#fb7185" font-size="9" font-weight="600">providers</text>
+        <text x="620" y="666" fill="#94a3b8" font-size="9">• GitHub (prod app)</text>
+        <text x="620" y="680" fill="#94a3b8" font-size="9">  cb: gettrail.vercel.app/...</text>
+        <text x="620" y="694" fill="#94a3b8" font-size="9">• GitHub (dev app)</text>
+        <text x="620" y="708" fill="#94a3b8" font-size="9">  cb: localhost:3000/...</text>
+        <text x="620" y="732" fill="#fb7185" font-size="9" font-weight="600">cookie</text>
+        <text x="620" y="748" fill="#94a3b8" font-size="9">• __Secure- prefix on HTTPS</text>
+        <text x="620" y="762" fill="#94a3b8" font-size="9">• httpOnly, sameSite=lax</text>
+
+        <!-- Drizzle ORM -->
+        <rect x="600" y="795" width="220" height="50" rx="6" fill="#0f172a"/>
+        <rect x="600" y="795" width="220" height="50" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="710" y="815" fill="white" font-size="11" font-weight="600" text-anchor="middle">Drizzle ORM</text>
+        <text x="710" y="831" fill="#94a3b8" font-size="9" text-anchor="middle">TypeScript schemas · migrations</text>
+
+        <!-- Neon Postgres (Database) -->
+        <rect x="840" y="582" width="220" height="263" rx="8" fill="#0f172a"/>
+        <rect x="840" y="582" width="220" height="263" rx="8" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="950" y="604" fill="white" font-size="12" font-weight="700" text-anchor="middle">Neon Postgres 17</text>
+        <text x="950" y="620" fill="#94a3b8" font-size="9" text-anchor="middle">serverless HTTP driver</text>
+        <text x="860" y="650" fill="#a78bfa" font-size="9" font-weight="600">auth tables</text>
+        <text x="860" y="666" fill="#94a3b8" font-size="9">• user (handle, bio, socials)</text>
+        <text x="860" y="680" fill="#94a3b8" font-size="9">• account (oauth)</text>
+        <text x="860" y="694" fill="#94a3b8" font-size="9">• session</text>
+        <text x="860" y="708" fill="#94a3b8" font-size="9">• verification</text>
+        <text x="860" y="734" fill="#a78bfa" font-size="9" font-weight="600">trail tables</text>
+        <text x="860" y="750" fill="#94a3b8" font-size="9">• trail_session</text>
+        <text x="860" y="764" fill="#94a3b8" font-size="9">  (slug, title, tool, is_featured)</text>
+        <text x="860" y="778" fill="#94a3b8" font-size="9">• trail_event</text>
+        <text x="860" y="792" fill="#94a3b8" font-size="9">  (kind, payload, at)</text>
+        <text x="950" y="820" fill="#a78bfa" font-size="8" text-anchor="middle">project: ep-lively-union-ap7qvni3</text>
+        <text x="950" y="834" fill="#94a3b8" font-size="8" text-anchor="middle">region: us-east-1</text>
+
+        <!-- Connections inside Vercel -->
+        <line x1="300" y1="700" x2="318" y2="700" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="580" y1="680" x2="598" y2="680" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-rose)"/>
+        <line x1="710" y1="777" x2="710" y2="793" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="580" y1="820" x2="598" y2="820" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="820" y1="820" x2="838" y2="775" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- GitHub OAuth external arrow -->
+        <path d="M 820 660 Q 880 510 960 480 L 1060 478" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,5" marker-end="url(#arrow-rose)"/>
+        <text x="990" y="498" fill="#fb7185" font-size="8" text-anchor="middle">github.com/login/oauth</text>
+
+        <!-- ============ INSTALL FLOW CALLOUT ============ -->
+        <rect x="20" y="945" width="1060" height="42" rx="8" fill="#0f172a"/>
+        <rect x="20" y="945" width="1060" height="42" rx="8" fill="rgba(167, 243, 0, 0.06)" stroke="#a7f300" stroke-width="1"/>
+        <text x="36" y="963" fill="#a7f300" font-size="10" font-weight="700">install pipeline</text>
+        <text x="36" y="978" fill="#94a3b8" font-size="9">curl -fsSL gettrail.vercel.app/install.sh | sh   →   clone repo   →   pnpm install   →   npm run build-release (better-sqlite3)   →   tsup build @trail/cli   →   symlink ~/.local/bin/trail</text>
+
+        <!-- ============ LEGEND (top-right corner, well outside any component) ============ -->
+        <rect x="1080" y="36" width="110" height="158" rx="6" fill="rgba(15, 23, 42, 0.95)" stroke="#1e293b" stroke-width="1"/>
+        <text x="1135" y="54" fill="white" font-size="10" font-weight="600" text-anchor="middle">Legend</text>
+
+        <rect x="1092" y="64" width="14" height="9" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="1112" y="72" fill="#94a3b8" font-size="8">Frontend</text>
+
+        <rect x="1092" y="78" width="14" height="9" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="1112" y="86" fill="#94a3b8" font-size="8">Backend</text>
+
+        <rect x="1092" y="92" width="14" height="9" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="1112" y="100" fill="#94a3b8" font-size="8">Database</text>
+
+        <rect x="1092" y="106" width="14" height="9" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="1112" y="114" fill="#94a3b8" font-size="8">Security</text>
+
+        <rect x="1092" y="120" width="14" height="9" rx="2" fill="rgba(30, 41, 59, 0.5)" stroke="#94a3b8" stroke-width="1"/>
+        <text x="1112" y="128" fill="#94a3b8" font-size="8">External</text>
+
+        <line x1="1092" y1="142" x2="1108" y2="142" stroke="#a7f300" stroke-width="1.5"/>
+        <text x="1112" y="145" fill="#94a3b8" font-size="8">Data flow</text>
+
+        <line x1="1092" y1="156" x2="1108" y2="156" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="1112" y="159" fill="#94a3b8" font-size="8">Auth flow</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot trail"></div>
+          <h3>Why local-first</h3>
+        </div>
+        <ul>
+          <li>• Sessions live on your machine in SQLite</li>
+          <li>• Nothing leaves until <code>trail share</code></li>
+          <li>• @trail/anonymize scrubs paths + secrets pre-upload</li>
+          <li>• Audit-friendly for skeptical reviewers</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Cross-vendor moat</h3>
+        </div>
+        <ul>
+          <li>• 6 parsers — claude-code, codex, cursor, copilot CLI, copilot chat, hermes</li>
+          <li>• One zod schema across all sources</li>
+          <li>• Anthropic / OpenAI viewers will only cover their own tools</li>
+          <li>• Trail is the neutral public layer</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>Why Neon over Turso</h3>
+        </div>
+        <ul>
+          <li>• Mature MCP for agent leverage</li>
+          <li>• Standard Postgres, no lock-in</li>
+          <li>• HTTP driver works in Vercel edge / RSC</li>
+          <li>• Local SQLite + cloud Postgres asymmetry handled by Drizzle</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Auth choices</h3>
+        </div>
+        <ul>
+          <li>• better-auth over Clerk — cheaper, open, no lock-in</li>
+          <li>• Two GitHub OAuth apps (dev localhost + prod)</li>
+          <li>• __Secure- cookie prefix on HTTPS</li>
+          <li>• CLI auth forwards the same session cookie</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Distribution</h3>
+        </div>
+        <ul>
+          <li>• /install page — copy-pasteable 3-step UI</li>
+          <li>• /install.sh — bash installer served as text/plain</li>
+          <li>• Rebuilds better-sqlite3 binding (pnpm v10 quirk)</li>
+          <li>• TODO: npm publish @trail/cli → npm i -g</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Deferred / not in stack</h3>
+        </div>
+        <ul>
+          <li>• Native menu bar app (apps/menubar/, deferred until Dev ID)</li>
+          <li>• Electron / Tauri — overkill</li>
+          <li>• Redis / queues — uploads are sync POSTs</li>
+          <li>• Stripe wired but off (waiting for demand signal)</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">
+      Trail v0.1 · github.com/janfaris/trail · pnpm + Turborepo monorepo · auto-deploy via Vercel · last updated 2026-05-18
+    </p>
+  </div>
+</body>
+</html>
