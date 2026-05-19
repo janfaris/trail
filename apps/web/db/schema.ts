@@ -141,3 +141,18 @@ export const discoverFeed = pgTable(
     rankIdx: index("discover_feed_rank_idx").on(t.rank),
   }),
 );
+
+// Short-lived single-use tokens for CLI device-code login. CLI generates id
+// (random hex), opens /cli-auth?token=id; the success page fills in
+// cookie_value + user_handle; /api/cli-auth/poll hands them to the CLI and
+// deletes the row.
+export const cliToken = pgTable("cli_token", {
+  id: text("id").primaryKey(),
+  cookieValue: text("cookie_value"),
+  userHandle: text("user_handle"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});
