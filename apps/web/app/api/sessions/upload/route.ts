@@ -6,7 +6,8 @@ import { type UploadSessionResponse } from "@trail/client";
 import { anonymize } from "@trail/anonymize";
 import { deriveTitle } from "@/lib/derive-title";
 import { generateSessionMeta } from "@/lib/openai";
-import { eq } from "drizzle-orm";
+import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
+import { eq, sql } from "drizzle-orm";
 
 function genSlug() {
   return Math.random().toString(36).slice(2, 10);
@@ -79,6 +80,22 @@ export async function POST(req: NextRequest) {
         data: e as unknown as Record<string, unknown>,
       })),
     );
+  }
+
+  // Best-effort embedding. Failure is non-fatal (search just won't index this one).
+  try {
+    const finalTitle = ai?.title ?? heuristicTitle;
+    const finalSummary = ai?.summary ?? s.summary ?? "";
+    const embedding = await generateSessionEmbedding(finalTitle, finalSummary, prompts);
+    if (embedding) {
+      const lit = toVectorLiteral(embedding);
+      await db
+        .update(schema.trailSession)
+        .set({ embedding: sql`${lit}::vector` })
+        .where(eq(schema.trailSession.id, sessionId));
+    }
+  } catch (err) {
+    console.error("[upload] embedding failed:", (err as Error).message);
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
