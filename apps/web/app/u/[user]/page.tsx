@@ -75,8 +75,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
   const gh = userRow.githubHandle || userRow.handle;
   const x = userRow.xHandle;
+  const li = userRow.linkedinHandle;
   const site = userRow.website;
-  const hasSocials = Boolean(gh || x || site);
+  const hasSocials = Boolean(gh || x || li || site);
 
   const heroFeatured = featured[0];
   const compactFeatured = featured.slice(1);
@@ -152,6 +153,22 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                     >
                       <XIcon size={13} />
                       X
+                    </a>
+                  </>
+                )}
+                {li && (
+                  <>
+                    <span className="text-zinc-700">·</span>
+                    <a
+                      href={`https://linkedin.com/in/${li}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:text-zinc-100"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                        <path d="M2.5 2A1.5 1.5 0 0 0 1 3.5v9A1.5 1.5 0 0 0 2.5 14h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 2h-11zM4.7 5.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM3.8 6.6h1.8v5.7H3.8V6.6zm3 0h1.7v.8c.24-.37.78-.95 1.86-.95 1.32 0 2.04.87 2.04 2.5v3.36h-1.78V9.32c0-.78-.27-1.27-.95-1.27-.52 0-.83.36-.97.7-.05.13-.07.31-.07.5v3.04H6.8V6.6z" />
+                      </svg>
+                      LinkedIn
                     </a>
                   </>
                 )}

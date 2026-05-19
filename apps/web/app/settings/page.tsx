@@ -67,6 +67,15 @@ export default async function SettingsPage() {
             />
           </Field>
 
+          <Field label="LinkedIn handle">
+            <input
+              name="linkedinHandle"
+              defaultValue={me.linkedinHandle ?? ""}
+              placeholder="janfaris"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm font-mono text-zinc-100 focus:outline-none focus:border-[#a7f300]/60"
+            />
+          </Field>
+
           <Field label="Website">
             <input
               name="website"
