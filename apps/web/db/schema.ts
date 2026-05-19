@@ -5,6 +5,7 @@ import {
   integer,
   boolean,
   jsonb,
+  numeric,
   uniqueIndex,
   index,
   vector,
@@ -91,6 +92,7 @@ export const trailSession = pgTable(
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    sharedAt: timestamp("shared_at", { withTimezone: true }),
     // text-embedding-3-small = 1536 dims. HNSW index enables fast cosine
     // similarity search.
     embedding: vector("embedding", { dimensions: 1536 }),
@@ -117,5 +119,25 @@ export const event = pgTable(
   },
   (t) => ({
     sessionIdx: index("event_session_idx").on(t.sessionId, t.idx),
+  }),
+);
+
+// Materialized trending feed. Refreshed nightly by /api/cron/discover.
+// Score formula lives in the cron route, not here — this table is just the
+// rendered output (rank + score + slug). FK cascade handles row deletes.
+export const discoverFeed = pgTable(
+  "discover_feed",
+  {
+    slug: text("slug")
+      .primaryKey()
+      .references(() => trailSession.slug, { onDelete: "cascade" }),
+    rank: integer("rank").notNull(),
+    score: numeric("score", { precision: 10, scale: 4 }).notNull(),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    rankIdx: index("discover_feed_rank_idx").on(t.rank),
   }),
 );
