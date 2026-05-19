@@ -68,6 +68,12 @@ export default async function Home() {
             <span className="text-[#a7f300]">/</span>trail
           </Link>
           <nav className="flex items-center gap-5 text-sm">
+            <Link
+              href="/search"
+              className="text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              Search
+            </Link>
             <a
               href="https://github.com/janfaris/trail"
               className="text-zinc-400 hover:text-zinc-100 transition-colors"
