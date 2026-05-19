@@ -1,18 +1,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { db, schema } from "@/db/client";
 
-function isValidCallback(cb: string | undefined): cb is string {
-  if (!cb) return false;
-  try {
-    const u = new URL(cb);
-    if (u.protocol !== "http:") return false;
-    return u.hostname === "127.0.0.1" || u.hostname === "localhost";
-  } catch {
-    return false;
-  }
-}
+const TOKEN_RE = /^[a-f0-9]{32,64}$/i;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -30,37 +23,50 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function InvalidShell() {
+  return (
+    <Shell>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+        <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+          invalid request
+        </span>
+      </div>
+      <h1 className="text-lg font-semibold tracking-tight mb-2">Invalid CLI request</h1>
+      <p className="text-sm text-zinc-400 leading-relaxed">
+        This page must be opened by the Trail CLI. Run{" "}
+        <code className="font-mono text-[#a7f300] bg-zinc-900 px-1.5 py-0.5 rounded">
+          trail login
+        </code>{" "}
+        in your terminal.
+      </p>
+    </Shell>
+  );
+}
+
 export default async function CliAuthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callback?: string }>;
+  searchParams: Promise<{ token?: string }>;
 }) {
-  const { callback } = await searchParams;
-
-  if (!isValidCallback(callback)) {
-    return (
-      <Shell>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
-            invalid request
-          </span>
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight mb-2">Invalid CLI request</h1>
-        <p className="text-sm text-zinc-400 leading-relaxed">
-          This page must be opened by the Trail CLI. Run{" "}
-          <code className="font-mono text-[#a7f300] bg-zinc-900 px-1.5 py-0.5 rounded">
-            trail login
-          </code>{" "}
-          in your terminal.
-        </p>
-      </Shell>
-    );
+  const { token } = await searchParams;
+  if (!token || !TOKEN_RE.test(token)) {
+    return <InvalidShell />;
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-  const successUrl = `/cli-auth/success?callback=${encodeURIComponent(callback)}`;
+  // Token must have been pre-registered by the CLI via /api/cli-auth/init.
+  // This keeps the cli-auth page a pure consumer and lets a stale or
+  // unknown token render the same "invalid request" message instead of
+  // silently creating a row that no one is polling.
+  const existing = await db.query.cliToken.findFirst({
+    where: eq(schema.cliToken.id, token),
+  });
+  if (!existing || existing.expiresAt.getTime() < Date.now()) {
+    return <InvalidShell />;
+  }
 
+  const successUrl = `/cli-auth/success?token=${encodeURIComponent(token)}`;
+  const session = await auth.api.getSession({ headers: await headers() });
   if (session?.user) {
     redirect(successUrl);
   }

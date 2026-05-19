@@ -1,46 +1,55 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
-import { eq } from "drizzle-orm";
 
-// TODO(v0.2): replace this with a proper CLI token system (cli_tokens table,
-// short-lived bearer tokens scoped to upload only). For now we forward the raw
-// session cookie because the user explicitly initiated `trail login` and we
-// want to ship the share flow without inventing a new auth surface.
-export async function getCliAuthPayload(): Promise<
-  | { ok: true; cookie: string; userHandle: string }
-  | { ok: false; error: string }
-> {
+const TOKEN_RE = /^[a-f0-9]{32,64}$/i;
+
+// Called by the success page (server component) to attach the freshly-issued
+// session cookie + user handle onto the pending cli_token row. The CLI is
+// polling /api/cli-auth/poll and will consume + delete the row.
+export async function completeCliAuth(
+  token: string,
+): Promise<{ ok: true; userHandle: string } | { ok: false; error: string }> {
+  if (!TOKEN_RE.test(token)) return { ok: false, error: "invalid token" };
+
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return { ok: false, error: "not authenticated" };
-  }
+  if (!session?.user) return { ok: false, error: "not authenticated" };
 
   const userRow = await db.query.user.findFirst({
     where: eq(schema.user.id, session.user.id),
   });
-  if (!userRow?.handle) {
-    return { ok: false, error: "user has no handle" };
-  }
+  if (!userRow?.handle) return { ok: false, error: "user has no handle" };
 
-  // better-auth's default session cookie is `better-auth.session_token`.
-  // On HTTPS in production, better-auth automatically prefixes it with
-  // `__Secure-` per the cookie spec, so we must check both names.
   const jar = await cookies();
   const cookieEntry =
     jar.get("better-auth.session_token") ??
     jar.get("__Secure-better-auth.session_token");
-  if (!cookieEntry?.value) {
-    return { ok: false, error: "session cookie missing" };
-  }
-
-  // Forward under the exact name we found it (so the CLI's subsequent
-  // requests use whichever name the server is actually setting).
+  if (!cookieEntry?.value) return { ok: false, error: "session cookie missing" };
   const cookieName = jar.get("__Secure-better-auth.session_token")
     ? "__Secure-better-auth.session_token"
     : "better-auth.session_token";
   const cookieHeader = `${cookieName}=${cookieEntry.value}`;
-  return { ok: true, cookie: cookieHeader, userHandle: userRow.handle };
+
+  const row = await db.query.cliToken.findFirst({
+    where: eq(schema.cliToken.id, token),
+  });
+  if (!row) return { ok: false, error: "token not found" };
+  if (row.expiresAt.getTime() < Date.now()) {
+    await db.delete(schema.cliToken).where(eq(schema.cliToken.id, token));
+    return { ok: false, error: "token expired" };
+  }
+
+  await db
+    .update(schema.cliToken)
+    .set({
+      cookieValue: cookieHeader,
+      userHandle: userRow.handle,
+      status: "ready",
+    })
+    .where(eq(schema.cliToken.id, token));
+
+  return { ok: true, userHandle: userRow.handle };
 }
