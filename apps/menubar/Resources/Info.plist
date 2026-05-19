@@ -28,5 +28,9 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>TrailBar uses AppleScript to open Terminal.app and run `trail view` for a selected session.</string>
+    <key>NSSupportsAutomaticTermination</key>
+    <false/>
+    <key>NSSupportsSuddenTermination</key>
+    <false/>
 </dict>
 </plist>

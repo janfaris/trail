@@ -17,4 +17,9 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 # Strip extended attributes that can cause Gatekeeper issues.
 xattr -cr "$APP" || true
 
+# Re-sign ad-hoc so the (now-copied) Info.plist is bound to the signature.
+# Without this, macOS sees Info.plist as unsigned and may apply a stricter
+# TCC sandbox to the process, blocking access to ~/.trail.
+codesign --force --deep --sign - "$APP"
+
 echo "✓ Built $APP"

@@ -10,7 +10,15 @@ enum TrailDBError: Error {
 
 struct TrailDB {
     static var defaultPath: String {
-        (NSHomeDirectory() as NSString).appendingPathComponent(".trail/db.sqlite")
+        // Use getpwuid for the real home, bypassing any sandboxed $HOME
+        // redirection. NSHomeDirectory() returns a per-app container when
+        // the binary's TCC sandbox is on, even if we didn't ask for it.
+        let uid = getuid()
+        if let pw = getpwuid(uid), let homePtr = pw.pointee.pw_dir {
+            let home = String(cString: homePtr)
+            return (home as NSString).appendingPathComponent(".trail/db.sqlite")
+        }
+        return (NSHomeDirectory() as NSString).appendingPathComponent(".trail/db.sqlite")
     }
 
     private static let isoFormatter: ISO8601DateFormatter = {

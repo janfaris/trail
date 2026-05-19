@@ -4,9 +4,13 @@ import Combine
 @MainActor
 final class SessionStore: ObservableObject {
     @Published var recent: [SessionSummary] = []
-    @Published var todayCount: Int = 0
+    @Published var todayCount: Int = 0 { didSet { onCountsChanged?() } }
     @Published var totalCount: Int = 0
     @Published var lastError: String?
+
+    /// Callback fired on the main thread when counts change. Used by
+    /// AppDelegate to update the NSStatusItem title without observing.
+    var onCountsChanged: (() -> Void)?
 
     private var timer: Timer?
     private var fsSource: DispatchSourceFileSystemObject?
