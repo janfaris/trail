@@ -87,6 +87,65 @@ export function computeDurationSeconds(
   return secs;
 }
 
+type ToolCallEvent = {
+  kind: string;
+  payload?: unknown;
+  data?: unknown;
+};
+
+function toolCallPayload(e: ToolCallEvent): {
+  name?: string;
+  args?: { path?: string };
+  result?: { success?: boolean; error?: unknown };
+} | null {
+  if (e.kind !== "tool_call") return null;
+  return (e.payload ?? e.data) as {
+    name?: string;
+    args?: { path?: string };
+    result?: { success?: boolean; error?: unknown };
+  } | null;
+}
+
+export function extractToolCallCounts(
+  events: ToolCallEvent[],
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const e of events) {
+    const p = toolCallPayload(e);
+    if (!p?.name) continue;
+    counts[p.name] = (counts[p.name] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export function countDistinctFiles(events: ToolCallEvent[]): number {
+  const set = new Set<string>();
+  for (const e of events) {
+    const p = toolCallPayload(e);
+    const path = p?.args?.path;
+    if (typeof path === "string" && path.length > 0) set.add(path);
+  }
+  return set.size;
+}
+
+export function countPrompts(events: Array<{ kind: string }>): number {
+  let n = 0;
+  for (const e of events) if (e.kind === "prompt") n++;
+  return n;
+}
+
+export function countFailedToolCalls(events: ToolCallEvent[]): number {
+  let n = 0;
+  for (const e of events) {
+    const p = toolCallPayload(e);
+    if (!p) continue;
+    const r = p.result;
+    if (!r) continue;
+    if (r.success === false || r.error != null) n++;
+  }
+  return n;
+}
+
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "";
   if (seconds < 60) return "0m";
