@@ -3,4 +3,6 @@ export const DEFAULT_TRAIL_API_URL = "https://gettrail.vercel.app";
 export const ENDPOINTS = {
   UPLOAD_SESSION: "/api/sessions/upload",
   CLI_AUTH_PAGE: "/cli-auth",
+  CLI_AUTH_INIT: "/api/cli-auth/init",
+  CLI_AUTH_POLL: "/api/cli-auth/poll",
 } as const;
