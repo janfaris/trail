@@ -53,6 +53,13 @@ c_dim "→ installing workspace deps (pnpm install)…"
 ( cd "\${SRC_DIR}" && pnpm install --frozen-lockfile=false )
 
 echo
+c_dim "→ rebuilding native modules (better-sqlite3)…"
+# pnpm v10 blocks postinstall scripts by default — better-sqlite3 needs an
+# explicit rebuild for its node-gyp binding, otherwise 'trail' fails at
+# runtime with "Could not locate the bindings file."
+( cd "\${SRC_DIR}" && pnpm rebuild better-sqlite3 )
+
+echo
 c_dim "→ building @trail/cli…"
 ( cd "\${SRC_DIR}" && pnpm --filter @trail/cli build )
 
