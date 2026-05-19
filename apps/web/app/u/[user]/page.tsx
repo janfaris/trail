@@ -52,11 +52,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
   const sessionInfo = await auth.api.getSession({ headers: await headers() });
   const isSelf = sessionInfo?.user?.id === userRow.id;
-  const isSignedIn = Boolean(sessionInfo?.user);
 
   const jar = await cookies();
   const seenIntro = jar.get("trail_seen_intro")?.value === "1";
-  const showIntro = !isSignedIn && !seenIntro;
+  // Show the "Try Trail" panel to anyone who is NOT the profile owner
+  // (anon visitors + signed-in strangers). Owners don't need install instructions.
+  const showIntro = !isSelf && !seenIntro;
 
   const all = await db
     .select()
