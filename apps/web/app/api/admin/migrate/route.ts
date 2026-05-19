@@ -26,6 +26,14 @@ const STATEMENTS: { name: string; sql: string }[] = [
     name: "user.linkedin_handle",
     sql: `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS linkedin_handle text`,
   },
+  {
+    name: "trail_session.languages",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS languages JSONB`,
+  },
+  {
+    name: "trail_session.duration_seconds",
+    sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS duration_seconds INTEGER`,
+  },
 ];
 
 export async function POST(req: NextRequest) {
