@@ -54,10 +54,17 @@ c_dim "→ installing workspace deps (pnpm install)…"
 
 echo
 c_dim "→ rebuilding native modules (better-sqlite3)…"
-# pnpm v10 blocks postinstall scripts by default — better-sqlite3 needs an
-# explicit rebuild for its node-gyp binding, otherwise 'trail' fails at
-# runtime with "Could not locate the bindings file."
-( cd "\${SRC_DIR}" && pnpm rebuild better-sqlite3 )
+# pnpm v10 blocks postinstall scripts by default, AND \`pnpm rebuild\` silently
+# skips packages not on the approved-scripts list. Run npm's build-release
+# directly inside the package — that always works.
+BSQL_DIR="\${SRC_DIR}/node_modules/.pnpm/better-sqlite3@11.10.0/node_modules/better-sqlite3"
+if [ -d "\${BSQL_DIR}" ]; then
+  ( cd "\${BSQL_DIR}" && npm run build-release )
+else
+  c_warn "! better-sqlite3 path not found at \${BSQL_DIR}"
+  c_warn "  attempting generic pnpm rebuild as fallback…"
+  ( cd "\${SRC_DIR}" && pnpm rebuild better-sqlite3 )
+fi
 
 echo
 c_dim "→ building @trail/cli…"
