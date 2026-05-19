@@ -26,13 +26,21 @@ export async function getCliAuthPayload(): Promise<
   }
 
   // better-auth's default session cookie is `better-auth.session_token`.
-  // It's httpOnly, but server actions can read it via next/headers cookies().
+  // On HTTPS in production, better-auth automatically prefixes it with
+  // `__Secure-` per the cookie spec, so we must check both names.
   const jar = await cookies();
-  const cookieEntry = jar.get("better-auth.session_token");
+  const cookieEntry =
+    jar.get("better-auth.session_token") ??
+    jar.get("__Secure-better-auth.session_token");
   if (!cookieEntry?.value) {
     return { ok: false, error: "session cookie missing" };
   }
 
-  const cookieHeader = `better-auth.session_token=${cookieEntry.value}`;
+  // Forward under the exact name we found it (so the CLI's subsequent
+  // requests use whichever name the server is actually setting).
+  const cookieName = jar.get("__Secure-better-auth.session_token")
+    ? "__Secure-better-auth.session_token"
+    : "better-auth.session_token";
+  const cookieHeader = `${cookieName}=${cookieEntry.value}`;
   return { ok: true, cookie: cookieHeader, userHandle: userRow.handle };
 }
