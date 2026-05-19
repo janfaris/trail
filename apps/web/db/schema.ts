@@ -27,6 +27,7 @@ export const user = pgTable(
     bio: text("bio"),
     xHandle: text("x_handle"),
     githubHandle: text("github_handle"),
+    linkedinHandle: text("linkedin_handle"),
     website: text("website"),
   },
   (t) => ({

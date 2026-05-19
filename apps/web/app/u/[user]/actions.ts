@@ -56,12 +56,18 @@ export async function saveProfile(formData: FormData) {
   const bio = (formData.get("bio") ?? "").toString().slice(0, 160) || null;
   const xHandle = ((formData.get("xHandle") ?? "").toString().trim().replace(/^@/, "")) || null;
   const githubHandle = ((formData.get("githubHandle") ?? "").toString().trim().replace(/^@/, "")) || null;
+  let linkedinHandle = (formData.get("linkedinHandle") ?? "").toString().trim();
+  linkedinHandle = linkedinHandle.replace(/^@/, "").replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "").replace(/\/+$/, "");
+  if (linkedinHandle && !/^[a-zA-Z0-9_-]{3,100}$/.test(linkedinHandle)) {
+    throw new Error("LinkedIn handle must be 3-100 chars, alphanumeric + hyphens/underscores only.");
+  }
+  const linkedinHandleValue = linkedinHandle || null;
   let website = (formData.get("website") ?? "").toString().trim() || null;
   if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
 
   await db
     .update(schema.user)
-    .set({ bio, xHandle, githubHandle, website })
+    .set({ bio, xHandle, githubHandle, linkedinHandle: linkedinHandleValue, website })
     .where(eq(schema.user.id, u.id));
 
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
