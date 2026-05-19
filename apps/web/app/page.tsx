@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { ToolIcon } from "@/components/tool-icon";
+import { RelativeTime } from "@/components/relative-time";
 import { SignOutButton } from "@/components/sign-out-button";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
@@ -60,6 +61,38 @@ export default async function Home() {
     : null;
   const handle = userRow?.handle ?? null;
 
+  // Top-6 discover feed for the homepage section. Hides itself if empty (e.g.
+  // before the first cron run or if the table doesn't exist yet).
+  let discover: Array<{
+    slug: string;
+    title: string | null;
+    tool: string;
+    eventCount: number;
+    startedAt: Date;
+    handle: string | null;
+  }> = [];
+  try {
+    discover = (await db
+      .select({
+        slug: schema.discoverFeed.slug,
+        title: schema.trailSession.title,
+        tool: schema.trailSession.tool,
+        eventCount: schema.trailSession.eventCount,
+        startedAt: schema.trailSession.startedAt,
+        handle: schema.user.handle,
+      })
+      .from(schema.discoverFeed)
+      .innerJoin(
+        schema.trailSession,
+        eq(schema.discoverFeed.slug, schema.trailSession.slug),
+      )
+      .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
+      .orderBy(asc(schema.discoverFeed.rank))
+      .limit(6)) as typeof discover;
+  } catch {
+    discover = [];
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-zinc-900">
@@ -68,6 +101,12 @@ export default async function Home() {
             <span className="text-[#a7f300]">/</span>trail
           </Link>
           <nav className="flex items-center gap-5 text-sm">
+            <Link
+              href="/discover"
+              className="text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              Discover
+            </Link>
             <Link
               href="/search"
               className="text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -269,6 +308,48 @@ $ trail share latest
             Trail is free during the v0.1 preview. Pricing arrives with v1.0.
           </p>
         </section>
+
+        {discover.length > 0 && (
+          <section className="max-w-5xl mx-auto px-6 py-20 border-t border-zinc-900">
+            <div className="flex items-end justify-between mb-8">
+              <h2 className="text-2xl font-medium tracking-tight text-zinc-50">
+                Discover
+              </h2>
+              <Link
+                href="/discover"
+                className="text-sm text-zinc-400 hover:text-[#a7f300] transition-colors"
+              >
+                View all →
+              </Link>
+            </div>
+            <ul className="grid md:grid-cols-2 gap-3">
+              {discover.map((s) => (
+                <li key={s.slug}>
+                  <Link
+                    href={`/u/${s.handle ?? "anon"}/${s.slug}`}
+                    className="group flex items-center gap-4 border border-zinc-900 bg-zinc-950 rounded-md p-4 hover:border-zinc-700 hover:bg-zinc-900/40 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-zinc-100 truncate group-hover:text-white">
+                        {s.title ?? s.slug}
+                      </div>
+                      <div className="mt-1 flex items-center gap-x-3 gap-y-1 text-[11px] font-mono text-zinc-500">
+                        <span className="inline-flex items-center gap-1.5">
+                          <ToolIcon name={s.tool} size={11} className="text-zinc-500" />
+                          {s.tool}
+                        </span>
+                        {s.handle && <span className="text-zinc-400">@{s.handle}</span>}
+                        <span className="tabular-nums">{s.eventCount} ev</span>
+                        <RelativeTime date={s.startedAt} className="tabular-nums" />
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono text-zinc-600 group-hover:text-[#a7f300] shrink-0">→</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="max-w-5xl mx-auto px-6 py-20 border-t border-zinc-900">
           <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-10">
