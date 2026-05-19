@@ -7,6 +7,7 @@ import { anonymize } from "@trail/anonymize";
 import { deriveTitle } from "@/lib/derive-title";
 import { generateSessionMeta } from "@/lib/openai";
 import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
+import { extractLanguages, computeDurationSeconds } from "@/lib/session-metrics";
 import { eq, sql } from "drizzle-orm";
 
 function genSlug() {
@@ -56,6 +57,21 @@ export async function POST(req: NextRequest) {
   const lastEventKinds = s.events.slice(-3).map((e) => e.kind);
   const ai = prompts.length > 0 ? await generateSessionMeta(prompts, lastEventKinds) : null;
 
+  // Best-effort metrics. Bad data shouldn't block upload.
+  let languages: Record<string, number> | null = null;
+  let durationSeconds: number | null = null;
+  try {
+    const ev = s.events as Array<{ kind: string; payload?: unknown; at: string | Date }>;
+    languages = extractLanguages(ev);
+    durationSeconds = computeDurationSeconds(
+      new Date(s.startedAt),
+      s.endedAt ? new Date(s.endedAt) : null,
+      ev,
+    );
+  } catch (err) {
+    console.error("[upload] metrics failed:", (err as Error).message);
+  }
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: session.user.id,
@@ -67,6 +83,8 @@ export async function POST(req: NextRequest) {
     eventCount: s.events.length,
     startedAt: new Date(s.startedAt),
     endedAt: s.endedAt ? new Date(s.endedAt) : null,
+    languages: languages && Object.keys(languages).length > 0 ? languages : null,
+    durationSeconds,
   });
 
   if (s.events.length > 0) {
