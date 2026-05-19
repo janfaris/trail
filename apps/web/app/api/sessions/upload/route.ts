@@ -7,7 +7,14 @@ import { anonymize } from "@trail/anonymize";
 import { deriveTitle } from "@/lib/derive-title";
 import { generateSessionMeta } from "@/lib/openai";
 import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
-import { extractLanguages, computeDurationSeconds } from "@/lib/session-metrics";
+import {
+  extractLanguages,
+  computeDurationSeconds,
+  extractToolCallCounts,
+  countDistinctFiles,
+  countPrompts,
+  countFailedToolCalls,
+} from "@/lib/session-metrics";
 import { eq, sql } from "drizzle-orm";
 
 function genSlug() {
@@ -60,6 +67,10 @@ export async function POST(req: NextRequest) {
   // Best-effort metrics. Bad data shouldn't block upload.
   let languages: Record<string, number> | null = null;
   let durationSeconds: number | null = null;
+  let toolCallCounts: Record<string, number> | null = null;
+  let distinctFiles: number | null = null;
+  let promptCount: number | null = null;
+  let failedToolCalls: number | null = null;
   try {
     const ev = s.events as Array<{ kind: string; payload?: unknown; at: string | Date }>;
     languages = extractLanguages(ev);
@@ -68,6 +79,10 @@ export async function POST(req: NextRequest) {
       s.endedAt ? new Date(s.endedAt) : null,
       ev,
     );
+    toolCallCounts = extractToolCallCounts(ev);
+    distinctFiles = countDistinctFiles(ev);
+    promptCount = countPrompts(ev);
+    failedToolCalls = countFailedToolCalls(ev);
   } catch (err) {
     console.error("[upload] metrics failed:", (err as Error).message);
   }
@@ -85,6 +100,11 @@ export async function POST(req: NextRequest) {
     endedAt: s.endedAt ? new Date(s.endedAt) : null,
     languages: languages && Object.keys(languages).length > 0 ? languages : null,
     durationSeconds,
+    toolCallCounts:
+      toolCallCounts && Object.keys(toolCallCounts).length > 0 ? toolCallCounts : null,
+    distinctFiles,
+    promptCount,
+    failedToolCalls,
   });
 
   if (s.events.length > 0) {
