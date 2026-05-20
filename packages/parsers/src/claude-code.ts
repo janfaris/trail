@@ -20,12 +20,15 @@ function extractText(content: unknown): string {
     return content
       .map((b) => {
         if (b && typeof b === "object") {
-          const blk = b as { type?: string; text?: string; content?: unknown };
+          const blk = b as { type?: string; text?: string };
           if (blk.type === "text" && typeof blk.text === "string") return blk.text;
-          if (blk.type === "tool_result") {
-            if (typeof blk.content === "string") return blk.content;
-            if (Array.isArray(blk.content)) return extractText(blk.content);
-          }
+          // Intentionally skip tool_result blocks here. The Claude Code
+          // .jsonl format echoes tool outputs back on user-role messages,
+          // but those are NOT user prompts — they're the protocol's way of
+          // returning tool results to the model. Including them here was
+          // the root cause of recipes containing raw search JSON +
+          // "REMINDER: You MUST include the sources above" assistant nudges
+          // surfaced as if they were the first user prompt.
         }
         return "";
       })

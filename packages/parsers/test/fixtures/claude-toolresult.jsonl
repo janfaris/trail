@@ -1,0 +1,5 @@
+{"type":"user","timestamp":"2026-05-20T10:00:00Z","sessionId":"toolresult-fixture","cwd":"/tmp/x","message":{"role":"user","content":[{"type":"text","text":"Search the web for puerto rico web design prices"}]}}
+{"type":"assistant","timestamp":"2026-05-20T10:00:01Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"WebSearch","input":{"query":"puerto rico web design prices"}}]}}
+{"type":"user","timestamp":"2026-05-20T10:00:02Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"[{\"title\":\"Cuanto cuesta una pagina web\",\"url\":\"https://smartmediapr.com/\"},{\"title\":\"More results\",\"url\":\"https://example.com\"}]\n\nREMINDER: You MUST include the sources above in your response."}]}]}}
+{"type":"assistant","timestamp":"2026-05-20T10:00:03Z","message":{"role":"assistant","content":[{"type":"text","text":"Based on the search results, prices range from $695 to $2000."}]}}
+{"type":"user","timestamp":"2026-05-20T10:00:04Z","message":{"role":"user","content":[{"type":"text","text":"Now compare to Squarespace pricing"}]}}
