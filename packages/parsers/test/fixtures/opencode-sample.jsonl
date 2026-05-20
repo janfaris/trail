@@ -1,0 +1,4 @@
+{"role":"user","content":"hello opencode","timestamp":"2026-05-20T10:00:00Z"}
+{"role":"assistant","content":[{"type":"text","text":"hi there"},{"type":"tool_use","name":"bash","input":{"cmd":"ls"}}],"timestamp":"2026-05-20T10:00:05Z"}
+{"role":"assistant","content":"done","timestamp":"2026-05-20T10:00:10Z","tool":{"name":"editor","args":{"file":"a.ts"}}}
+invalid json line
