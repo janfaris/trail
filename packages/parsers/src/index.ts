@@ -5,8 +5,8 @@ export type { ParseCursorOptions } from "./cursor.js";
 export { parseHermesSession } from "./hermes.js";
 export { parseCopilotCliSession } from "./copilot-cli.js";
 export { parseCopilotChatDB } from "./copilot-chat.js";
+export { parseClineTask } from "./cline.js";
+export { parseWindsurfSession } from "./windsurf.js";
 export type { ParseCopilotChatOptions } from "./copilot-chat.js";
 
-export async function parseAiderSession(): Promise<never> {
-  throw new Error("aider parser not implemented yet");
-}
+export { parseAiderSession } from "./aider.js";
