@@ -15,6 +15,8 @@ import { ExplainButton } from "@/components/explain-button";
 import { FileDiff } from "@/components/file-diff";
 import { RecipeCard } from "@/components/recipe-card";
 import { ForkButton } from "@/components/fork-button";
+import { ForkButtons } from "@/components/fork-buttons";
+import { ReactionBar } from "@/components/reaction-bar";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import type { Metadata } from "next";
 
@@ -194,6 +196,14 @@ export default async function SessionView({
           </span>
         </div>
 
+        <div className="mb-8">
+          <ForkButtons
+            shareUrl={fullUrl}
+            forkUrl={`${fullUrl}/fork`}
+            setupPrompt={firstPromptText ?? ""}
+          />
+        </div>
+
         <RecipeCard
           session={{
             title: sessionRow.title ?? "",
@@ -237,6 +247,8 @@ export default async function SessionView({
             return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
           })}
         </div>
+
+        <ReactionBar slug={slug} />
       </main>
     </div>
   );

@@ -60,6 +60,66 @@ const STATEMENTS: { name: string; sql: string }[] = [
   { name: "trail_session.pending_review_reasons", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS pending_review_reasons jsonb` },
   { name: "trail_session.redacted_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS redacted_at timestamp` },
   { name: "trail_session_visibility_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_visibility_idx ON trail_session (visibility)` },
+  // Phase 1 — taxonomy
+  { name: "trail_session.tools_used", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS tools_used jsonb` },
+  { name: "trail_session.frameworks", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS frameworks jsonb` },
+  { name: "trail_session.task_type", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS task_type text` },
+  { name: "trail_session.models", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS models jsonb` },
+  { name: "trail_session.outcome", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS outcome text` },
+  { name: "trail_session_task_type_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_task_type_idx ON trail_session (task_type)` },
+  { name: "trail_session_outcome_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_outcome_idx ON trail_session (outcome)` },
+  // Phase 1 — reactions on sessions
+  {
+    name: "session_reaction",
+    sql: `
+      CREATE TABLE IF NOT EXISTS "session_reaction" (
+        "id" text PRIMARY KEY,
+        "session_id" text NOT NULL REFERENCES "trail_session"("id") ON DELETE CASCADE,
+        "user_id" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "kind" text NOT NULL,
+        "note" text,
+        "created_at" timestamptz NOT NULL DEFAULT now(),
+        UNIQUE("session_id", "user_id", "kind")
+      )
+    `,
+  },
+  {
+    name: "session_reaction_session_idx",
+    sql: `CREATE INDEX IF NOT EXISTS session_reaction_session_idx ON session_reaction (session_id, kind)`,
+  },
+  // Phase 1.7 — curated playlists
+  {
+    name: "playlist",
+    sql: `
+      CREATE TABLE IF NOT EXISTS "playlist" (
+        "id" text PRIMARY KEY,
+        "slug" text NOT NULL UNIQUE,
+        "title" text NOT NULL,
+        "description" text,
+        "curator_id" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+        "is_official" boolean NOT NULL DEFAULT false,
+        "created_at" timestamptz NOT NULL DEFAULT now(),
+        "updated_at" timestamptz NOT NULL DEFAULT now()
+      )
+    `,
+  },
+  {
+    name: "playlist_item",
+    sql: `
+      CREATE TABLE IF NOT EXISTS "playlist_item" (
+        "id" text PRIMARY KEY,
+        "playlist_id" text NOT NULL REFERENCES "playlist"("id") ON DELETE CASCADE,
+        "session_id" text NOT NULL REFERENCES "trail_session"("id") ON DELETE CASCADE,
+        "position" integer NOT NULL,
+        "note" text,
+        UNIQUE("playlist_id", "session_id")
+      )
+    `,
+  },
+  {
+    name: "playlist_item_playlist_idx",
+    sql: `CREATE INDEX IF NOT EXISTS playlist_item_playlist_idx ON playlist_item (playlist_id, position)`,
+  },
 ];
 
 export async function POST(req: NextRequest) {
