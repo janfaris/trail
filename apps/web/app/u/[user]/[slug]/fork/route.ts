@@ -6,6 +6,29 @@ import { eq, and, asc } from "drizzle-orm";
 import { deriveTitle } from "@/lib/derive-title";
 import type { EventData } from "@/components/timeline-event";
 
+/**
+ * Heuristic: does this look like a tool_result payload that got mis-stored
+ * as a user prompt by the (pre-fix) Claude Code parser? Cheap signals:
+ *
+ *  - WebSearch's distinctive "REMINDER: You MUST include the sources" nudge
+ *  - Starts with raw JSON array of result objects: [{"title":"...
+ *  - Contains tool_use_id (Anthropic protocol marker)
+ *  - Looks like JSON envelope: {"type":"tool_result", ...
+ *
+ * These are pathological — a real human prompt could in theory match the
+ * JSON-array shape, but it's vanishingly rare and the cost of a false
+ * positive (one missing prompt) is much lower than poisoning every fork.
+ */
+export function isLikelyToolResultEcho(text: string): boolean {
+  if (!text) return false;
+  const t = text.trim();
+  if (/REMINDER:\s*You MUST include the sources/i.test(t)) return true;
+  if (/tool_use_id/.test(t)) return true;
+  if (/^\[\{\s*"title"\s*:/.test(t)) return true;
+  if (/^\{\s*"type"\s*:\s*"tool_result"/.test(t)) return true;
+  return false;
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ user: string; slug: string }> },
@@ -31,9 +54,17 @@ export async function GET(
     .where(eq(schema.event.sessionId, sessionRow.id))
     .orderBy(asc(schema.event.idx));
 
-  const promptEvents = events.filter(
-    (e) => (e.data as EventData).kind === "prompt",
-  );
+  const promptEvents = events.filter((e) => {
+    const d = e.data as EventData;
+    if (d.kind !== "prompt") return false;
+    // Defensive: drop prompts that were poisoned by the pre-fix claude-code
+    // parser, which mis-classified tool_result echoes as user prompts.
+    // These show up with raw JSON payloads, tool_use_id mentions, or the
+    // distinctive "REMINDER: You MUST include the sources" WebSearch nudge.
+    // Once the backfill has rewritten existing rows this filter is a no-op,
+    // but it's cheap insurance against any session that wasn't backfilled.
+    return !isLikelyToolResultEcho(d.text);
+  });
 
   const keyPromptIdxs = sessionRow.recipeKeyPromptIdxs;
   const keyPrompts =
