@@ -1,10 +1,10 @@
 import { Session } from "@trail/schema";
 import type { Session as SessionT } from "@trail/schema";
-import { DETECTORS, type RedactionCategory } from "./detectors.js";
-import { scanValue, type EntropySuspect } from "./entropy.js";
+import { DETECTORS, type RedactionCategory } from "./detectors";
+import { scanValue, type EntropySuspect } from "./entropy";
 
-export type { RedactionCategory } from "./detectors.js";
-export type { EntropySuspect } from "./entropy.js";
+export type { RedactionCategory } from "./detectors";
+export type { EntropySuspect } from "./entropy";
 
 export interface RedactionReport {
   /** Total redactions applied (sum across categories). */

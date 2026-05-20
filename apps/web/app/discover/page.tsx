@@ -37,13 +37,16 @@ async function loadTop(): Promise<Row[]> {
       eventCount: schema.trailSession.eventCount,
       startedAt: schema.trailSession.startedAt,
       handle: schema.user.handle,
+      visibility: schema.trailSession.visibility,
     })
     .from(schema.discoverFeed)
     .innerJoin(schema.trailSession, eq(schema.discoverFeed.slug, schema.trailSession.slug))
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
     .orderBy(asc(schema.discoverFeed.rank))
-    .limit(50);
-  return rows as Row[];
+    .limit(80);
+  // Phase 0: never surface pending-review or owner-hidden sessions on /discover.
+  return rows.filter((r) => (r as { visibility?: string }).visibility !== "pending"
+                          && (r as { visibility?: string }).visibility !== "private") as Row[];
 }
 
 export default async function DiscoverPage() {

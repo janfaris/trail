@@ -18,6 +18,8 @@ export interface TrailClientOptions {
   baseUrl?: string;
   getAuthCookie: () => string | null;
   fetchImpl?: typeof fetch;
+  /** Extra HTTP headers to attach to every request (e.g. share-time gates). */
+  extraHeaders?: Record<string, string>;
 }
 
 export interface TrailClient {
@@ -40,6 +42,7 @@ export function createTrailClient(opts: TrailClientOptions): TrailClient {
           headers: {
             "content-type": "application/json",
             cookie,
+            ...(opts.extraHeaders ?? {}),
           },
           body: JSON.stringify(session),
         });
