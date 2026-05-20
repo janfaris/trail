@@ -4,15 +4,40 @@ import { aiClient, textModel } from "./ai-client";
 export const SessionMetaSchema = z.object({
   title: z.string().max(80),
   summary: z.string().max(300),
+  tools_used: z.array(z.string()).max(8).optional().default([]),
+  frameworks: z.array(z.string()).max(8).optional().default([]),
+  models: z.array(z.string()).max(8).optional().default([]),
+  task_type: z
+    .enum([
+      "onboarding",
+      "debugging",
+      "migration",
+      "spike",
+      "shipped",
+      "refactor",
+      "research",
+      "other",
+    ])
+    .optional()
+    .default("other"),
+  outcome: z
+    .enum(["shipped", "abandoned", "rabbithole", "unknown"])
+    .optional()
+    .default("unknown"),
 });
 
 export type SessionMeta = z.infer<typeof SessionMetaSchema>;
 
-const SYSTEM_PROMPT = `You generate concise metadata for a developer's AI coding/research session.
+const SYSTEM_PROMPT = `You generate structured metadata for a developer's AI coding/research session.
 
 Return JSON with:
 - title: <=70 chars, sentence case, no quotes, no trailing period. Capture the user's actual goal or outcome (not a literal paraphrase of the first prompt). Examples: "Lupa pricing market research", "Cursor parser implementation for Trail".
-- summary: 2 sentences, ~200 chars total. Past tense. What the user was trying to do + what was accomplished or decided. No emoji, no marketing speak, no "AI-assisted" filler.`;
+- summary: 2 sentences, ~200 chars total. Past tense. What the user was trying to do + what was accomplished or decided. No emoji, no marketing speak, no "AI-assisted" filler.
+- tools_used: short list of AI dev tools / MCPs mentioned (e.g. "claude-code","cursor","supabase-mcp","playwright-mcp"). Up to 8. Slugs only, no spaces. Empty if none.
+- frameworks: web/lang frameworks the work touches (e.g. "nextjs","drizzle","tailwind","fastapi","swiftui"). Up to 8. Slugs only.
+- models: LLM model names if mentioned (e.g. "claude-sonnet-4.7","gpt-5.4","gemini-2.5"). Up to 8.
+- task_type: one of "onboarding","debugging","migration","spike","shipped","refactor","research","other".
+- outcome: "shipped" if work clearly succeeded / merged / deployed; "abandoned" if user gave up; "rabbithole" if went off-topic deep; else "unknown".`;
 
 const JSON_SCHEMA = {
   name: "session_meta",
@@ -23,8 +48,48 @@ const JSON_SCHEMA = {
     properties: {
       title: { type: "string", maxLength: 80 },
       summary: { type: "string", maxLength: 300 },
+      tools_used: {
+        type: "array",
+        items: { type: "string", maxLength: 40 },
+        maxItems: 8,
+      },
+      frameworks: {
+        type: "array",
+        items: { type: "string", maxLength: 40 },
+        maxItems: 8,
+      },
+      models: {
+        type: "array",
+        items: { type: "string", maxLength: 40 },
+        maxItems: 8,
+      },
+      task_type: {
+        type: "string",
+        enum: [
+          "onboarding",
+          "debugging",
+          "migration",
+          "spike",
+          "shipped",
+          "refactor",
+          "research",
+          "other",
+        ],
+      },
+      outcome: {
+        type: "string",
+        enum: ["shipped", "abandoned", "rabbithole", "unknown"],
+      },
     },
-    required: ["title", "summary"],
+    required: [
+      "title",
+      "summary",
+      "tools_used",
+      "frameworks",
+      "models",
+      "task_type",
+      "outcome",
+    ],
   },
 } as const;
 

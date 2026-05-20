@@ -127,6 +127,13 @@ export async function POST(req: NextRequest) {
     failedToolCalls,
     visibility,
     pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : null,
+    toolsUsed:
+      ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,
+    frameworks:
+      ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
+    models: ai?.models && ai.models.length > 0 ? ai.models : null,
+    taskType: ai?.task_type ?? null,
+    outcome: ai?.outcome ?? null,
   });
 
   if (s.events.length > 0) {

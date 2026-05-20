@@ -116,6 +116,12 @@ export const trailSession = pgTable(
     visibility: text("visibility").notNull().default("public"),
     pendingReviewReasons: jsonb("pending_review_reasons").$type<string[]>(),
     redactedAt: timestamp("redacted_at"),
+    // Phase 1 taxonomy — LLM-extracted facets surfaced at /learn.
+    toolsUsed: jsonb("tools_used").$type<string[]>(),
+    frameworks: jsonb("frameworks").$type<string[]>(),
+    taskType: text("task_type"),       // "onboarding"|"debugging"|"migration"|"spike"|"shipped"|"refactor"|"research"|"other"
+    models: jsonb("models").$type<string[]>(),
+    outcome: text("outcome"),          // "shipped"|"abandoned"|"rabbithole"|"unknown"
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
@@ -157,6 +163,63 @@ export const discoverFeed = pgTable(
   },
   (t) => ({
     rankIdx: index("discover_feed_rank_idx").on(t.rank),
+  }),
+);
+
+// Phase 1 — reactions on sessions ("this worked" / "needed tweak" / "broken").
+// Uniqueness on (session, user, kind) means each user gets one reaction per
+// kind per session — the UI can let them switch between kinds by deleting
+// the previous row first, or accumulate (the data supports either).
+export const sessionReaction = pgTable(
+  "session_reaction",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // 'worked' | 'needs-tweak' | 'broken' | 'worked-verified'
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    sessionIdx: index("session_reaction_session_idx").on(t.sessionId, t.kind),
+  }),
+);
+
+// Phase 1.7 — curated playlists ("Best onboarding trails", "GPT-5 deep work", ...).
+export const playlist = pgTable("playlist", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  curatorId: text("curator_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  isOfficial: boolean("is_official").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const playlistItem = pgTable(
+  "playlist_item",
+  {
+    id: text("id").primaryKey(),
+    playlistId: text("playlist_id")
+      .notNull()
+      .references(() => playlist.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    note: text("note"),
+  },
+  (t) => ({
+    playlistIdx: index("playlist_item_playlist_idx").on(t.playlistId, t.position),
   }),
 );
 
