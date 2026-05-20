@@ -7,6 +7,7 @@ export { parseCopilotCliSession } from "./copilot-cli.js";
 export { parseCopilotChatDB } from "./copilot-chat.js";
 export { parseClineTask } from "./cline.js";
 export { parseWindsurfSession } from "./windsurf.js";
+export { parseZedSession } from "./zed.js";
 export type { ParseCopilotChatOptions } from "./copilot-chat.js";
 
 export { parseAiderSession } from "./aider.js";

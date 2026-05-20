@@ -1,0 +1,20 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "text": "Hello Zed",
+      "timestamp": "2025-01-01T10:00:00Z"
+    },
+    {
+      "role": "assistant",
+      "content": [
+        { "type": "text", "text": "Hi there!" },
+        { "type": "text", "text": "How can I help?" }
+      ],
+      "timestamp": "2025-01-01T10:00:05Z",
+      "tool_uses": [
+        { "name": "read_file", "input": { "path": "foo.ts" } }
+      ]
+    }
+  ]
+}
