@@ -50,6 +50,11 @@ const STATEMENTS: { name: string; sql: string }[] = [
     name: "trail_session.failed_tool_calls",
     sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS failed_tool_calls INTEGER`,
   },
+  { name: "trail_session.recipe_tldr", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_tldr text` },
+  { name: "trail_session.recipe_outcome", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_outcome text` },
+  { name: "trail_session.recipe_key_prompt_idxs", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_key_prompt_idxs jsonb` },
+  { name: "trail_session.recipe_highlight_idxs", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_highlight_idxs jsonb` },
+  { name: "trail_session.recipe_generated_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_generated_at timestamp` },
 ];
 
 export async function POST(req: NextRequest) {
