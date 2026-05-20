@@ -1,0 +1,28 @@
+{
+  "sessionId": "abc-123",
+  "title": "Test Session",
+  "workspaceDirectory": "/home/user/proj",
+  "dateCreated": "2025-01-15T10:00:00Z",
+  "history": [
+    {
+      "role": "user",
+      "content": "Hello, please help me",
+      "timestamp": 1736935200000
+    },
+    {
+      "role": "assistant",
+      "content": [
+        { "type": "text", "text": "Sure, what do you need?" }
+      ],
+      "timestamp": 1736935210000
+    },
+    {
+      "role": "user",
+      "content": "Refactor this function"
+    },
+    {
+      "role": "assistant",
+      "content": "Here is the refactored code."
+    }
+  ]
+}
