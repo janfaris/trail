@@ -7,18 +7,18 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://gettrail.vercel.app"),
-  title: "Trail — The GitHub for AI coding sessions",
-  description: "Record. Search. Share. Your AI work as portable, public proof-of-work.",
+  title: "Trail — Semantic search for your AI coding sessions",
+  description: "Find any Claude Code, Codex, Cursor, or Copilot session by memory. Cross-vendor timeline + real semantic search in your own Postgres.",
   openGraph: {
-    title: "Trail — The GitHub for AI coding sessions",
-    description: "Record. Search. Share. Your AI work as portable, public proof-of-work.",
+    title: "Trail — Semantic search for your AI coding sessions",
+    description: "Find any Claude Code, Codex, Cursor, or Copilot session by memory. Cross-vendor timeline + real semantic search in your own Postgres.",
     siteName: "Trail",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trail — The GitHub for AI coding sessions",
-    description: "Record. Search. Share. Your AI work as portable, public proof-of-work.",
+    title: "Trail — Semantic search for your AI coding sessions",
+    description: "Find any Claude Code, Codex, Cursor, or Copilot session by memory. Cross-vendor timeline + real semantic search in your own Postgres.",
   },
 };
 
