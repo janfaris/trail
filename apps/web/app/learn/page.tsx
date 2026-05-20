@@ -287,7 +287,7 @@ export default async function LearnPage({
                     className="block group"
                   >
                     <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
-                      <ToolIcon tool={r.tool} className="w-3 h-3" />
+                      <ToolIcon name={r.tool} className="w-3 h-3" />
                       <span>{r.tool}</span>
                       {r.taskType && (
                         <>

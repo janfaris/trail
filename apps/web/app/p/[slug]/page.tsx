@@ -117,7 +117,7 @@ export default async function PlaylistPage({ params }: Props) {
                     className="block group"
                   >
                     <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
-                      <ToolIcon tool={it.tool} className="w-3 h-3" />
+                      <ToolIcon name={it.tool} className="w-3 h-3" />
                       <span>{it.tool}</span>
                       {it.taskType && (
                         <>
