@@ -12,6 +12,7 @@ import { deriveTitle } from "@/lib/derive-title";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { ExplainButton } from "@/components/explain-button";
+import { FileDiff } from "@/components/file-diff";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -173,9 +174,20 @@ export default async function SessionView({
         />
 
         <div className="space-y-5">
-          {events.map((e) => (
-            <TimelineEvent key={e.id} idx={e.idx} data={e.data as EventData} />
-          ))}
+          {events.map((e) => {
+            const ev = e.data as EventData;
+            if (ev.kind === "file_diff") {
+              return (
+                <FileDiff
+                  key={e.id}
+                  path={ev.path}
+                  before={ev.before}
+                  after={ev.after}
+                />
+              );
+            }
+            return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
+          })}
         </div>
       </main>
     </div>
