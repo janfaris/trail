@@ -10,3 +10,5 @@ export { parseWindsurfSession } from "./windsurf.js";
 export type { ParseCopilotChatOptions } from "./copilot-chat.js";
 
 export { parseAiderSession } from "./aider.js";
+export { parseOpenCodeSession } from "./opencode.js";
+export { parseContinueSession } from "./continue.js";
