@@ -1,12 +1,21 @@
 import { Session } from "@trail/schema";
 import type { Session as SessionT } from "@trail/schema";
-import { DETECTORS, type RedactionCategory } from "./detectors";
+import { DETECTORS, type RedactionCategory } from "./detectors.js";
+import { scanValue, type EntropySuspect } from "./entropy.js";
 
-export type { RedactionCategory } from "./detectors";
+export type { RedactionCategory } from "./detectors.js";
+export type { EntropySuspect } from "./entropy.js";
 
 export interface RedactionReport {
+  /** Total redactions applied (sum across categories). */
   total: number;
   byCategory: Record<RedactionCategory, number>;
+  /**
+   * High-entropy tokens that survived all named detectors. Possible
+   * unknown credentials. The caller decides whether to block upload or
+   * surface to the user for confirmation.
+   */
+  suspects: EntropySuspect[];
 }
 
 interface Counter {
@@ -16,9 +25,13 @@ interface Counter {
 function scrubString(s: string, counter: Counter): string {
   let out = s;
   for (const det of DETECTORS) {
-    out = out.replace(det.pattern, (match) => {
+    out = out.replace(det.pattern, (match, ...groups) => {
       counter.add(det.category, 1);
-      return det.replace(match);
+      // The trailing two args of String.replace's callback are offset + full.
+      // Strip them so detector replace functions see only their capture
+      // groups (which is what the detector signatures declare).
+      const captures = groups.slice(0, -2) as string[];
+      return det.replace(match, ...captures);
     });
   }
   return out;
@@ -37,14 +50,22 @@ function scrubValue(v: unknown, counter: Counter): unknown {
   return v;
 }
 
-export function anonymize(session: SessionT): { session: SessionT; report: RedactionReport } {
+export function anonymize(session: SessionT): {
+  session: SessionT;
+  report: RedactionReport;
+} {
   const byCategory: Record<RedactionCategory, number> = {
     secret: 0,
+    "credential-url": 0,
     path: 0,
     email: 0,
     "internal-host": 0,
   };
-  const counter: Counter = { add: (c, n) => { byCategory[c] += n; } };
+  const counter: Counter = {
+    add: (c, n) => {
+      byCategory[c] += n;
+    },
+  };
 
   // Deep-clone via JSON round-trip then walk.
   const cloned = JSON.parse(JSON.stringify(session)) as SessionT;
@@ -53,6 +74,9 @@ export function anonymize(session: SessionT): { session: SessionT; report: Redac
   // Validate output still matches schema (defense in depth).
   const parsed = Session.parse(scrubbed);
 
+  // After named detectors have run, sweep for unknown high-entropy tokens.
+  const suspects = scanValue(parsed);
+
   const total = Object.values(byCategory).reduce((a, b) => a + b, 0);
-  return { session: parsed, report: { total, byCategory } };
+  return { session: parsed, report: { total, byCategory, suspects } };
 }
