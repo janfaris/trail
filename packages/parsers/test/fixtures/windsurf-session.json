@@ -1,0 +1,7 @@
+{
+  "messages": [
+    { "role": "user", "content": "Hello windsurf", "timestamp": "2025-01-01T10:00:00Z" },
+    { "role": "assistant", "content": "Hi there!", "timestamp": "2025-01-01T10:00:05Z",
+      "tool_calls": [{ "name": "read_file", "arguments": { "path": "foo.ts" } }] }
+  ]
+}
