@@ -15,16 +15,16 @@ const EXAMPLE_META = "41 events · Claude Code";
 
 const features = [
   {
-    title: "Captures automatically",
-    body: "No extra steps. trail record tails the log files your AI tools already write — zero hooks, zero proxying.",
+    title: "Search like you remember it",
+    body: "Ask for “that session where I debugged the Stripe webhook retry” and Trail finds it. Real semantic search, not grep — every session embedded into your own Postgres.",
   },
   {
-    title: "Searches your history",
-    body: "Find that fix from two weeks ago in two seconds. Full-text across every session, every tool.",
+    title: "Every tool, one timeline",
+    body: "Claude Code, Codex, Cursor, Copilot, Hermes — all in one searchable feed. Switch tools mid-task without losing the thread.",
   },
   {
-    title: "Shares as portable proof-of-work",
-    body: "Public links for your portfolio, bio, or DMs. Anonymized before upload — paths and secrets scrubbed.",
+    title: "Your data, your Postgres",
+    body: "Sessions live in your own Neon database. Open source CLI. psql your own AI history. No vendor lock-in, no markdown clutter in your repo.",
   },
 ];
 
@@ -39,16 +39,20 @@ const captures: { name: string; label: string }[] = [
 
 const faqs = [
   {
+    q: "How is this different from SpecStory?",
+    a: "SpecStory dumps markdown into your repo (.specstory/history/) and offers keyword search; semantic search is on their roadmap. Trail ships semantic search today via pgvector, keeps your sessions out of your repo, and gives you your own Postgres to query.",
+  },
+  {
     q: "Does it slow my AI agent?",
-    a: "No. Trail reads the log files your tools already write. Zero hooks, zero proxying.",
+    a: "No. Trail tails the log files your tools already write. Zero hooks, zero proxying, zero perceivable overhead.",
   },
   {
     q: "Is my data private?",
-    a: "Yes by default. Sessions stay on your machine until you explicitly run trail share.",
+    a: "Yes by default. Sessions stay on your machine until you explicitly run trail share. Public sessions are anonymized — paths and secrets scrubbed before upload.",
   },
   {
     q: "What about Anthropic or OpenAI shipping their own viewer?",
-    a: "They will, eventually — but only for their own tool. Trail is cross-vendor: one feed, all your work, portable.",
+    a: "They will, eventually — but only for their own tool. Trail is cross-vendor: one feed, all your work, portable across every AI coding tool you use.",
   },
 ];
 
@@ -152,13 +156,13 @@ export default async function Home() {
             v0.1 · open source
           </div>
           <h1 className="text-5xl md:text-6xl font-medium tracking-tight leading-[1.02] text-zinc-50 mb-6 max-w-3xl">
-            Your AI coding work,{" "}
-            <span className="text-[#a7f300]">recorded</span>.
+            Find any AI coding session.{" "}
+            <span className="text-[#a7f300]">By memory</span>.
           </h1>
           <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed mb-10">
-            Trail captures every Claude Code, Codex, Hermes, and Copilot session into a
-            searchable archive. Share any session as a public link — proof of how you actually
-            work.
+            Trail captures Claude Code, Codex, Cursor, Copilot, and Hermes into one searchable
+            timeline — with real semantic search, not grep. Find that session from three weeks ago
+            by how you remember it, not what you typed.
           </p>
 
           <div className="flex items-center gap-2 max-w-md mb-3">
@@ -226,11 +230,11 @@ export default async function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <div>
               <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-2">
-                Built for the way you actually work
+                A real memory layer for AI coding
               </h2>
               <p className="text-zinc-500 mb-8 leading-relaxed">
-                Trail snaps onto your existing CLI — no agents, no IDE plugins, no
-                analytics SDK.
+                Trail snaps onto your existing CLI — no IDE plugins, no proxying, no markdown
+                clutter in your repo.
               </p>
               <ol className="space-y-5">
                 {features.map((f, i) => (
@@ -257,11 +261,12 @@ export default async function Home() {
                 </div>
                 <pre className="px-4 py-4 text-[12.5px] font-mono leading-relaxed text-zinc-300 overflow-x-auto">
 {`$ trail record
-`}<span className="text-zinc-500">{`→ watching claude-code, codex, hermes, copilot…`}</span>{`
+`}<span className="text-zinc-500">{`→ watching claude-code, codex, cursor, copilot…`}</span>{`
 
-$ trail share latest
-`}<span className="text-zinc-500">{`→ anonymizing… 41 events, 6 file diffs`}</span>{`
-`}<span className="text-[#a7f300]">{`✓ https://trail.dev/u/you/057smo2q`}</span>
+$ trail search "stripe webhook retry bug"
+`}<span className="text-zinc-500">{`→ 3 results across claude-code, codex`}</span>{`
+`}<span className="text-[#a7f300]">{`✓ jan 14 · claude-code · "Stripe idempotency keys + retry"`}</span>{`
+`}<span className="text-zinc-500">{`  jan 09 · codex · "webhook 504s on Vercel cold start"`}</span>
                 </pre>
               </div>
 
@@ -296,7 +301,7 @@ $ trail share latest
           <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-10">
             Questions
           </h2>
-          <dl className="grid md:grid-cols-3 gap-8">
+          <dl className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {faqs.map((f) => (
               <div key={f.q}>
                 <dt className="text-sm text-zinc-100 font-medium mb-2">{f.q}</dt>
@@ -362,17 +367,18 @@ $ trail share latest
               vanish when I close the terminal.
             </p>
             <p>
-              No way to find that fix from two weeks ago. No way to show a friend exactly how I
-              solved something. No way to prove to a hiring manager that I actually know how to
-              think with these tools.
+              I couldn't find that auth fix from three weeks ago. I couldn't remember which tool
+              I'd used to solve the same Stripe bug last month. Cursor had its own history,
+              Claude Code had another, Codex had a third — none of them talked.
             </p>
             <p>
               So I built Trail. It tails the log files the tools already write — no proxying, no
-              hooks, no slowdown. Sessions live on your machine. Search across all your work in
-              two seconds. Share any session as a public link with secrets scrubbed.
+              hooks, no slowdown. Every session lands in your own Postgres with semantic
+              embeddings, so you can search by meaning, not keywords. Switch between Claude Code
+              and Codex mid-task and bring the context with you.
             </p>
             <p className="text-zinc-500">
-              Local-first. Open source. Tell me if it's useful.{" "}
+              Local-first. Open source. Your data, your database.{" "}
               <Link
                 href="/u/jankarlo.faris"
                 className="text-zinc-300 hover:text-[#a7f300] underline-offset-4 underline decoration-zinc-700"
