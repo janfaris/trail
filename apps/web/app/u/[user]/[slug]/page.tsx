@@ -13,6 +13,9 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { ExplainButton } from "@/components/explain-button";
 import { FileDiff } from "@/components/file-diff";
+import { RecipeCard } from "@/components/recipe-card";
+import { ForkButton } from "@/components/fork-button";
+import { TimelineToggle } from "@/components/timeline-toggle";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -49,10 +52,14 @@ export async function generateMetadata({
 
 export default async function SessionView({
   params,
+  searchParams,
 }: {
   params: Promise<{ user: string; slug: string }>;
+  searchParams: Promise<{ full?: string }>;
 }) {
   const { user, slug } = await params;
+  const sp = await searchParams;
+  const showFull = sp.full === "1";
 
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
@@ -85,6 +92,26 @@ export default async function SessionView({
       ? (firstPrompt.data as { kind: "prompt"; text: string }).text
       : undefined;
   const title = sessionRow.title || deriveTitle(firstPromptText, sessionRow.slug);
+
+  const keyPromptIdxs = sessionRow.recipeKeyPromptIdxs ?? [];
+  const keyPrompts =
+    keyPromptIdxs.length > 0
+      ? events
+          .filter(
+            (e) =>
+              keyPromptIdxs.includes(e.idx) &&
+              (e.data as { kind?: string }).kind === "prompt",
+          )
+          .map((e) => ({
+            idx: e.idx,
+            text: (e.data as { text?: string }).text ?? "",
+          }))
+      : [];
+  const highlightIdxs = sessionRow.recipeHighlightIdxs ?? [];
+  const visibleEvents =
+    !showFull && highlightIdxs.length > 0
+      ? events.filter((e) => highlightIdxs.includes(e.idx))
+      : events;
 
   return (
     <div className="min-h-screen">
@@ -139,6 +166,7 @@ export default async function SessionView({
         {/* Action strip */}
         <div className="flex flex-wrap items-center gap-2 mb-12 pb-6 border-b border-zinc-900">
           <CopyButton value={fullUrl} label="Copy link" copiedLabel="Copied" />
+          <ForkButton user={user} slug={slug} title={sessionRow.title ?? slug} />
           <a
             href={tweetIntent(`${title} — a trail by @${user}`, fullUrl)}
             target="_blank"
@@ -166,6 +194,19 @@ export default async function SessionView({
           </span>
         </div>
 
+        <RecipeCard
+          session={{
+            title: sessionRow.title ?? "",
+            recipeTldr: sessionRow.recipeTldr,
+            recipeOutcome: sessionRow.recipeOutcome,
+            tool: sessionRow.tool,
+            repo: sessionRow.repo,
+            durationSeconds: sessionRow.durationSeconds,
+            eventCount: sessionRow.eventCount,
+          }}
+          keyPrompts={keyPrompts}
+        />
+
         <ExplainButton
           sessionId={sessionRow.id}
           pathToRevalidate={`/u/${user}/${slug}`}
@@ -173,8 +214,15 @@ export default async function SessionView({
           canExplain={canExplain}
         />
 
+        {highlightIdxs.length > 0 && (
+          <TimelineToggle
+            totalEvents={events.length}
+            highlightCount={highlightIdxs.length}
+          />
+        )}
+
         <div className="space-y-5">
-          {events.map((e) => {
+          {visibleEvents.map((e) => {
             const ev = e.data as EventData;
             if (ev.kind === "file_diff") {
               return (
