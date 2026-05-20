@@ -86,6 +86,25 @@ const ICONS: Record<string, Shape[]> = {
     },
     { t: "path", d: "M6.5 6L5 7.5 6.5 9M9.5 6L11 7.5 9.5 9", opacity: 0.8 },
   ],
+  windsurf: [
+    { t: "path", d: "M2 10c2 0 2-2 4-2s2 2 4 2 2-2 4-2" },
+    { t: "path", d: "M2 13c2 0 2-2 4-2s2 2 4 2 2-2 4-2", opacity: 0.5 },
+  ],
+  cline: [
+    { t: "rect", x: 2, y: 3, width: 12, height: 10, rx: 2 },
+    { t: "path", d: "M5 8h6" },
+  ],
+  continue: [
+    { t: "path", d: "M4 3l5 5-5 5" },
+    { t: "path", d: "M9 3l5 5-5 5", opacity: 0.5 },
+  ],
+  zed: [
+    { t: "path", d: "M4 4h8l-8 8h8" },
+  ],
+  opencode: [
+    { t: "circle", cx: 8, cy: 8, r: 5.5 },
+    { t: "path", d: "M5.5 7l-1.5 1 1.5 1M10.5 7l1.5 1-1.5 1", opacity: 0.8 },
+  ],
 };
 
 function renderShape(s: Shape, i: number) {
