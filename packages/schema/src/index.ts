@@ -8,6 +8,11 @@ export const ToolKind = z.enum([
   "hermes",
   "copilot-cli",
   "copilot-chat",
+  "windsurf",
+  "cline",
+  "continue",
+  "zed",
+  "opencode",
 ]);
 
 export const EventKind = z.discriminatedUnion("kind", [
