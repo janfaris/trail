@@ -1,80 +1,85 @@
 "use client";
-import dynamic from "next/dynamic";
-
-const DiffViewer = dynamic(() => import("react-diff-viewer-continued"), { ssr: false });
-
-const darkStyles = {
-  variables: {
-    dark: {
-      diffViewerBackground: "#09090b",
-      diffViewerColor: "#e4e4e7",
-      addedBackground: "rgba(167, 243, 0, 0.08)",
-      addedColor: "#d8ffa1",
-      removedBackground: "rgba(244, 63, 94, 0.08)",
-      removedColor: "#fda4af",
-      wordAddedBackground: "rgba(167, 243, 0, 0.22)",
-      wordRemovedBackground: "rgba(244, 63, 94, 0.22)",
-      addedGutterBackground: "rgba(167, 243, 0, 0.12)",
-      removedGutterBackground: "rgba(244, 63, 94, 0.12)",
-      gutterBackground: "#09090b",
-      gutterBackgroundDark: "#09090b",
-      highlightBackground: "#18181b",
-      highlightGutterBackground: "#18181b",
-      codeFoldGutterBackground: "#18181b",
-      codeFoldBackground: "#18181b",
-      emptyLineBackground: "#0b0b0e",
-      gutterColor: "#52525b",
-      addedGutterColor: "#a7f300",
-      removedGutterColor: "#fda4af",
-      codeFoldContentColor: "#71717a",
-      diffViewerTitleBackground: "#0b0b0e",
-      diffViewerTitleColor: "#a1a1aa",
-      diffViewerTitleBorderColor: "#27272a",
-    },
-  },
-  line: {
-    padding: "2px 8px",
-    fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
-    fontSize: "12px",
-    lineHeight: "1.55",
-  },
-  gutter: {
-    minWidth: "44px",
-    padding: "0 8px",
-    fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
-    fontSize: "11px",
-  },
-  contentText: {
-    fontFamily: "var(--font-geist-mono), ui-monospace, monospace",
-  },
-} as const;
+import { useMemo, useState } from "react";
+import { createTwoFilesPatch } from "diff";
 
 export function FileDiff({ path, before, after }: { path: string; before: string; after: string }) {
+  const [open, setOpen] = useState(false);
+
+  const lines = useMemo(() => {
+    const patch = createTwoFilesPatch(path, path, before ?? "", after ?? "", "", "", { context: 3 });
+    // Drop the 4 header lines emitted by createTwoFilesPatch (Index, ===, ---, +++).
+    const raw = patch.split("\n");
+    // Find first hunk header (starts with @@); everything before that is header noise.
+    const firstHunk = raw.findIndex((l) => l.startsWith("@@"));
+    const body = firstHunk >= 0 ? raw.slice(firstHunk) : raw;
+    // Trim trailing empty line
+    if (body.length && body[body.length - 1] === "") body.pop();
+    return body;
+  }, [path, before, after]);
+
+  const stats = useMemo(() => {
+    let adds = 0;
+    let dels = 0;
+    for (const l of lines) {
+      if (l.startsWith("+") && !l.startsWith("+++")) adds++;
+      else if (l.startsWith("-") && !l.startsWith("---")) dels++;
+    }
+    return { adds, dels };
+  }, [lines]);
+
   return (
     <div className="rounded-md border border-zinc-800 overflow-hidden bg-zinc-950">
-      <div className="px-4 py-2 bg-zinc-900/60 border-b border-zinc-800 font-mono text-xs text-zinc-300 flex items-center gap-2">
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <path
-            d="M3 1.5h6L13 5.5v9H3z"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-            opacity="0.6"
-          />
-          <path d="M9 1.5v4h4" stroke="currentColor" strokeWidth="1.2" opacity="0.6" />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full px-4 py-2 bg-zinc-900/60 border-b border-zinc-800 font-mono text-xs text-zinc-300 flex items-center gap-2 hover:bg-zinc-900 transition-colors text-left"
+        aria-expanded={open}
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          aria-hidden
+          className={`text-zinc-500 transition-transform ${open ? "rotate-90" : ""}`}
+        >
+          <path d="M3 1.5L6.5 5L3 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-zinc-400">{path}</span>
-      </div>
-      <div className="text-xs">
-        <DiffViewer
-          oldValue={before}
-          newValue={after}
-          splitView={false}
-          useDarkTheme
-          hideLineNumbers={false}
-          styles={darkStyles}
-        />
-      </div>
+        <span className="text-zinc-400 flex-1 truncate">{path}</span>
+        {stats.adds > 0 && <span className="text-emerald-400">+{stats.adds}</span>}
+        {stats.dels > 0 && <span className="text-rose-400">-{stats.dels}</span>}
+      </button>
+      {open && (
+        <div className="text-xs font-mono leading-relaxed overflow-x-auto bg-zinc-950">
+          {lines.length === 0 ? (
+            <div className="px-4 py-3 text-zinc-500">No changes</div>
+          ) : (
+            <pre className="m-0 py-2">
+              {lines.map((line, i) => {
+                let cls = "text-zinc-400";
+                let bg = "";
+                if (line.startsWith("@@")) {
+                  cls = "text-zinc-500";
+                  bg = "bg-zinc-900/60";
+                } else if (line.startsWith("+") && !line.startsWith("+++")) {
+                  cls = "text-emerald-300";
+                  bg = "bg-emerald-500/10";
+                } else if (line.startsWith("-") && !line.startsWith("---")) {
+                  cls = "text-rose-300";
+                  bg = "bg-rose-500/10";
+                } else {
+                  cls = "text-zinc-400";
+                }
+                return (
+                  <div key={i} className={`px-4 whitespace-pre ${bg} ${cls}`}>
+                    {line || " "}
+                  </div>
+                );
+              })}
+            </pre>
+          )}
+        </div>
+      )}
     </div>
   );
 }
