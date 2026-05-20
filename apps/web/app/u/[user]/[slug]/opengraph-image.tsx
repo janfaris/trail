@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import {
   COLORS,
@@ -8,56 +8,82 @@ import {
   OG_SIZE,
   ToolSvg,
   Wordmark,
-  formatDate,
   loadOgFonts,
-  truncate,
 } from "@/lib/og";
-import { deriveTitle } from "@/lib/derive-title";
-import type { EventData } from "@/components/timeline-event";
 
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Trail session";
 
-export default async function Image({ params }: { params: Promise<{ user: string; slug: string }> }) {
+export default async function Image({
+  params,
+}: {
+  params: Promise<{ user: string; slug: string }>;
+}) {
   const { user, slug } = await params;
   const fonts = await loadOgFonts();
 
-  const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.handle, user),
-  });
+  const rows = await db
+    .select({
+      session: schema.trailSession,
+      user: schema.user,
+    })
+    .from(schema.trailSession)
+    .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
+    .where(and(eq(schema.trailSession.slug, slug), eq(schema.user.handle, user)))
+    .limit(1);
 
-  let title = slug;
-  let tool = "claude-code";
-  let eventCount = 0;
-  let dateLabel = "";
-  let firstPromptText: string | undefined;
+  const row = rows[0];
 
-  if (userRow) {
-    const sessionRow = await db.query.trailSession.findFirst({
-      where: and(
-        eq(schema.trailSession.userId, userRow.id),
-        eq(schema.trailSession.slug, slug),
+  if (!row) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            background: COLORS.bg,
+            display: "flex",
+            flexDirection: "column",
+            padding: 64,
+            fontFamily: "Geist",
+            position: "relative",
+          }}
+        >
+          <Wordmark />
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                fontSize: 64,
+                fontWeight: 600,
+                letterSpacing: "-0.035em",
+                color: COLORS.text,
+                lineHeight: 1,
+              }}
+            >
+              @{user}/{slug}
+            </div>
+          </div>
+          <Footer />
+        </div>
       ),
-    });
-    if (sessionRow) {
-      const events = await db
-        .select()
-        .from(schema.event)
-        .where(eq(schema.event.sessionId, sessionRow.id))
-        .orderBy(asc(schema.event.idx))
-        .limit(20);
-      const fp = events.find((e) => (e.data as EventData).kind === "prompt");
-      firstPromptText =
-        fp && (fp.data as EventData).kind === "prompt"
-          ? (fp.data as { kind: "prompt"; text: string }).text
-          : undefined;
-      title = sessionRow.title || deriveTitle(firstPromptText, sessionRow.slug);
-      tool = sessionRow.tool;
-      eventCount = sessionRow.eventCount;
-      dateLabel = formatDate(sessionRow.startedAt);
-    }
+      { ...size, fonts },
+    );
   }
+
+  const { session, user: userRow } = row;
+  const handle = userRow.handle;
+  const title = session.title ?? slug;
+  const summary = session.summary ?? "";
+  const eventCount = session.eventCount ?? 0;
 
   return new ImageResponse(
     (
@@ -81,74 +107,60 @@ export default async function Image({ params }: { params: Promise<{ user: string
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            paddingTop: 24,
           }}
         >
           <div
             style={{
-              fontSize: 64,
+              display: "flex",
+              fontSize: 68,
               fontWeight: 600,
               letterSpacing: "-0.035em",
-              lineHeight: 1.08,
               color: COLORS.text,
-              maxWidth: 1060,
-              display: "-webkit-box",
-              
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
+              lineHeight: 1.05,
             }}
           >
-            {truncate(title, 140)}
+            {title}
           </div>
 
-          <div
-            style={{
-              marginTop: 28,
-              display: "flex",
-              alignItems: "center",
-              gap: 18,
-              fontFamily: "GeistMono",
-              fontSize: 22,
-              color: COLORS.textDim,
-            }}
-          >
-            <ToolSvg name={tool} size={26} color="#d4d4d8" />
-            <span style={{ color: COLORS.text }}>{tool}</span>
-            <span style={{ color: COLORS.textFaint }}>·</span>
-            <span>@{user}</span>
-            <span style={{ color: COLORS.textFaint }}>·</span>
-            <span>
-              <span style={{ color: COLORS.text }}>{eventCount}</span>{" "}
-              event{eventCount === 1 ? "" : "s"}
-            </span>
-            {dateLabel ? (
-              <>
-                <span style={{ color: COLORS.textFaint }}>·</span>
-                <span>{dateLabel}</span>
-              </>
-            ) : null}
-          </div>
-
-          {firstPromptText ? (
+          {summary ? (
             <div
               style={{
-                marginTop: 36,
-                fontFamily: "GeistMono",
-                fontSize: 20,
-                color: COLORS.textMute,
-                lineHeight: 1.4,
-                maxWidth: 1060,
                 display: "-webkit-box",
-                
+                marginTop: 24,
+                fontSize: 28,
+                color: COLORS.textDim,
+                letterSpacing: "-0.01em",
+                lineHeight: 1.35,
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: "vertical",
                 overflow: "hidden",
               }}
             >
-              {truncate(firstPromptText.replace(/\s+/g, " ").trim(), 140)}
+              {summary}
             </div>
           ) : null}
+
+          <div
+            style={{
+              marginTop: 40,
+              display: "flex",
+              alignItems: "center",
+              gap: 20,
+              fontFamily: "GeistMono",
+              fontSize: 22,
+              color: COLORS.textMute,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <ToolSvg name={session.tool} size={28} color="#d4d4d8" />
+            </div>
+            <span style={{ color: COLORS.text }}>@{handle}</span>
+            <span style={{ color: COLORS.textFaint }}>·</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: COLORS.text }}>{eventCount}</span>
+              <span>event{eventCount === 1 ? "" : "s"}</span>
+            </div>
+          </div>
         </div>
 
         <Footer />
