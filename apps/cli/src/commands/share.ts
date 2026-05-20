@@ -10,6 +10,7 @@ import { anonymize, type EntropySuspect } from "@trail/anonymize";
 import { createTrailClient, DEFAULT_TRAIL_API_URL } from "@trail/client";
 import { db } from "../db.js";
 import { getAuthCookie, clearAuth } from "../lib/auth-storage.js";
+import { detectGitContext } from "../git-context.js";
 
 interface SessionRow {
   id: string;
@@ -251,10 +252,29 @@ export function shareCommand(): Command {
         process.exit(1);
       }
 
+      // Best-effort GitHub linkage — populates "Shipped in <repo>@<sha>" pill
+      // on the published session. Never blocks upload.
+      const git = detectGitContext();
+      const linkHeaders: Record<string, string> = {};
+      if (git.repo) linkHeaders["x-trail-linked-repo"] = git.repo;
+      if (git.commitSha) linkHeaders["x-trail-linked-commit"] = git.commitSha;
+      if (git.repoUrl && git.commitSha) {
+        linkHeaders["x-trail-linked-commit-url"] = `${git.repoUrl}/commit/${git.commitSha}`;
+      }
+      if (git.repo) {
+        console.log(
+          chalk.dim("·"),
+          `linking to ${git.repo}${git.commitSha ? `@${git.commitSha.slice(0, 7)}` : ""}`,
+        );
+      }
+
       const client = createTrailClient({
         baseUrl: opts.baseUrl,
         getAuthCookie: () => cookie,
-        extraHeaders: opts.allowSuspects ? { "x-trail-allow-suspects": "true" } : undefined,
+        extraHeaders: {
+          ...(opts.allowSuspects ? { "x-trail-allow-suspects": "true" } : {}),
+          ...linkHeaders,
+        },
       });
       const result = await client.uploadSession(scrubbed);
 

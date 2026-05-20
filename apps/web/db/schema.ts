@@ -122,6 +122,10 @@ export const trailSession = pgTable(
     taskType: text("task_type"),       // "onboarding"|"debugging"|"migration"|"spike"|"shipped"|"refactor"|"research"|"other"
     models: jsonb("models").$type<string[]>(),
     outcome: text("outcome"),          // "shipped"|"abandoned"|"rabbithole"|"unknown"
+    // Phase 2 — GitHub linkage (autodetected at record-time from git remote).
+    linkedPrUrl: text("linked_pr_url"),       // https://github.com/<owner>/<repo>/pull/<n>
+    linkedCommitSha: text("linked_commit_sha"),
+    linkedRepo: text("linked_repo"),          // <owner>/<repo>
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
