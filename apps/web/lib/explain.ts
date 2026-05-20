@@ -1,12 +1,4 @@
-import OpenAI from "openai";
-
-let _client: OpenAI | null = null;
-function client(): OpenAI | null {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  if (!_client) _client = new OpenAI({ apiKey: key });
-  return _client;
-}
+import { aiClient, textModel } from "./ai-client";
 
 const SYSTEM_PROMPT = `You explain what happened in a developer's AI coding/research session.
 
@@ -71,9 +63,9 @@ export interface ExplainInput {
 export async function generateSessionExplanation(
   input: ExplainInput,
 ): Promise<string | null> {
-  const c = client();
+  const c = aiClient();
   if (!c) return null;
-  const model = process.env.OPENAI_TEXT_MODEL || "gpt-5.4-mini";
+  const model = textModel();
 
   // Bookend trim: first 30 + last 10. If <=40 events, take them all.
   const evs = input.events;
