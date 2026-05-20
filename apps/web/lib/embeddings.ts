@@ -1,12 +1,4 @@
-import OpenAI from "openai";
-
-let _client: OpenAI | null = null;
-function client(): OpenAI | null {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  if (!_client) _client = new OpenAI({ apiKey: key });
-  return _client;
-}
+import { aiClient, embeddingModel } from "./ai-client";
 
 // Build a single text blob from the session's signal sources. Cap at ~16k chars
 // (~4k tokens) — text-embedding-3-large accepts up to 8191 tokens, plenty of room.
@@ -37,9 +29,9 @@ export async function generateSessionEmbedding(
   summary: string,
   prompts: string[],
 ): Promise<number[] | null> {
-  const c = client();
+  const c = aiClient();
   if (!c) return null;
-  const model = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-large";
+  const model = embeddingModel();
   const input = buildEmbeddingInput(title, summary, prompts);
   if (!input.trim()) return null;
   try {

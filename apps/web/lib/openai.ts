@@ -1,14 +1,5 @@
-import OpenAI from "openai";
 import { z } from "zod";
-
-let _client: OpenAI | null = null;
-
-function client(): OpenAI | null {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return null;
-  if (!_client) _client = new OpenAI({ apiKey: key });
-  return _client;
-}
+import { aiClient, textModel } from "./ai-client";
 
 export const SessionMetaSchema = z.object({
   title: z.string().max(80),
@@ -45,10 +36,10 @@ export async function generateSessionMeta(
   prompts: string[],
   lastEventKinds: string[],
 ): Promise<SessionMeta | null> {
-  const c = client();
+  const c = aiClient();
   if (!c) return null;
 
-  const model = process.env.OPENAI_TEXT_MODEL || "gpt-5.4-mini";
+  const model = textModel();
   const promptBlock = prompts
     .slice(0, 3)
     .map((p, i) => `Prompt ${i + 1}:\n${truncate(p, 1200)}`)
