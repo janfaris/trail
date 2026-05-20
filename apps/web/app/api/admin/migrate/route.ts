@@ -120,6 +120,11 @@ const STATEMENTS: { name: string; sql: string }[] = [
     name: "playlist_item_playlist_idx",
     sql: `CREATE INDEX IF NOT EXISTS playlist_item_playlist_idx ON playlist_item (playlist_id, position)`,
   },
+  // Phase 2 — GitHub PR/commit linkage
+  { name: "trail_session.linked_pr_url", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS linked_pr_url text` },
+  { name: "trail_session.linked_commit_sha", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS linked_commit_sha text` },
+  { name: "trail_session.linked_repo", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS linked_repo text` },
+  { name: "trail_session_linked_pr_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_linked_pr_idx ON trail_session (linked_pr_url) WHERE linked_pr_url IS NOT NULL` },
 ];
 
 export async function POST(req: NextRequest) {

@@ -204,6 +204,14 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                     </a>
                   </>
                 )}
+                <span className="text-zinc-700">·</span>
+                <Link
+                  href={`/u/${userRow.handle}/interview`}
+                  className="inline-flex items-center gap-1.5 text-[#a7f300] hover:text-[#c8ff5e] transition-colors"
+                  title="Recruiter mode — shipped trails only"
+                >
+                  Recruiter view →
+                </Link>
                 {site && (
                   <>
                     <span className="text-zinc-700">·</span>

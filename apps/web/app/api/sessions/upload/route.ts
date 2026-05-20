@@ -50,6 +50,20 @@ export async function POST(req: NextRequest) {
   // rather than publishing immediately. The owner can confirm later.
   const allowSuspects =
     req.headers.get("x-trail-allow-suspects")?.toLowerCase() === "true";
+
+  // Phase 2 — GitHub linkage headers, populated by `trail share` from the
+  // git remote + HEAD. All optional; treat as opaque strings + light sanity
+  // checks. We never trust these for auth — just for display on the page.
+  const linkedRepoHdr = req.headers.get("x-trail-linked-repo");
+  const linkedCommitHdr = req.headers.get("x-trail-linked-commit");
+  const linkedRepo =
+    linkedRepoHdr && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(linkedRepoHdr)
+      ? linkedRepoHdr
+      : null;
+  const linkedCommitSha =
+    linkedCommitHdr && /^[a-f0-9]{7,40}$/i.test(linkedCommitHdr)
+      ? linkedCommitHdr
+      : null;
   const entropyReasons =
     redactionReport.suspects.length > 0 && !allowSuspects
       ? [
@@ -134,6 +148,9 @@ export async function POST(req: NextRequest) {
     models: ai?.models && ai.models.length > 0 ? ai.models : null,
     taskType: ai?.task_type ?? null,
     outcome: ai?.outcome ?? null,
+    linkedRepo,
+    linkedCommitSha,
+    linkedPrUrl: null, // populated later when we add PR backfill via GH API
   });
 
   if (s.events.length > 0) {
