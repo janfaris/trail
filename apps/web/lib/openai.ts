@@ -69,3 +69,88 @@ export async function generateSessionMeta(
     return null;
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Sensitive-content flag — second LLM pass on the already-scrubbed payload.
+// Defense-in-depth on top of regex detectors + entropy guard. The model is
+// asked to call this out conservatively; we accept some false positives
+// because the consequence is a "pending review" state, not a deletion.
+// ──────────────────────────────────────────────────────────────────────────
+
+const FLAG_SYSTEM = `You are a content-safety checker for a developer session-sharing platform.
+
+Inspect the JSON sample (already passed through regex-based redaction).
+Decide whether it STILL contains anything that looks like:
+- credentials, API keys, secrets, tokens, passwords (regex may have missed novel formats)
+- personally-identifying info: full real names + employer, phone numbers, home addresses
+- proprietary code with NDA-shaped markers ("internal use only", "confidential", customer DBs by name)
+- private internal URLs / hostnames not caught by *.internal / *.local
+
+Be conservative — only flag if a reasonable security reviewer would block the share.
+Return JSON {"has_sensitive": boolean, "reasons": ["short reason", ...]}.
+If has_sensitive=false, reasons MUST be empty.`;
+
+const FLAG_SCHEMA = {
+  name: "sensitive_flag",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      has_sensitive: { type: "boolean" },
+      reasons: {
+        type: "array",
+        items: { type: "string", maxLength: 200 },
+        maxItems: 6,
+      },
+    },
+    required: ["has_sensitive", "reasons"],
+  },
+} as const;
+
+export const SensitiveFlagSchema = z.object({
+  has_sensitive: z.boolean(),
+  reasons: z.array(z.string()).max(6),
+});
+export type SensitiveFlag = z.infer<typeof SensitiveFlagSchema>;
+
+/**
+ * Best-effort content flag. Returns null if the model is unreachable so the
+ * caller can fall back to "publish-anyway" without a hard outage. A real
+ * `has_sensitive=true` MUST gate the upload server-side.
+ */
+export async function flagSensitive(payload: unknown): Promise<SensitiveFlag | null> {
+  const c = aiClient();
+  if (!c) return null;
+  const model = textModel();
+
+  // Cap payload at ~12k chars to bound cost. We trim from the middle so the
+  // first/last events (which usually carry the most identifying context)
+  // both stay in view.
+  const serialized = JSON.stringify(payload);
+  const sample =
+    serialized.length <= 12000
+      ? serialized
+      : serialized.slice(0, 6000) + "\n…[trimmed]…\n" + serialized.slice(-6000);
+
+  try {
+    const res = await c.chat.completions.create({
+      model,
+      temperature: 0,
+      max_completion_tokens: 400,
+      messages: [
+        { role: "system", content: FLAG_SYSTEM },
+        { role: "user", content: sample },
+      ],
+      response_format: { type: "json_schema", json_schema: FLAG_SCHEMA },
+    });
+    const raw = res.choices[0]?.message?.content;
+    if (!raw) return null;
+    const parsed = SensitiveFlagSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) return null;
+    return parsed.data;
+  } catch (err) {
+    console.error("[openai.flagSensitive] failed:", (err as Error).message);
+    return null;
+  }
+}

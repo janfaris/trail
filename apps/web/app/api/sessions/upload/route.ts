@@ -5,7 +5,7 @@ import { Session as SessionSchema } from "@trail/schema";
 import { type UploadSessionResponse } from "@trail/client";
 import { anonymize } from "@trail/anonymize";
 import { deriveTitle } from "@/lib/derive-title";
-import { generateSessionMeta } from "@/lib/openai";
+import { generateSessionMeta, flagSensitive } from "@/lib/openai";
 import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
 import {
   extractLanguages,
@@ -43,7 +43,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid session", issues: parsed.error.issues }, { status: 400 });
   }
   // Defense-in-depth: even if the CLI forgot to scrub, we scrub server-side too.
-  const { session: s } = anonymize(parsed.data);
+  const { session: s, report: redactionReport } = anonymize(parsed.data);
+
+  // Phase 0 trust gate. If the scrubbed payload still contains high-entropy
+  // tokens or the LLM flag fires, hold the session in pending-review state
+  // rather than publishing immediately. The owner can confirm later.
+  const allowSuspects =
+    req.headers.get("x-trail-allow-suspects")?.toLowerCase() === "true";
+  const entropyReasons =
+    redactionReport.suspects.length > 0 && !allowSuspects
+      ? [
+          `entropy guard found ${redactionReport.suspects.length} suspicious token(s) — ` +
+            redactionReport.suspects
+              .slice(0, 3)
+              .map((s) => `${s.location} (~${s.entropy} bits)`)
+              .join(", "),
+        ]
+      : [];
+  const flag = await flagSensitive(s).catch(() => null);
+  const flagReasons = flag?.has_sensitive ? flag.reasons : [];
+  const pendingReasons = [...entropyReasons, ...flagReasons];
+  const visibility = pendingReasons.length > 0 ? "pending" : "public";
 
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) });
   if (!userRow?.handle) {
@@ -105,6 +125,8 @@ export async function POST(req: NextRequest) {
     distinctFiles,
     promptCount,
     failedToolCalls,
+    visibility,
+    pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : null,
   });
 
   if (s.events.length > 0) {
@@ -137,9 +159,17 @@ export async function POST(req: NextRequest) {
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
-  const response: UploadSessionResponse = {
+  const response: UploadSessionResponse & {
+    visibility?: string;
+    pendingReviewReasons?: string[];
+    redactionsApplied?: number;
+  } = {
     url: `${baseUrl}/u/${userRow.handle}/${slug}`,
     slug,
+    visibility,
+    pendingReviewReasons:
+      pendingReasons.length > 0 ? pendingReasons : undefined,
+    redactionsApplied: redactionReport.total,
   };
   return NextResponse.json(response);
 }

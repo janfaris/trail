@@ -55,6 +55,11 @@ const STATEMENTS: { name: string; sql: string }[] = [
   { name: "trail_session.recipe_key_prompt_idxs", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_key_prompt_idxs jsonb` },
   { name: "trail_session.recipe_highlight_idxs", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_highlight_idxs jsonb` },
   { name: "trail_session.recipe_generated_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS recipe_generated_at timestamp` },
+  // Phase 0 trust — visibility gate + pending-review reasons + retro-redaction timestamp.
+  { name: "trail_session.visibility", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'public'` },
+  { name: "trail_session.pending_review_reasons", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS pending_review_reasons jsonb` },
+  { name: "trail_session.redacted_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS redacted_at timestamp` },
+  { name: "trail_session_visibility_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_visibility_idx ON trail_session (visibility)` },
 ];
 
 export async function POST(req: NextRequest) {

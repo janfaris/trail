@@ -110,6 +110,12 @@ export const trailSession = pgTable(
     distinctFiles: integer("distinct_files"),
     promptCount: integer("prompt_count"),
     failedToolCalls: integer("failed_tool_calls"),
+    // Phase 0 trust: visibility gates the public listing. 'public' is the
+    // happy path; 'pending' is held for owner confirmation (LLM PII flag);
+    // 'private' is owner-hidden; 'redacted' is post-publish strike.
+    visibility: text("visibility").notNull().default("public"),
+    pendingReviewReasons: jsonb("pending_review_reasons").$type<string[]>(),
+    redactedAt: timestamp("redacted_at"),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
