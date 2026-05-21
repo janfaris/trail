@@ -21,12 +21,12 @@ export function ProfileIntroCard() {
       </form>
 
       <div className="text-[10px] uppercase tracking-[0.16em] text-[#a7f300] mb-1.5 font-mono">
-        Try Trail
+        This is a Trail portfolio
       </div>
       <p className="text-sm text-zinc-300 leading-relaxed pr-6 max-w-3xl">
-        Trail records AI coding sessions across Claude Code, Cursor, Codex, Copilot, and
-        Hermes. The sessions below are real work — searchable, anonymized, shareable.
-        Three commands and you&apos;ll have your own profile like this one.
+        Below is how this engineer actually works with AI — real sessions from Claude Code,
+        Cursor, Codex, Copilot, and Hermes. Anonymized, curated, embeddable. Three commands
+        and you&apos;ll have your own.
       </p>
 
       <ol className="mt-4 space-y-2">
@@ -55,7 +55,9 @@ export function ProfileIntroCard() {
       <p className="mt-3 text-xs font-mono text-zinc-500">
         then{" "}
         <code className="text-zinc-300">trail share latest</code>{" "}
-        to make a public link like this one →
+        to publish · drop{" "}
+        <code className="text-zinc-300">trail.dev/u/you</code>{" "}
+        in your bio →
       </p>
     </div>
   );
