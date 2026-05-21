@@ -147,7 +147,14 @@ export async function POST(req: NextRequest) {
       ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
     models: ai?.models && ai.models.length > 0 ? ai.models : null,
     taskType: ai?.task_type ?? null,
-    outcome: ai?.outcome ?? null,
+    // Auto-infer "shipped" when the LLM didn't tag it but the session has
+    // strong signals: a linked git commit (recorded from inside a repo) or a
+    // sustained run (≥20 events ≈ real work, not a one-shot question). This
+    // keeps the recruiter view populated without requiring per-session
+    // curation. Owners can override from /dashboard.
+    outcome:
+      ai?.outcome ??
+      (linkedCommitSha || s.events.length >= 20 ? "shipped" : null),
     linkedRepo,
     linkedCommitSha,
     linkedPrUrl: null, // populated later when we add PR backfill via GH API

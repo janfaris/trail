@@ -36,7 +36,9 @@ export default async function InterviewView({ params }: Props) {
   });
   if (!userRow) notFound();
 
-  // Shipped trails: outcome=shipped OR has linked commit. Public only.
+  // Shipped trails: outcome=shipped, has linked commit, OR sustained run
+  // (≥20 events). The last is a back-compat catch for older sessions that
+  // were uploaded before the upload route auto-inferred outcome. Public only.
   const shipped = await db
     .select({
       slug: schema.trailSession.slug,
@@ -57,7 +59,7 @@ export default async function InterviewView({ params }: Props) {
       and(
         eq(schema.trailSession.userId, userRow.id),
         eq(schema.trailSession.visibility, "public"),
-        sql`(${schema.trailSession.outcome} = 'shipped' OR ${schema.trailSession.linkedCommitSha} IS NOT NULL)`,
+        sql`(${schema.trailSession.outcome} = 'shipped' OR ${schema.trailSession.linkedCommitSha} IS NOT NULL OR ${schema.trailSession.eventCount} >= 20)`,
       ),
     )
     .orderBy(desc(schema.trailSession.startedAt))
