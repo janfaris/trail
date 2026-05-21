@@ -24,6 +24,21 @@ const captures: { name: string; label: string }[] = [
   { name: "cursor", label: "Cursor" },
 ];
 
+const TOOL_DOT: Record<string, string> = {
+  "claude-code": "#d97706",
+  "codex": "#10b981",
+  "cursor": "#60a5fa",
+  "copilot-cli": "#a78bfa",
+  "copilot-chat": "#a78bfa",
+  "hermes": "#a7f300",
+};
+
+const heroPreview = [
+  { tool: "claude-code", title: EXAMPLE_TITLE, meta: "41 ev" },
+  { tool: "codex", title: "Drizzle migration: append-only schema", meta: "28 ev" },
+  { tool: "hermes", title: "Background research agent w/ cron", meta: "63 ev" },
+];
+
 const stages = [
   {
     n: "01",
@@ -144,7 +159,7 @@ export default async function Home() {
 
       <main className="flex-1">
         {/* HERO — HP1 Vertical-rail */}
-        <section className="relative mx-auto max-w-6xl px-6 lg:px-10 pt-24 pb-28 grid grid-cols-12 gap-x-6">
+        <section className="relative mx-auto max-w-6xl px-6 lg:px-10 pt-20 pb-16 grid grid-cols-12 gap-x-6 gap-y-10">
           {/* The rail */}
           <div className="col-span-12 md:col-span-1 md:pt-2">
             <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
@@ -153,7 +168,8 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="col-span-12 md:col-span-11">
+          {/* Copy column */}
+          <div className="col-span-12 md:col-span-6">
             {handle && (
               <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-[#a7f300] mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
@@ -161,26 +177,25 @@ export default async function Home() {
               </div>
             )}
 
-            <h1 className="font-display text-[44px] sm:text-[64px] md:text-[80px] leading-[0.94] tracking-[-0.025em] text-zinc-50 mb-8 max-w-[18ch]">
+            <h1 className="font-display text-[40px] sm:text-[52px] md:text-[60px] leading-[0.96] tracking-[-0.025em] text-zinc-50 mb-7 max-w-[16ch]">
               The portfolio<br />
               <span className="italic font-light text-zinc-300">recruiters can&apos;t read</span><br />
               from your <span className="text-[#a7f300]">commits</span>.
             </h1>
 
-            <p className="text-[17px] sm:text-[19px] leading-[1.55] text-zinc-400 max-w-[58ch] mb-12">
-              Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and turns
-              them into one public profile. Featured trails, anonymized by default, embeddable
-              anywhere.
+            <p className="text-[16px] sm:text-[17px] leading-[1.55] text-zinc-400 max-w-[44ch] mb-9">
+              Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and
+              turns them into one public profile. Anonymized by default, embeddable anywhere.
             </p>
 
-            <div className="flex items-center gap-2 max-w-[440px] mb-4">
+            <div className="flex items-center gap-2 max-w-[420px] mb-3">
               <div className="flex-1 flex items-center h-11 px-3.5 rounded-md border border-zinc-800 bg-zinc-900/50 font-mono text-[13px] text-zinc-200">
                 <span className="text-zinc-600 select-none mr-2.5">$</span>
                 <span>{INSTALL}</span>
               </div>
               <CopyButton value={INSTALL} label="Copy" copiedLabel="Copied" className="h-11 px-3.5" />
             </div>
-            <p className="text-[11px] text-zinc-500 font-mono mb-10 max-w-[440px]">
+            <p className="text-[11px] text-zinc-500 font-mono mb-8 max-w-[420px]">
               Coming soon. For now,{" "}
               <a href="https://github.com/janfaris/trail" className="text-zinc-400 hover:text-[#a7f300] underline-offset-4 hover:underline">
                 clone the repo
@@ -203,17 +218,65 @@ export default async function Home() {
                 <span aria-hidden>→</span>
               </Link>
             </div>
+          </div>
 
-            {/* Captures strip */}
-            <div className="mt-16 pt-6 border-t border-zinc-900/80 flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] font-mono">
-              <span className="uppercase tracking-[0.22em] text-zinc-600">Captures</span>
-              {captures.map((c) => (
-                <span key={c.name} className="inline-flex items-center gap-1.5 text-zinc-400">
-                  <ToolIcon name={c.name} size={13} className="text-zinc-500" />
-                  {c.label}
+          {/* Hero preview — profile card mock */}
+          <div className="col-span-12 md:col-span-5 md:pt-4">
+            <Link
+              href={EXAMPLE_HREF}
+              className="group block rounded-xl border border-zinc-800 hover:border-[#a7f300]/40 bg-gradient-to-b from-zinc-900/60 to-zinc-950 hover:from-zinc-900/80 transition-colors overflow-hidden shadow-[0_20px_60px_-20px_rgba(167,243,0,0.08)]"
+            >
+              <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+                <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
+                  trail.dev/u/jankarlo.faris
                 </span>
-              ))}
-            </div>
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">live</span>
+              </div>
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full border border-zinc-700 bg-zinc-900 flex items-center justify-center font-mono text-[12px] text-[#a7f300]">
+                    JF
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-zinc-100 text-[15px] font-medium leading-tight">Jan Karlo Faris</div>
+                    <div className="text-[11px] font-mono text-zinc-500 mt-0.5">ts · py · rust · 142 trails</div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-5 pb-2 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+                Featured
+              </div>
+              <ul className="divide-y divide-zinc-800/70">
+                {heroPreview.map((row) => (
+                  <li key={row.title} className="px-5 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="h-1.5 w-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: TOOL_DOT[row.tool] ?? "#71717a" }}
+                      />
+                      <ToolIcon name={row.tool} size={13} className="text-zinc-400 shrink-0" />
+                      <span className="text-[13px] text-zinc-100 truncate">{row.title}</span>
+                    </div>
+                    <span className="text-[10.5px] font-mono text-zinc-500 shrink-0 tabular-nums">{row.meta}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between text-[11px] font-mono text-zinc-500 group-hover:text-[#a7f300] transition-colors">
+                <span>Open profile</span>
+                <span aria-hidden>→</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Captures strip — full width under both columns */}
+          <div className="col-span-12 md:col-start-2 md:col-span-11 mt-2 pt-6 border-t border-zinc-900/80 flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] font-mono">
+            <span className="uppercase tracking-[0.22em] text-zinc-600">Captures</span>
+            {captures.map((c) => (
+              <span key={c.name} className="inline-flex items-center gap-1.5 text-zinc-400">
+                <ToolIcon name={c.name} size={13} className="text-zinc-500" />
+                {c.label}
+              </span>
+            ))}
           </div>
         </section>
 
@@ -348,28 +411,44 @@ $ trail search "stripe webhook retry"
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-8">
               <span className="text-[#a7f300]">A —</span> Note from the builder
             </div>
-            <div className="space-y-5 text-[16px] leading-[1.7] text-zinc-300 font-display">
-              <p>
-                I do most of my real work inside AI tools now — Claude Code, Codex, Cursor, Copilot,
-                Hermes. Hours of prompts, decisions, and diffs every day. None of it shows up on my
-                GitHub.
-              </p>
-              <p>
-                Recruiters open my repos and see one-line commits. They don&apos;t see the hour I
-                spent debugging a Stripe webhook retry, the refactor I argued through with Claude,
-                the agent loop I wired together at 2am. The part that&apos;s actually <em className="italic">me</em>.
-              </p>
-              <p>
-                So I built Trail. One link in your bio. Recruiters see how you think with AI, not
-                just what shipped. Anonymized before publish, captured from the CLIs you already
-                run — no proxying, no slowdown.
-              </p>
-              <p className="text-zinc-500 text-[14px] pt-2">
-                Local-first. Open source. Your data, your database. —{" "}
-                <Link href="/u/jankarlo.faris" className="text-zinc-300 hover:text-[#a7f300] underline-offset-4 underline decoration-zinc-700">
-                  @jankarlo.faris
+            <div className="relative rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900/40 to-zinc-950 p-8 sm:p-12 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
+              <div className="absolute -top-4 left-8 flex items-center gap-2 bg-zinc-950 px-3">
+                <div className="h-7 w-7 rounded-full border border-zinc-700 bg-zinc-900 flex items-center justify-center font-mono text-[10px] text-[#a7f300]">
+                  JF
+                </div>
+                <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
+                  jankarlo.faris · san juan, pr
+                </span>
+              </div>
+              <div className="space-y-5 text-[16px] leading-[1.7] text-zinc-300 font-display">
+                <p>
+                  I do most of my real work inside AI tools now — Claude Code, Codex, Cursor,
+                  Copilot, Hermes. Hours of prompts, decisions, and diffs every day. None of it
+                  shows up on my GitHub.
+                </p>
+                <p>
+                  Recruiters open my repos and see one-line commits. They don&apos;t see the hour I
+                  spent debugging a Stripe webhook retry, the refactor I argued through with
+                  Claude, the agent loop I wired together at 2am. The part that&apos;s actually{" "}
+                  <em className="italic">me</em>.
+                </p>
+                <p>
+                  So I built Trail. One link in your bio. Recruiters see how you think with AI,
+                  not just what shipped. Anonymized before publish, captured from the CLIs you
+                  already run — no proxying, no slowdown.
+                </p>
+              </div>
+              <div className="mt-8 pt-6 border-t border-zinc-800/80 flex items-center justify-between">
+                <p className="text-zinc-500 text-[12.5px] font-mono uppercase tracking-[0.18em]">
+                  Local-first · Open source · Your DB
+                </p>
+                <Link
+                  href="/u/jankarlo.faris"
+                  className="font-display italic text-[18px] text-zinc-200 hover:text-[#a7f300] transition-colors"
+                >
+                  — Jan
                 </Link>
-              </p>
+              </div>
             </div>
           </div>
         </section>
@@ -425,6 +504,10 @@ $ trail search "stripe webhook retry"
                       href={`/u/${s.handle ?? "anon"}/${s.slug}`}
                       className="group flex items-center gap-4 border border-zinc-900 bg-zinc-950 rounded-md p-4 hover:border-zinc-700 hover:bg-zinc-900/40 transition-colors"
                     >
+                      <span
+                        className="h-8 w-[3px] rounded-full shrink-0"
+                        style={{ backgroundColor: TOOL_DOT[s.tool] ?? "#3f3f46" }}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="text-[13.5px] text-zinc-100 truncate group-hover:text-white">
                           {s.title ?? s.slug}
