@@ -13,7 +13,7 @@ import { db, schema } from "@/db/client";
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";
 const EXAMPLE_TITLE = "Lupa · pricing research session";
 const EXAMPLE_META = "41 events · Claude Code";
-const INSTALL = "npm install -g @trail/cli";
+const INSTALL = "git clone github.com/janfaris/trail && npm link";
 
 const captures: { name: string; label: string }[] = [
   { name: "claude-code", label: "Claude Code" },
@@ -188,40 +188,46 @@ export default async function Home() {
               turns them into one public profile. Anonymized by default, embeddable anywhere.
             </p>
 
-            <div className="flex items-center gap-2 max-w-[420px] mb-3">
-              <div className="flex-1 flex items-center h-11 px-3.5 rounded-md border border-zinc-800 bg-zinc-900/50 font-mono text-[13px] text-zinc-200">
+            <div className="flex items-center gap-2 max-w-[460px] mb-3">
+              <div className="flex-1 flex items-center h-11 px-3.5 rounded-md border border-zinc-800 bg-zinc-900/50 font-mono text-[12.5px] text-zinc-200 overflow-hidden">
                 <span className="text-zinc-600 select-none mr-2.5">$</span>
-                <span>{INSTALL}</span>
+                <span className="truncate">{INSTALL}</span>
               </div>
               <CopyButton value={INSTALL} label="Copy" copiedLabel="Copied" className="h-11 px-3.5" />
             </div>
-            <p className="text-[11px] text-zinc-500 font-mono mb-8 max-w-[420px]">
-              Coming soon. For now,{" "}
-              <a href="https://github.com/janfaris/trail" className="text-zinc-400 hover:text-[#a7f300] underline-offset-4 hover:underline">
-                clone the repo
-              </a>{" "}
-              and <span className="text-zinc-300">npm link</span>.
+            <p className="text-[11px] text-zinc-500 font-mono mb-8 max-w-[460px] flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[#a7f300]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_6px_#a7f300]" />
+                v0.1 preview
+              </span>
+              <span className="text-zinc-700">·</span>
+              <span>npm registry release with v1.0</span>
             </p>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[14px]">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[14px]">
               {handle ? (
                 <Link href={`/u/${handle}`}>
                   <Button size="default">View your profile →</Button>
                 </Link>
               ) : (
-                <a href="/api/auth/sign-in/github">
-                  <Button size="default">Sign in with GitHub →</Button>
+                <Link href={EXAMPLE_HREF}>
+                  <Button size="default">See a live profile →</Button>
+                </Link>
+              )}
+              {!handle && (
+                <a
+                  href="/api/auth/sign-in/github"
+                  className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"
+                >
+                  Sign in with GitHub
+                  <span aria-hidden>→</span>
                 </a>
               )}
-              <Link href={EXAMPLE_HREF} className="text-zinc-300 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5">
-                See an example profile
-                <span aria-hidden>→</span>
-              </Link>
             </div>
           </div>
 
           {/* Hero preview — profile card mock */}
-          <div className="col-span-12 md:col-span-5 md:pt-4">
+          <div className="col-span-12 md:col-span-5">
             <Link
               href={EXAMPLE_HREF}
               className="group block rounded-xl border border-zinc-800 hover:border-[#a7f300]/40 bg-gradient-to-b from-zinc-900/60 to-zinc-950 hover:from-zinc-900/80 transition-colors overflow-hidden shadow-[0_20px_60px_-20px_rgba(167,243,0,0.08)]"
@@ -433,9 +439,15 @@ $ trail search "stripe webhook retry"
                   <em className="italic">me</em>.
                 </p>
                 <p>
-                  So I built Trail. One link in your bio. Recruiters see how you think with AI,
-                  not just what shipped. Anonymized before publish, captured from the CLIs you
-                  already run — no proxying, no slowdown.
+                  So I built Trail.
+                </p>
+                <p className="font-display text-[22px] sm:text-[26px] leading-[1.25] text-zinc-50 border-l-2 border-[#a7f300] pl-5 -ml-5 italic font-light">
+                  One link in your bio. Recruiters see how you think with AI, not just what
+                  shipped.
+                </p>
+                <p>
+                  Anonymized before publish, captured from the CLIs you already run — no
+                  proxying, no slowdown.
                 </p>
               </div>
               <div className="mt-8 pt-6 border-t border-zinc-800/80 flex items-center justify-between">
