@@ -125,6 +125,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
             {isSelf && (
               <>
                 <Link
+                  href="/dashboard"
+                  className="text-zinc-400 hover:text-[#a7f300] transition-colors text-xs font-mono"
+                >
+                  Manage sessions
+                </Link>
+                <Link
                   href="/settings"
                   className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs font-mono"
                 >
