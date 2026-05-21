@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
 
@@ -49,6 +49,63 @@ export async function toggleFeatured(sessionId: string) {
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
   if (me?.handle) revalidatePath(`/u/${me.handle}`);
   return { ok: true };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Bulk session management — drives /dashboard. Owners can flip visibility
+// and outcome on many sessions at once instead of running `trail share`
+// one ID at a time. All actions assert ownership server-side.
+// ──────────────────────────────────────────────────────────────────────────
+
+type Visibility = "public" | "private" | "pending";
+type Outcome = "shipped" | "abandoned" | "rabbithole" | "unknown" | null;
+
+async function ownedSessionIds(userId: string, ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ id: schema.trailSession.id })
+    .from(schema.trailSession)
+    .where(and(eq(schema.trailSession.userId, userId), inArray(schema.trailSession.id, ids)));
+  return rows.map((r) => r.id);
+}
+
+export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
+  const u = await requireUser();
+  if (!["public", "private", "pending"].includes(visibility)) {
+    return { ok: false, error: "invalid visibility" };
+  }
+  const owned = await ownedSessionIds(u.id, ids);
+  if (owned.length === 0) return { ok: true, updated: 0 };
+  await db
+    .update(schema.trailSession)
+    .set({ visibility })
+    .where(inArray(schema.trailSession.id, owned));
+  const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
+  if (me?.handle) {
+    revalidatePath(`/u/${me.handle}`);
+    revalidatePath(`/u/${me.handle}/interview`);
+    revalidatePath(`/dashboard`);
+  }
+  return { ok: true, updated: owned.length };
+}
+
+export async function bulkSetOutcome(ids: string[], outcome: Outcome) {
+  const u = await requireUser();
+  if (outcome !== null && !["shipped", "abandoned", "rabbithole", "unknown"].includes(outcome)) {
+    return { ok: false, error: "invalid outcome" };
+  }
+  const owned = await ownedSessionIds(u.id, ids);
+  if (owned.length === 0) return { ok: true, updated: 0 };
+  await db
+    .update(schema.trailSession)
+    .set({ outcome })
+    .where(inArray(schema.trailSession.id, owned));
+  const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
+  if (me?.handle) {
+    revalidatePath(`/u/${me.handle}/interview`);
+    revalidatePath(`/dashboard`);
+  }
+  return { ok: true, updated: owned.length };
 }
 
 export async function saveProfile(formData: FormData) {
