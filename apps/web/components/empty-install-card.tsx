@@ -12,14 +12,15 @@ export function EmptyInstallCard() {
     <div className="border border-zinc-900 rounded-lg bg-zinc-950 p-6 md:p-8">
       <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-[#a7f300] mb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
-        You&apos;re signed in · finish setup
+        Your portfolio is empty · 3 steps to fill it
       </div>
       <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-2">
-        Install the CLI to start recording
+        Install the CLI and your next session lands here
       </h2>
       <p className="text-sm text-zinc-400 leading-relaxed mb-8 max-w-xl">
-        Three commands and every Claude Code, Codex, Hermes, and Copilot session
-        you run will land on your profile.
+        Trail captures your work from Claude Code, Codex, Cursor, Copilot, and Hermes —
+        then turns it into a public portfolio you can drop in your bio. Public profiles need
+        at least 3 sessions before they list publicly.
       </p>
 
       <ol className="space-y-5">

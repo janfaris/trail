@@ -15,16 +15,16 @@ const EXAMPLE_META = "41 events · Claude Code";
 
 const features = [
   {
-    title: "Search like you remember it",
-    body: "Ask for “that session where I debugged the Stripe webhook retry” and Trail finds it. Real semantic search, not grep — every session embedded into your own Postgres.",
+    title: "GitHub shows the artifact. Trail shows the artisan.",
+    body: "Commits show what shipped. Trail shows the reasoning thread that produced it — the prompts, the dead-ends, the fixes. The part recruiters never see.",
   },
   {
-    title: "Every tool, one timeline",
-    body: "Claude Code, Codex, Cursor, Copilot, Hermes — all in one searchable feed. Switch tools mid-task without losing the thread.",
+    title: "One link in your bio. Embeds anywhere.",
+    body: "Drop trail.dev/u/you into your personal site, GitHub README, or résumé. Profiles render as a clean embed — three featured sessions, your stack, your style.",
   },
   {
-    title: "Your data, your Postgres",
-    body: "Sessions live in your own Neon database. Open source CLI. psql your own AI history. No vendor lock-in, no markdown clutter in your repo.",
+    title: "Anonymized by default.",
+    body: "24+ secret detectors, entropy guard, server-side gate before anything goes public. Your portfolio is shareable without leaking API keys or client code.",
   },
 ];
 
@@ -39,20 +39,20 @@ const captures: { name: string; label: string }[] = [
 
 const faqs = [
   {
-    q: "How is this different from SpecStory?",
-    a: "SpecStory dumps markdown into your repo (.specstory/history/) and offers keyword search; semantic search is on their roadmap. Trail ships semantic search today via pgvector, keeps your sessions out of your repo, and gives you your own Postgres to query.",
+    q: "Who is this for?",
+    a: "Engineers who code with AI tools daily and want to show recruiters how they actually work — not just what they shipped. Job-seekers, freelancers, indie hackers building proof-of-work in public.",
   },
   {
-    q: "Does it slow my AI agent?",
-    a: "No. Trail tails the log files your tools already write. Zero hooks, zero proxying, zero perceivable overhead.",
+    q: "What do recruiters actually see?",
+    a: "Your featured sessions — prompts, decisions, and final diffs. A recruiter-mode view filters to shipped trails only. Embed it on your personal site or drop the link in your bio.",
   },
   {
-    q: "Is my data private?",
-    a: "Yes by default. Sessions stay on your machine until you explicitly run trail share. Public sessions are anonymized — paths and secrets scrubbed before upload.",
+    q: "Is anything I record automatically public?",
+    a: "No. Sessions stay on your machine until you run trail share. Public sessions pass through 24+ secret detectors, an entropy guard, and a server-side gate before they go live.",
   },
   {
-    q: "What about Anthropic or OpenAI shipping their own viewer?",
-    a: "They will, eventually — but only for their own tool. Trail is cross-vendor: one feed, all your work, portable across every AI coding tool you use.",
+    q: "Which AI tools does it capture?",
+    a: "Claude Code, Codex, Cursor, Copilot CLI, Copilot Chat, and Hermes — captured by tailing the log files they already write. No proxying, no hooks, no slowdown.",
   },
 ];
 
@@ -156,13 +156,12 @@ export default async function Home() {
             v0.1 · open source
           </div>
           <h1 className="text-5xl md:text-6xl font-medium tracking-tight leading-[1.02] text-zinc-50 mb-6 max-w-3xl">
-            Find any AI coding session.{" "}
-            <span className="text-[#a7f300]">By memory</span>.
+            Your AI coding{" "}
+            <span className="text-[#a7f300]">portfolio</span>.
           </h1>
           <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed mb-10">
-            Trail captures Claude Code, Codex, Cursor, Copilot, and Hermes into one searchable
-            timeline — with real semantic search, not grep. Find that session from three weeks ago
-            by how you remember it, not what you typed.
+            Recruiters see your commits. Trail shows how you actually think — every Claude Code,
+            Codex, Cursor, Copilot, and Hermes session, curated as one link you drop in your bio.
           </p>
 
           <div className="flex items-center gap-2 max-w-md mb-3">
@@ -230,11 +229,11 @@ export default async function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <div>
               <h2 className="text-2xl font-medium tracking-tight text-zinc-50 mb-2">
-                A real memory layer for AI coding
+                The portfolio recruiters can&apos;t get from GitHub
               </h2>
               <p className="text-zinc-500 mb-8 leading-relaxed">
-                Trail snaps onto your existing CLI — no IDE plugins, no proxying, no markdown
-                clutter in your repo.
+                Trail captures your AI coding work from the CLIs you already use, then turns it
+                into a public profile you control — featured sessions, stack tags, embed anywhere.
               </p>
               <ol className="space-y-5">
                 {features.map((f, i) => (
@@ -363,19 +362,18 @@ $ trail search "stripe webhook retry bug"
           <div className="max-w-2xl space-y-4 text-sm leading-relaxed text-zinc-400">
             <p>
               I do most of my real work inside AI coding tools now — Claude Code, Codex, Cursor,
-              Copilot, Hermes. Every session has hours of prompts, decisions, and diffs that just
-              vanish when I close the terminal.
+              Copilot, Hermes. Hours of prompts, decisions, and diffs every day. None of it shows
+              up on my GitHub profile.
             </p>
             <p>
-              I couldn't find that auth fix from three weeks ago. I couldn't remember which tool
-              I'd used to solve the same Stripe bug last month. Cursor had its own history,
-              Claude Code had another, Codex had a third — none of them talked.
+              Recruiters open my repos and see one-line commits. They don&apos;t see the hour I
+              spent debugging the Stripe webhook retry, the refactor I argued through with Claude,
+              the agent loop I wired together at 2am. The part that&apos;s actually me.
             </p>
             <p>
-              So I built Trail. It tails the log files the tools already write — no proxying, no
-              hooks, no slowdown. Every session lands in your own Postgres with semantic
-              embeddings, so you can search by meaning, not keywords. Switch between Claude Code
-              and Codex mid-task and bring the context with you.
+              So I built Trail. Drop one link in your bio. Recruiters see how you think with AI,
+              not just what shipped. Sessions are anonymized before going public, captured from
+              the CLIs you already run — no proxying, no slowdown.
             </p>
             <p className="text-zinc-500">
               Local-first. Open source. Your data, your database.{" "}
