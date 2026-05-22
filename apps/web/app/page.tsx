@@ -148,11 +148,7 @@ export default async function Home() {
                 </Link>
                 <SignOutButton />
               </>
-            ) : (
-              <a href="/api/auth/sign-in/github">
-                <Button size="sm">Sign in</Button>
-              </a>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>
@@ -164,7 +160,7 @@ export default async function Home() {
           <div className="col-span-12 md:col-span-1 md:pt-2">
             <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
               <span className="text-[#a7f300]">00</span>
-              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">Install</span>
+              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">Profile</span>
             </div>
           </div>
 
@@ -188,42 +184,29 @@ export default async function Home() {
               turns them into one public profile. Anonymized by default, embeddable anywhere.
             </p>
 
-            <div className="flex items-center gap-2 max-w-[460px] mb-3">
-              <div className="flex-1 flex items-center h-11 px-3.5 rounded-md border border-zinc-800 bg-zinc-900/50 font-mono text-[12.5px] text-zinc-200 overflow-hidden">
-                <span className="text-zinc-600 select-none mr-2.5">$</span>
-                <span className="truncate">{INSTALL}</span>
-              </div>
-              <CopyButton value={INSTALL} label="Copy" copiedLabel="Copied" className="h-11 px-3.5" />
-            </div>
-            <p className="text-[11px] text-zinc-500 font-mono mb-8 max-w-[460px] flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[#a7f300]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_6px_#a7f300]" />
-                v0.1 preview
-              </span>
-              <span className="text-zinc-700">·</span>
-              <span>npm registry release with v1.0</span>
-            </p>
-
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[14px]">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[14px] mb-3">
               {handle ? (
                 <Link href={`/u/${handle}`}>
                   <Button size="default">View your profile →</Button>
                 </Link>
               ) : (
-                <Link href={EXAMPLE_HREF}>
-                  <Button size="default">See a live profile →</Button>
-                </Link>
-              )}
-              {!handle && (
-                <a
-                  href="/api/auth/sign-in/github"
-                  className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"
-                >
-                  Sign in with GitHub
-                  <span aria-hidden>→</span>
+                <a href="/api/auth/sign-in/github">
+                  <Button size="default">Sign in with GitHub →</Button>
                 </a>
               )}
+              {!handle && (
+                <Link
+                  href={EXAMPLE_HREF}
+                  className="text-zinc-400 hover:text-[#a7f300] transition-colors inline-flex items-center gap-1.5"
+                >
+                  See a live profile
+                  <span aria-hidden>→</span>
+                </Link>
+              )}
             </div>
+            <p className="text-[11px] text-zinc-600 font-mono">
+              Free during v0.1 preview · CLI install below
+            </p>
           </div>
 
           {/* Hero preview — profile card mock */}
@@ -236,7 +219,7 @@ export default async function Home() {
                 <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
                   trail.dev/u/jankarlo.faris
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">live</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">example</span>
               </div>
               <div className="px-5 pt-5 pb-4">
                 <div className="flex items-center gap-3">
