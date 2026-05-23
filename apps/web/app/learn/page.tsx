@@ -1,25 +1,33 @@
+/* Hallmark · macrostructure: workbench · polish: hp1-vertical-rail · genre: technical-editorial · stamp: trail-2026-05 */
 import Link from "next/link";
-import { eq, and, desc, isNotNull, sql, type SQL } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
+import { EmailDigestForm } from "@/components/email-digest-form";
+import {
+  getBuckets,
+  allFeaturedSlugs,
+  blurbFor,
+  type Bucket,
+  type BucketSlug,
+} from "@/lib/featured-trails";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Learn — Trail" };
+export const metadata = {
+  title: "Learn — Trail",
+  description:
+    "Curated AI-coding trails by technique: debugging with agents, multi-agent orchestration, RAG, refactors at scale, greenfield builds, and verification loops.",
+};
 
-// /learn — task-driven discovery.
-// Facets: tool x framework x task_type x outcome (default outcome=shipped).
-// Server component. Search params drive the query.
+// /learn — technique-bucketed reading list.
+//
+// Server component. Loads the hand-curated featured slugs from
+// lib/featured-trails.ts, joins against trail_session + user, and groups the
+// rows by bucket. Missing slugs (deleted/private) are silently dropped — the
+// bucket just renders shorter.
 
-type SP = Record<string, string | string[] | undefined>;
-
-function pick(sp: SP, key: string): string | null {
-  const v = sp[key];
-  if (Array.isArray(v)) return v[0] ?? null;
-  return v ?? null;
-}
-
-interface Row {
+interface SessionRow {
   slug: string;
   title: string | null;
   summary: string | null;
@@ -33,26 +41,9 @@ interface Row {
   handle: string | null;
 }
 
-async function loadRows(sp: SP): Promise<Row[]> {
-  const tool = pick(sp, "tool");
-  const framework = pick(sp, "framework");
-  const taskType = pick(sp, "task_type");
-  const outcome = pick(sp, "outcome") ?? "shipped";
-
-  const conds: SQL[] = [
-    eq(schema.trailSession.visibility, "public"),
-  ];
-  if (tool) conds.push(eq(schema.trailSession.tool, tool));
-  if (taskType) conds.push(eq(schema.trailSession.taskType, taskType));
-  if (outcome && outcome !== "any") {
-    conds.push(eq(schema.trailSession.outcome, outcome));
-  }
-  if (framework) {
-    // jsonb ?| (any-of) array containment
-    conds.push(sql`${schema.trailSession.frameworks} @> ${JSON.stringify([framework])}::jsonb`);
-  }
-
-  const rows = await db
+async function loadSessions(slugs: string[]): Promise<Map<string, SessionRow>> {
+  if (slugs.length === 0) return new Map();
+  const rows = (await db
     .select({
       slug: schema.trailSession.slug,
       title: schema.trailSession.title,
@@ -68,163 +59,178 @@ async function loadRows(sp: SP): Promise<Row[]> {
     })
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
-    .where(and(...conds))
-    .orderBy(desc(schema.trailSession.startedAt))
-    .limit(60);
-
-  return rows as Row[];
-}
-
-async function loadFacets(): Promise<{
-  tools: { value: string; count: number }[];
-  taskTypes: { value: string; count: number }[];
-  frameworks: { value: string; count: number }[];
-}> {
-  // Tool + task_type are scalar columns — straight group bys.
-  const tools = (await db
-    .select({
-      value: schema.trailSession.tool,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(schema.trailSession)
-    .where(eq(schema.trailSession.visibility, "public"))
-    .groupBy(schema.trailSession.tool)
-    .orderBy(sql`count(*) desc`)
-    .limit(12)) as { value: string; count: number }[];
-
-  const taskTypes = (await db
-    .select({
-      value: schema.trailSession.taskType,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(schema.trailSession)
     .where(
       and(
         eq(schema.trailSession.visibility, "public"),
-        isNotNull(schema.trailSession.taskType),
+        inArray(schema.trailSession.slug, slugs),
       ),
-    )
-    .groupBy(schema.trailSession.taskType)
-    .orderBy(sql`count(*) desc`)
-    .limit(12)) as { value: string; count: number }[];
-
-  // Frameworks live in a jsonb array — unnest via jsonb_array_elements_text.
-  const fwRaw = await db.execute<{ value: string; count: number }>(sql`
-    SELECT fw AS value, count(*)::int AS count
-    FROM (
-      SELECT jsonb_array_elements_text(frameworks) AS fw
-      FROM trail_session
-      WHERE visibility = 'public' AND frameworks IS NOT NULL
-    ) t
-    GROUP BY fw
-    ORDER BY count DESC
-    LIMIT 16
-  `);
-  const frameworks =
-    (fwRaw as unknown as { rows: { value: string; count: number }[] }).rows ??
-    (fwRaw as unknown as { value: string; count: number }[]);
-
-  return { tools, taskTypes, frameworks: frameworks as { value: string; count: number }[] };
+    )) as SessionRow[];
+  const map = new Map<string, SessionRow>();
+  for (const r of rows) map.set(r.slug, r);
+  return map;
 }
 
-function buildHref(sp: SP, key: string, value: string | null): string {
-  const params = new URLSearchParams();
-  for (const k of ["tool", "framework", "task_type", "outcome"]) {
-    const v = pick(sp, k);
-    if (v) params.set(k, v);
-  }
-  if (value === null) params.delete(key);
-  else params.set(key, value);
-  const qs = params.toString();
-  return qs ? `/learn?${qs}` : "/learn";
-}
-
-function FacetGroup({
-  label,
-  options,
-  paramKey,
-  sp,
+function TrailItem({
+  row,
+  bucket,
 }: {
-  label: string;
-  options: { value: string; count: number }[];
-  paramKey: string;
-  sp: SP;
+  row: SessionRow;
+  bucket: BucketSlug;
 }) {
-  const active = pick(sp, paramKey);
+  const editor = blurbFor(bucket, row.slug);
+  const href = row.handle ? `/u/${row.handle}/${row.slug}` : "#";
   return (
-    <div className="mb-6">
-      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">
-        {label}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {active && (
-          <Link
-            href={buildHref(sp, paramKey, null)}
-            className="px-2 py-1 text-xs rounded font-mono text-zinc-400 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-600"
-          >
-            clear
-          </Link>
+    <li className="py-5">
+      <Link href={href} className="block group">
+        <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1.5">
+          <ToolIcon name={row.tool} className="w-3 h-3" />
+          <span>{row.tool}</span>
+          {row.taskType && (
+            <>
+              <span>·</span>
+              <span>{row.taskType}</span>
+            </>
+          )}
+          {row.outcome && row.outcome !== "unknown" && (
+            <>
+              <span>·</span>
+              <span className={row.outcome === "shipped" ? "text-[#a7f300]" : ""}>
+                {row.outcome}
+              </span>
+            </>
+          )}
+          <span>·</span>
+          <RelativeTime date={row.startedAt} />
+          {row.handle && (
+            <>
+              <span>·</span>
+              <span>@{row.handle}</span>
+            </>
+          )}
+          <span>·</span>
+          <span className="tabular-nums">{row.eventCount} ev</span>
+        </div>
+        <h3 className="text-[17px] font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors leading-snug">
+          {row.title ?? row.slug}
+        </h3>
+        {editor && (
+          <p className="mt-1.5 text-[13px] text-zinc-300 leading-relaxed border-l-2 border-zinc-800 group-hover:border-[#a7f300]/60 pl-3 italic">
+            {editor}
+          </p>
         )}
-        {options.map((o) => {
-          const isActive = active === o.value;
-          return (
-            <Link
-              key={o.value}
-              href={buildHref(sp, paramKey, isActive ? null : o.value)}
-              className={`px-2 py-1 text-xs rounded font-mono border transition-colors ${
-                isActive
-                  ? "bg-[#a7f300] text-zinc-950 border-[#a7f300]"
-                  : "text-zinc-300 border-zinc-800 hover:border-zinc-600 hover:text-zinc-100"
-              }`}
-            >
-              {o.value}
-              <span className="ml-1 opacity-60">{o.count}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+        {row.summary && !editor && (
+          <p className="mt-1 text-sm text-zinc-400 line-clamp-2">{row.summary}</p>
+        )}
+        {(row.toolsUsed?.length || row.frameworks?.length) ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(row.toolsUsed ?? []).slice(0, 5).map((t) => (
+              <span
+                key={`t-${t}`}
+                className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded"
+              >
+                {t}
+              </span>
+            ))}
+            {(row.frameworks ?? []).slice(0, 5).map((f) => (
+              <span
+                key={`f-${f}`}
+                className="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-1.5 py-0.5 rounded"
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </Link>
+    </li>
   );
 }
 
-export default async function LearnPage({
-  searchParams,
+function BucketSection({
+  bucket,
+  rows,
+  index,
 }: {
-  searchParams: Promise<SP>;
+  bucket: Bucket;
+  rows: SessionRow[];
+  index: number;
 }) {
-  const sp = await searchParams;
-  let rows: Row[] = [];
-  let facets: Awaited<ReturnType<typeof loadFacets>> = {
-    tools: [],
-    taskTypes: [],
-    frameworks: [],
-  };
+  const n = String(index + 1).padStart(2, "0");
+  return (
+    <section
+      id={bucket.slug}
+      className="scroll-mt-20 grid grid-cols-12 gap-x-6 gap-y-6 py-12 border-t border-zinc-900 first:border-t-0"
+    >
+      {/* rail */}
+      <div className="col-span-12 md:col-span-1 md:pt-2">
+        <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+          <span className="text-[#a7f300]">{n}</span>
+          <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">
+            {bucket.kicker}
+          </span>
+        </div>
+      </div>
+
+      {/* header */}
+      <header className="col-span-12 md:col-span-11">
+        <h2 className="font-display text-[28px] md:text-[34px] leading-[1.05] tracking-[-0.02em] text-zinc-50 mb-2 max-w-[22ch]">
+          {bucket.title.split(" ").slice(0, -1).join(" ")}{" "}
+          <span className="italic font-light text-indigo-300">{bucket.verb}</span>
+        </h2>
+        <p className="text-[14.5px] text-zinc-400 leading-[1.55] max-w-[60ch]">
+          {bucket.description}
+        </p>
+      </header>
+
+      {/* list */}
+      <div className="col-span-12 md:col-start-2 md:col-span-11">
+        {rows.length === 0 ? (
+          <div className="mt-2 rounded-md border border-dashed border-zinc-900 bg-zinc-950/40 p-5 text-[13px] font-mono text-zinc-500">
+            No featured trails yet for this bucket.{" "}
+            <Link
+              href="/discover"
+              className="text-zinc-300 hover:text-[#a7f300] underline-offset-2 hover:underline"
+            >
+              Browse discover →
+            </Link>
+          </div>
+        ) : (
+          <ul className="divide-y divide-zinc-900">
+            {rows.map((r) => (
+              <TrailItem key={r.slug} row={r} bucket={bucket.slug} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default async function LearnPage() {
+  const buckets = getBuckets();
+  const slugs = allFeaturedSlugs();
+  let sessionsBySlug: Map<string, SessionRow> = new Map();
   try {
-    [rows, facets] = await Promise.all([loadRows(sp), loadFacets()]);
+    sessionsBySlug = await loadSessions(slugs);
   } catch {
-    // Schema columns may not exist yet on first deploy before migration.
+    // schema/table might not exist on first deploy — render empty buckets
+    sessionsBySlug = new Map();
   }
 
-  const tool = pick(sp, "tool");
-  const framework = pick(sp, "framework");
-  const taskType = pick(sp, "task_type");
-  const outcome = pick(sp, "outcome") ?? "shipped";
-
-  const subtitleParts: string[] = [];
-  if (tool) subtitleParts.push(tool);
-  if (framework) subtitleParts.push(`+ ${framework}`);
-  if (taskType) subtitleParts.push(`· ${taskType}`);
-  if (outcome !== "any") subtitleParts.push(`· ${outcome}`);
-  const subtitle = subtitleParts.join(" ") || "all shipped trails";
+  const tocItems = buckets.map((b) => ({
+    slug: b.slug,
+    title: b.title,
+    count: b.picks.filter((p) => sessionsBySlug.has(p.slug)).length,
+  }));
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
+    <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-50">
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
+        <div className="mx-auto max-w-6xl px-6 lg:px-10 h-14 flex items-center justify-between">
+          <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
             <span className="text-[#a7f300]">/</span>trail
           </Link>
-          <nav className="flex items-center gap-5 text-sm">
+          <nav className="flex items-center gap-6 text-[13px]">
             <Link href="/learn" className="text-zinc-100 transition-colors">
               Learn
             </Link>
@@ -234,116 +240,102 @@ export default async function LearnPage({
             <Link href="/search" className="text-zinc-400 hover:text-zinc-100 transition-colors">
               Search
             </Link>
+            <a
+              href="https://github.com/janfaris/trail"
+              className="text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              GitHub
+            </a>
           </nav>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-10 w-full">
-        <aside>
-          <FacetGroup label="Tool" options={facets.tools} paramKey="tool" sp={sp} />
-          <FacetGroup
-            label="Framework"
-            options={facets.frameworks}
-            paramKey="framework"
-            sp={sp}
-          />
-          <FacetGroup
-            label="Task type"
-            options={facets.taskTypes}
-            paramKey="task_type"
-            sp={sp}
-          />
-          <FacetGroup
-            label="Outcome"
-            options={[
-              { value: "shipped", count: 0 },
-              { value: "abandoned", count: 0 },
-              { value: "rabbithole", count: 0 },
-              { value: "any", count: 0 },
-            ]}
-            paramKey="outcome"
-            sp={sp}
-          />
-        </aside>
-
-        <section>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-1">
-            Trails for {subtitle}
-          </h1>
-          <p className="text-zinc-500 mb-8 text-sm font-mono">
-            {rows.length} {rows.length === 1 ? "trail" : "trails"}
-          </p>
-
-          {rows.length === 0 ? (
-            <div className="text-zinc-500 text-sm font-mono">
-              No trails match these filters yet. Try clearing one, or check back after more sessions are uploaded.
+      <main className="flex-1 mx-auto max-w-6xl px-6 lg:px-10 w-full">
+        {/* HERO */}
+        <section className="grid grid-cols-12 gap-x-6 gap-y-10 pt-20 pb-10">
+          <div className="col-span-12 md:col-span-1 md:pt-2">
+            <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+              <span className="text-[#a7f300]">00</span>
+              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">
+                Playbook
+              </span>
             </div>
-          ) : (
-            <ul className="divide-y divide-zinc-900">
-              {rows.map((r) => (
-                <li key={r.slug} className="py-4">
+          </div>
+          <div className="col-span-12 md:col-span-7">
+            <h1 className="font-display text-[40px] sm:text-[48px] md:text-[56px] leading-[0.98] tracking-[-0.025em] text-zinc-50 mb-6 max-w-[18ch]">
+              Learn how other builders{" "}
+              <span className="italic font-light text-indigo-300">ship with AI</span>.
+            </h1>
+            <p className="text-[16px] sm:text-[17px] leading-[1.55] text-zinc-400 max-w-[52ch]">
+              Real sessions — prompts, decisions, diffs — grouped by what they teach. No screenshots,
+              no &ldquo;tips&rdquo; threads, no theory. Just the receipts of people who got the thing working.
+            </p>
+          </div>
+          <aside className="col-span-12 md:col-span-4 md:pt-2">
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600 mb-3">
+              Buckets
+            </div>
+            <ul className="space-y-1.5">
+              {tocItems.map((t) => (
+                <li key={t.slug} className="flex items-baseline gap-3 text-[13px] font-mono">
                   <Link
-                    href={r.handle ? `/u/${r.handle}/${r.slug}` : "#"}
-                    className="block group"
+                    href={`#${t.slug}`}
+                    className="text-zinc-300 hover:text-[#a7f300] transition-colors"
                   >
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
-                      <ToolIcon name={r.tool} className="w-3 h-3" />
-                      <span>{r.tool}</span>
-                      {r.taskType && (
-                        <>
-                          <span>·</span>
-                          <span>{r.taskType}</span>
-                        </>
-                      )}
-                      {r.outcome && r.outcome !== "unknown" && (
-                        <>
-                          <span>·</span>
-                          <span className={r.outcome === "shipped" ? "text-[#a7f300]" : ""}>
-                            {r.outcome}
-                          </span>
-                        </>
-                      )}
-                      <span>·</span>
-                      <RelativeTime date={r.startedAt} />
-                      {r.handle && (
-                        <>
-                          <span>·</span>
-                          <span>@{r.handle}</span>
-                        </>
-                      )}
-                    </div>
-                    <h3 className="text-base font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors">
-                      {r.title ?? r.slug}
-                    </h3>
-                    {r.summary && (
-                      <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">{r.summary}</p>
-                    )}
-                    {(r.toolsUsed?.length || r.frameworks?.length) ? (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {(r.toolsUsed ?? []).slice(0, 6).map((t) => (
-                          <span
-                            key={`t-${t}`}
-                            className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                        {(r.frameworks ?? []).slice(0, 6).map((f) => (
-                          <span
-                            key={`f-${f}`}
-                            className="text-[10px] font-mono text-zinc-400 bg-zinc-900 px-1.5 py-0.5 rounded"
-                          >
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
+                    {t.title}
                   </Link>
+                  <span className="text-zinc-600 tabular-nums">{t.count}</span>
                 </li>
               ))}
             </ul>
-          )}
+          </aside>
         </section>
+
+        {/* BUCKETS */}
+        <div>
+          {buckets.map((b, i) => {
+            const rows = b.picks
+              .map((p) => sessionsBySlug.get(p.slug))
+              .filter((r): r is SessionRow => Boolean(r));
+            return <BucketSection key={b.slug} bucket={b} rows={rows} index={i} />;
+          })}
+        </div>
+
+        {/* EMAIL CTA */}
+        <section className="my-20 grid grid-cols-12 gap-x-6 gap-y-6 border-t border-zinc-900 pt-14">
+          <div className="col-span-12 md:col-span-1 md:pt-2">
+            <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+              <span className="text-[#a7f300]">→</span>
+              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">
+                Digest
+              </span>
+            </div>
+          </div>
+          <div className="col-span-12 md:col-span-7">
+            <h2 className="font-display text-[28px] md:text-[34px] leading-[1.05] tracking-[-0.02em] text-zinc-50 mb-3 max-w-[22ch]">
+              One email a week.{" "}
+              <span className="italic font-light text-indigo-300">Six trails worth reading.</span>
+            </h2>
+            <p className="text-[14.5px] text-zinc-400 leading-[1.55] max-w-[58ch] mb-6">
+              The <em>AI Coding Patterns</em> digest. Hand-picked from new public trails — what worked,
+              what didn&apos;t, and what changed about how to drive an agent this week. No filler.
+              Unsub in one click.
+            </p>
+            <EmailDigestForm />
+            <p className="mt-3 text-[11px] font-mono text-zinc-600">
+              We&apos;ll never share your email. One send a week, max.
+            </p>
+          </div>
+        </section>
+
+        <footer className="border-t border-zinc-900 py-8 text-[11px] font-mono text-zinc-600 flex items-center justify-between">
+          <span>
+            <span className="text-[#a7f300]">/</span>trail · learn
+          </span>
+          <Link href="/discover" className="hover:text-zinc-300">
+            Browse all public trails →
+          </Link>
+        </footer>
       </main>
     </div>
   );
