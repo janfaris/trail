@@ -19,12 +19,13 @@ interface SessionRow {
   startedAt: string;
   endedAt: string | null;
   repo: string | null;
+  redactedAt: string | null;
 }
 
-function loadLocalSession(id: string): SessionT | null {
+function loadLocalSession(id: string): { session: SessionT; alreadyRedacted: boolean } | null {
   const row = db
     .prepare(
-      `SELECT id, user, tool, started_at AS startedAt, ended_at AS endedAt, repo
+      `SELECT id, user, tool, started_at AS startedAt, ended_at AS endedAt, repo, redacted_at AS redactedAt
        FROM sessions WHERE id = ?`,
     )
     .get(id) as SessionRow | undefined;
@@ -43,7 +44,7 @@ function loadLocalSession(id: string): SessionT | null {
     repo: row.repo ?? undefined,
     events,
   };
-  return Session.parse(built);
+  return { session: Session.parse(built), alreadyRedacted: row.redactedAt != null };
 }
 
 function confirm(prompt: string): Promise<boolean> {
@@ -190,11 +191,12 @@ export function shareCommand(): Command {
       allowSuspects: boolean;
       baseUrl: string;
     }) => {
-      const session = loadLocalSession(id);
-      if (!session) {
+      const loaded = loadLocalSession(id);
+      if (!loaded) {
         console.error(chalk.red("✗"), `no local session with id ${id}`);
         process.exit(1);
       }
+      const { session, alreadyRedacted } = loaded;
 
       // Commander negates --no-* flags into positive booleans (opts.diffs = true means diffs allowed).
       const scoped = applyScopeFilters(session, {
@@ -203,7 +205,13 @@ export function shareCommand(): Command {
         noToolArgs: !opts.toolArgs,
       });
 
+      // Capture-time redaction (Task 4) is the primary defense; this second
+      // anonymize() pass is a fallback for sessions captured pre-redaction.
+      // For redacted-at-capture rows it will be a near no-op (idempotent).
       const { session: scrubbed, report } = anonymize(scoped);
+      if (alreadyRedacted) {
+        console.log(chalk.dim("scrub"), "session already redacted at capture-time");
+      }
       console.log(
         chalk.cyan("scrub"),
         `${report.total} redactions:`,
