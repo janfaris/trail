@@ -84,6 +84,10 @@ const faqs = [
     a: "No. Sessions stay local until you run trail share. Public trails pass through 24+ secret detectors, an entropy guard, and a server-side gate before they go live.",
   },
   {
+    q: "What if my Claude Code logs contain client NDAs?",
+    a: "Sessions stay local until you explicitly run trail share. Before publish, 24+ detectors strip secrets, client names, internal URLs, and high-entropy strings — and you preview the redacted diff first. If a session feels too sensitive, keep it private; the value of Trail doesn't depend on sharing every one.",
+  },
+  {
     q: "Which tools does it capture?",
     a: "Claude Code, Codex, Cursor, Copilot CLI, Copilot Chat, and Hermes — captured by tailing the log files they already write. Local-first. Open source.",
   },
@@ -173,15 +177,15 @@ export default async function Home() {
               </div>
             )}
 
-            <h1 className="font-display text-[40px] sm:text-[52px] md:text-[60px] leading-[0.96] tracking-[-0.025em] text-zinc-50 mb-7 max-w-[16ch]">
-              The portfolio<br />
-              <span className="italic font-light text-zinc-300">recruiters can&apos;t read</span><br />
-              from your <span className="text-[#a7f300]">commits</span>.
+            <h1 className="font-display text-[40px] sm:text-[52px] md:text-[60px] leading-[0.96] tracking-[-0.025em] text-zinc-50 mb-7 max-w-[18ch]">
+              Show how you build<br />
+              with <span className="text-[#a7f300]">AI</span>.<br />
+              <span className="italic font-light text-zinc-300">Learn how others do.</span>
             </h1>
 
             <p className="text-[16px] sm:text-[17px] leading-[1.55] text-zinc-400 max-w-[44ch] mb-9">
-              Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and
-              turns them into one public profile. Anonymized by default, embeddable anywhere.
+              Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions.
+              Share the ones worth showing. Read the ones worth learning from.
             </p>
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-[14px] mb-3">
@@ -269,6 +273,36 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* TRACKS — Dual positioning: builders / readers */}
+        <section className="border-t border-zinc-900">
+          <div className="mx-auto max-w-6xl px-6 lg:px-10 py-14 grid grid-cols-12 gap-x-6 gap-y-10">
+            <div className="col-span-12 md:col-span-6 md:border-r md:border-zinc-900 md:pr-10">
+              <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-4">
+                <span className="text-[#a7f300]">A —</span> For builders
+              </div>
+              <h3 className="font-display text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.015em] text-zinc-50 mb-3">
+                A portfolio that proves you actually ship with AI.
+              </h3>
+              <p className="text-[14.5px] leading-[1.6] text-zinc-400 max-w-[42ch]">
+                Pin your strongest sessions. The prompts, the dead-ends, the diffs.
+                One link recruiters and clients can actually read.
+              </p>
+            </div>
+            <div className="col-span-12 md:col-span-6 md:pl-10">
+              <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-4">
+                <span className="text-[#a7f300]">B —</span> For everyone else
+              </div>
+              <h3 className="font-display text-[24px] sm:text-[28px] leading-[1.1] tracking-[-0.015em] text-zinc-50 mb-3">
+                Real session traces from people steering agents well.
+              </h3>
+              <p className="text-[14.5px] leading-[1.6] text-zinc-400 max-w-[42ch]">
+                Skip the threadboi takes. Read how senior builders actually prompt,
+                catch hallucinations, and close verification loops — line by line.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* WORKBENCH — Stage 01..04 */}
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-6 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.22em] text-zinc-600">
@@ -318,8 +352,8 @@ $ trail search "stripe webhook retry"
                   )}
 
                   {s.artifact === "diff" && (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 overflow-hidden">
-                      <div className="px-3.5 py-2 border-b border-zinc-800 flex items-center justify-between">
+                    <div className="rounded-lg border border-rose-500/15 bg-rose-500/[0.03] overflow-hidden">
+                      <div className="px-3.5 py-2 border-b border-rose-500/15 flex items-center justify-between">
                         <span className="text-[11px] font-mono text-zinc-500">scrub.preview</span>
                         <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a7f300]">redacted</span>
                       </div>
@@ -372,8 +406,8 @@ $ trail search "stripe webhook retry"
                   )}
 
                   {s.artifact === "embed" && (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 overflow-hidden">
-                      <div className="px-3.5 py-2 border-b border-zinc-800 flex items-center justify-between">
+                    <div className="rounded-lg border border-[#a7f300]/15 bg-[#a7f300]/[0.03] overflow-hidden">
+                      <div className="px-3.5 py-2 border-b border-[#a7f300]/15 flex items-center justify-between">
                         <span className="text-[11px] font-mono text-zinc-500">README.md</span>
                         <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">markdown</span>
                       </div>
@@ -394,11 +428,62 @@ $ trail search "stripe webhook retry"
           ))}
         </section>
 
-        {/* Founder note — Letter aside */}
+        {/* Featured trails strip — mid-page reading rail */}
+        {discover.length > 0 && (
+          <section className="border-t border-zinc-900">
+            <div className="mx-auto max-w-6xl px-6 lg:px-10 py-20">
+              <div className="flex items-end justify-between mb-10">
+                <div>
+                  <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-2">
+                    <span className="text-[#a7f300]">F —</span> Featured
+                  </div>
+                  <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.05] tracking-[-0.015em] text-zinc-50">
+                    Recent trails worth reading.
+                  </h2>
+                </div>
+                <Link href="/discover" className="text-[13px] text-zinc-400 hover:text-[#a7f300] transition-colors">
+                  View all →
+                </Link>
+              </div>
+              <ul className="grid md:grid-cols-2 gap-3">
+                {discover.map((s) => (
+                  <li key={s.slug}>
+                    <Link
+                      href={`/u/${s.handle ?? "anon"}/${s.slug}`}
+                      className="group flex items-center gap-4 border border-zinc-900 bg-zinc-950 rounded-md p-4 hover:border-zinc-700 hover:bg-zinc-900/40 transition-colors"
+                    >
+                      <span
+                        className="h-8 w-[3px] rounded-full shrink-0"
+                        style={{ backgroundColor: TOOL_DOT[s.tool] ?? "#3f3f46" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13.5px] text-zinc-100 truncate group-hover:text-white">
+                          {s.title ?? s.slug}
+                        </div>
+                        <div className="mt-1 flex items-center gap-x-3 gap-y-1 text-[11px] font-mono text-zinc-500">
+                          <span className="inline-flex items-center gap-1.5">
+                            <ToolIcon name={s.tool} size={11} className="text-zinc-500" />
+                            {s.tool}
+                          </span>
+                          {s.handle && <span className="text-zinc-400">@{s.handle}</span>}
+                          <span className="tabular-nums">{s.eventCount} ev</span>
+                          <RelativeTime date={s.startedAt} className="tabular-nums" />
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-zinc-600 group-hover:text-[#a7f300] shrink-0">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {/* Portfolio framing — Letter aside (demoted from hero) */}
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-3xl px-6 lg:px-10 py-24">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-8">
-              <span className="text-[#a7f300]">A —</span> Note from the builder
+              <span className="text-[#a7f300]">A —</span> The best trails become your portfolio
             </div>
             <div className="relative rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900/40 to-zinc-950 p-8 sm:p-12 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.8)]">
               <div className="absolute -top-4 left-8 flex items-center gap-2 bg-zinc-950 px-3">
@@ -411,26 +496,13 @@ $ trail search "stripe webhook retry"
               </div>
               <div className="space-y-5 text-[16px] leading-[1.7] text-zinc-300 font-display">
                 <p>
-                  I do most of my real work inside AI tools now — Claude Code, Codex, Cursor,
-                  Copilot, Hermes. Hours of prompts, decisions, and diffs every day. None of it
-                  shows up on my GitHub.
-                </p>
-                <p>
-                  Recruiters open my repos and see one-line commits. They don&apos;t see the hour I
-                  spent debugging a Stripe webhook retry, the refactor I argued through with
-                  Claude, the agent loop I wired together at 2am. The part that&apos;s actually{" "}
-                  <em className="italic">me</em>.
-                </p>
-                <p>
-                  So I built Trail.
+                  I do most of my real work inside AI tools now. Hours of prompts,
+                  decisions, and diffs every day — none of which shows up on my GitHub.
+                  Recruiters open my repos and see one-line commits, not the part that&apos;s
+                  actually <em className="italic">me</em>.
                 </p>
                 <p className="font-display text-[22px] sm:text-[26px] leading-[1.25] text-zinc-50 border-l-2 border-[#a7f300] pl-5 -ml-5 italic font-light">
-                  One link in your bio. Recruiters see how you think with AI, not just what
-                  shipped.
-                </p>
-                <p>
-                  Anonymized before publish, captured from the CLIs you already run — no
-                  proxying, no slowdown.
+                  Pin three trails. The right people see how you actually think with AI.
                 </p>
               </div>
               <div className="mt-8 pt-6 border-t border-zinc-800/80 flex items-center justify-between">
@@ -475,57 +547,6 @@ $ trail search "stripe webhook retry"
           </div>
         </section>
 
-        {/* Discover (conditional) */}
-        {discover.length > 0 && (
-          <section className="border-t border-zinc-900">
-            <div className="mx-auto max-w-6xl px-6 lg:px-10 py-24">
-              <div className="flex items-end justify-between mb-10">
-                <div>
-                  <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-2">
-                    <span className="text-[#a7f300]">D —</span> Discover
-                  </div>
-                  <h2 className="font-display text-[28px] leading-[1.05] tracking-[-0.015em] text-zinc-50">
-                    What others are working through.
-                  </h2>
-                </div>
-                <Link href="/discover" className="text-[13px] text-zinc-400 hover:text-[#a7f300] transition-colors">
-                  View all →
-                </Link>
-              </div>
-              <ul className="grid md:grid-cols-2 gap-3">
-                {discover.map((s) => (
-                  <li key={s.slug}>
-                    <Link
-                      href={`/u/${s.handle ?? "anon"}/${s.slug}`}
-                      className="group flex items-center gap-4 border border-zinc-900 bg-zinc-950 rounded-md p-4 hover:border-zinc-700 hover:bg-zinc-900/40 transition-colors"
-                    >
-                      <span
-                        className="h-8 w-[3px] rounded-full shrink-0"
-                        style={{ backgroundColor: TOOL_DOT[s.tool] ?? "#3f3f46" }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13.5px] text-zinc-100 truncate group-hover:text-white">
-                          {s.title ?? s.slug}
-                        </div>
-                        <div className="mt-1 flex items-center gap-x-3 gap-y-1 text-[11px] font-mono text-zinc-500">
-                          <span className="inline-flex items-center gap-1.5">
-                            <ToolIcon name={s.tool} size={11} className="text-zinc-500" />
-                            {s.tool}
-                          </span>
-                          {s.handle && <span className="text-zinc-400">@{s.handle}</span>}
-                          <span className="tabular-nums">{s.eventCount} ev</span>
-                          <RelativeTime date={s.startedAt} className="tabular-nums" />
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono text-zinc-600 group-hover:text-[#a7f300] shrink-0">→</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
-
         {/* Final CTA strip */}
         <section className="border-t border-zinc-900 bg-gradient-to-b from-zinc-950 to-black">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-28 text-center">
@@ -533,7 +554,7 @@ $ trail search "stripe webhook retry"
               <span className="text-[#a7f300]">→</span> Ship your portfolio
             </div>
             <h2 className="font-display text-[40px] sm:text-[56px] leading-[1.0] tracking-[-0.02em] text-zinc-50 mb-8 max-w-[20ch] mx-auto">
-              One link in your bio. <span className="italic font-light text-zinc-400">The rest writes itself.</span>
+              One link in your bio.
             </h2>
             <div className="flex items-center justify-center gap-2 max-w-[420px] mx-auto mb-6">
               <div className="flex-1 flex items-center h-11 px-3.5 rounded-md border border-zinc-800 bg-zinc-900/50 font-mono text-[13px] text-zinc-200">
