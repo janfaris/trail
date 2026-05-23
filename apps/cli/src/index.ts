@@ -5,6 +5,7 @@ import { shareCommand } from "./commands/share.js";
 import { openCommand } from "./commands/open.js";
 import { searchCommand } from "./commands/search.js";
 import { loginCommand, logoutCommand, whoamiCommand } from "./commands/auth.js";
+import { daemonCommand } from "./commands/daemon.js";
 
 const program = new Command()
   .name("trail")
@@ -19,5 +20,6 @@ program.addCommand(searchCommand());
 program.addCommand(loginCommand());
 program.addCommand(logoutCommand());
 program.addCommand(whoamiCommand());
+program.addCommand(daemonCommand());
 
 program.parseAsync();
