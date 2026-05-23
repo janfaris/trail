@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { homedir, userInfo } from "node:os";
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { buildPlist } from "../lib/launchd-plist.js";
 
 const execFileP = promisify(execFile);
@@ -66,6 +66,16 @@ async function bootstrap(): Promise<void> {
   await execFileP("launchctl", ["bootstrap", `gui/${uid}`, PLIST_PATH]);
 }
 
+async function bootout(ignoreMissing: boolean): Promise<void> {
+  const uid = userInfo().uid;
+  try {
+    await execFileP("launchctl", ["bootout", `gui/${uid}/${DAEMON_LABEL}`]);
+  } catch (err) {
+    if (!ignoreMissing) throw err;
+    // bootout returns non-zero when service is not loaded; swallow.
+  }
+}
+
 async function installAction(): Promise<void> {
   assertMac();
   await mkdir(TRAIL_DIR, { recursive: true });
@@ -75,6 +85,24 @@ async function installAction(): Promise<void> {
   await writeFile(PLIST_PATH, plist, "utf8");
   await bootstrap();
   console.log(chalk.green(`Installed ${DAEMON_LABEL} (bin: ${binPath})`));
+}
+
+async function uninstallAction(): Promise<void> {
+  assertMac();
+  await bootout(true);
+  try {
+    await unlink(PLIST_PATH);
+  } catch {
+    // already gone
+  }
+  console.log(chalk.green(`Uninstalled ${DAEMON_LABEL}`));
+}
+
+async function restartAction(): Promise<void> {
+  assertMac();
+  await bootout(true);
+  await bootstrap();
+  console.log(chalk.green(`Restarted ${DAEMON_LABEL}`));
 }
 
 async function statusAction(): Promise<void> {
@@ -87,5 +115,7 @@ export function daemonCommand(): Command {
   const cmd = new Command("daemon").description("Manage the Trail background recorder (macOS)");
   cmd.command("status").description("Show daemon status").action(statusAction);
   cmd.command("install").description("Install and start the daemon").action(installAction);
+  cmd.command("uninstall").description("Stop and remove the daemon").action(uninstallAction);
+  cmd.command("restart").description("Restart the daemon").action(restartAction);
   return cmd;
 }
