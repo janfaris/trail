@@ -44,6 +44,18 @@ pnpm -r build
 pnpm --filter @trail/web dev   # http://localhost:3000
 ```
 
+### Run it in the background (macOS)
+
+Once installed, Trail can watch your AI CLI session files continuously via a launchd LaunchAgent — no terminal window required.
+
+```bash
+trail daemon install     # registers ~/Library/LaunchAgents/com.trail.daemon.plist
+trail daemon status      # shows running / stopped + PID
+trail daemon uninstall   # stops + removes the LaunchAgent
+```
+
+Logs stream to `~/.trail/daemon.log`. macOS only for now (Linux/Windows on the roadmap). See [docs/daemon.md](docs/daemon.md) for details.
+
 End-to-end share flow:
 
 ```bash
