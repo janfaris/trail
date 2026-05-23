@@ -43,8 +43,9 @@ db.exec(`
 for (const col of ["redacted_at TEXT", "redaction_count INTEGER"]) {
   try {
     db.exec(`ALTER TABLE sessions ADD COLUMN ${col}`);
-  } catch {
-    // already exists
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/duplicate column name/i.test(msg)) throw err;
   }
 }
 
