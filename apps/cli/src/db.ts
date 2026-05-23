@@ -21,6 +21,8 @@ db.exec(`
     summary TEXT,
     share_slug TEXT,
     source_path TEXT,
+    redacted_at TEXT,
+    redaction_count INTEGER,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
@@ -37,14 +39,26 @@ db.exec(`
   );
 `);
 
+// Idempotent migration for DBs created before redaction-at-capture landed.
+for (const col of ["redacted_at TEXT", "redaction_count INTEGER"]) {
+  try {
+    db.exec(`ALTER TABLE sessions ADD COLUMN ${col}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/duplicate column name/i.test(msg)) throw err;
+  }
+}
+
 import type { Session } from "@trail/schema";
 
 const upsertSession = db.prepare(`
-  INSERT INTO sessions (id, user, tool, started_at, ended_at, repo, source_path, updated_at)
-  VALUES (@id, @user, @tool, @startedAt, @endedAt, @repo, @sourcePath, datetime('now'))
+  INSERT INTO sessions (id, user, tool, started_at, ended_at, repo, source_path, redacted_at, redaction_count, updated_at)
+  VALUES (@id, @user, @tool, @startedAt, @endedAt, @repo, @sourcePath, @redactedAt, @redactionCount, datetime('now'))
   ON CONFLICT(id) DO UPDATE SET
     ended_at = excluded.ended_at,
     repo = COALESCE(excluded.repo, sessions.repo),
+    redacted_at = excluded.redacted_at,
+    redaction_count = excluded.redaction_count,
     updated_at = datetime('now')
 `);
 
@@ -55,22 +69,31 @@ const insertEvent = db.prepare(
 );
 const insertFts = db.prepare(`INSERT INTO events_fts (session_id, payload) VALUES (?, ?)`);
 
+import { redactSessionForCapture } from "./lib/capture-redact.js";
+
 export function saveSession(session: Session, sourcePath: string): void {
+  // Redact BEFORE any data touches SQLite. Local DB compromise must not
+  // expose raw API keys / emails / credential URLs. share.ts keeps a second
+  // anonymize() pass as a fallback for legacy rows captured pre-redaction.
+  const { session: redacted, redactedAt, redactionCount } =
+    redactSessionForCapture(session);
   const tx = db.transaction(() => {
     upsertSession.run({
-      id: session.id,
-      user: session.user,
-      tool: session.tool,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt ?? null,
-      repo: session.repo ?? null,
+      id: redacted.id,
+      user: redacted.user,
+      tool: redacted.tool,
+      startedAt: redacted.startedAt,
+      endedAt: redacted.endedAt ?? null,
+      repo: redacted.repo ?? null,
       sourcePath,
+      redactedAt,
+      redactionCount,
     });
-    deleteEvents.run(session.id);
-    deleteFts.run(session.id);
-    for (const ev of session.events) {
+    deleteEvents.run(redacted.id);
+    deleteFts.run(redacted.id);
+    for (const ev of redacted.events) {
       const payload = JSON.stringify(ev);
-      insertEvent.run(session.id, ev.at, ev.kind, payload);
+      insertEvent.run(redacted.id, ev.at, ev.kind, payload);
       // index a text-only blob for FTS
       const text =
         ev.kind === "prompt" || ev.kind === "completion"
@@ -82,7 +105,7 @@ export function saveSession(session: Session, sourcePath: string): void {
               : ev.kind === "file_diff"
                 ? `${ev.path}`
                 : "";
-      insertFts.run(session.id, text);
+      insertFts.run(redacted.id, text);
     }
   });
   tx();
