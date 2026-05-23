@@ -2,18 +2,20 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { homedir, userInfo } from "node:os";
-import path from "node:path";
+import { userInfo } from "node:os";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { buildPlist } from "../lib/launchd-plist.js";
+import {
+  DAEMON_LABEL,
+  TRAIL_DIR,
+  LOG_PATH,
+  LAUNCH_AGENTS_DIR,
+  PLIST_PATH,
+} from "../lib/daemon-paths.js";
 
 const execFileP = promisify(execFile);
 
-export const DAEMON_LABEL = "com.trail.daemon";
-export const TRAIL_DIR = path.join(homedir(), ".trail");
-export const LOG_PATH = path.join(TRAIL_DIR, "daemon.log");
-export const LAUNCH_AGENTS_DIR = path.join(homedir(), "Library", "LaunchAgents");
-export const PLIST_PATH = path.join(LAUNCH_AGENTS_DIR, `${DAEMON_LABEL}.plist`);
+export { DAEMON_LABEL, TRAIL_DIR, LOG_PATH, LAUNCH_AGENTS_DIR, PLIST_PATH };
 
 export type DaemonStatus =
   | { state: "running"; pid: number }
@@ -23,6 +25,13 @@ export type DaemonStatus =
 type Runner = (cmd: string, args: string[]) => Promise<{ stdout: string; stderr: string }>;
 
 const defaultRunner: Runner = (cmd, args) => execFileP(cmd, args);
+
+export class DaemonError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DaemonError";
+  }
+}
 
 export async function getDaemonStatus(runner: Runner = defaultRunner): Promise<DaemonStatus> {
   try {
@@ -45,8 +54,7 @@ export function formatStatus(s: DaemonStatus): string {
 
 function assertMac(): void {
   if (process.platform !== "darwin") {
-    console.error(chalk.red("Daemon mode is macOS-only"));
-    process.exit(1);
+    throw new DaemonError("Daemon mode is macOS-only");
   }
 }
 
@@ -58,7 +66,9 @@ async function resolveBinPath(): Promise<string> {
   } catch {
     // fall through
   }
-  return process.execPath;
+  throw new DaemonError(
+    "Could not locate `trail` binary on PATH. Install globally or symlink it before running `trail daemon install`.",
+  );
 }
 
 async function bootstrap(): Promise<void> {
@@ -66,13 +76,26 @@ async function bootstrap(): Promise<void> {
   await execFileP("launchctl", ["bootstrap", `gui/${uid}`, PLIST_PATH]);
 }
 
+interface ExecError extends Error {
+  code?: number | string;
+  stderr?: string;
+}
+
+function isMissingServiceError(err: unknown): boolean {
+  const e = err as ExecError;
+  const code = typeof e?.code === "number" ? e.code : Number.parseInt(String(e?.code ?? ""), 10);
+  if (code === 113 || code === 3) return true;
+  const stderr = String(e?.stderr ?? "");
+  return /could not find service|no such process|not loaded/i.test(stderr);
+}
+
 async function bootout(ignoreMissing: boolean): Promise<void> {
   const uid = userInfo().uid;
   try {
     await execFileP("launchctl", ["bootout", `gui/${uid}/${DAEMON_LABEL}`]);
   } catch (err) {
-    if (!ignoreMissing) throw err;
-    // bootout returns non-zero when service is not loaded; swallow.
+    if (ignoreMissing && isMissingServiceError(err)) return;
+    throw err;
   }
 }
 
@@ -111,11 +134,23 @@ async function statusAction(): Promise<void> {
   console.log(formatStatus(s));
 }
 
+function wrap(fn: () => Promise<void>): () => Promise<void> {
+  return async () => {
+    try {
+      await fn();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(chalk.red(msg));
+      process.exit(1);
+    }
+  };
+}
+
 export function daemonCommand(): Command {
   const cmd = new Command("daemon").description("Manage the Trail background recorder (macOS)");
-  cmd.command("status").description("Show daemon status").action(statusAction);
-  cmd.command("install").description("Install and start the daemon").action(installAction);
-  cmd.command("uninstall").description("Stop and remove the daemon").action(uninstallAction);
-  cmd.command("restart").description("Restart the daemon").action(restartAction);
+  cmd.command("status").description("Show daemon status").action(wrap(statusAction));
+  cmd.command("install").description("Install and start the daemon").action(wrap(installAction));
+  cmd.command("uninstall").description("Stop and remove the daemon").action(wrap(uninstallAction));
+  cmd.command("restart").description("Restart the daemon").action(wrap(restartAction));
   return cmd;
 }

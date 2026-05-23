@@ -1,3 +1,5 @@
+import { RECORD_SUBCOMMAND } from "./daemon-paths.js";
+
 export interface BuildPlistInput {
   binPath: string;
   logPath: string;
@@ -15,6 +17,7 @@ export function buildPlist({ binPath, logPath, label }: BuildPlistInput): string
   const bin = escapeXml(binPath);
   const log = escapeXml(logPath);
   const lbl = escapeXml(label);
+  const sub = escapeXml(RECORD_SUBCOMMAND);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -24,7 +27,7 @@ export function buildPlist({ binPath, logPath, label }: BuildPlistInput): string
   <key>ProgramArguments</key>
   <array>
     <string>${bin}</string>
-    <string>record</string>
+    <string>${sub}</string>
   </array>
   <key>RunAtLoad</key>
   <true/>

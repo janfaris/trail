@@ -26,4 +26,15 @@ describe("buildPlist", () => {
     expect(xml).toContain("<plist version=\"1.0\">");
     expect(xml.trimEnd().endsWith("</plist>")).toBe(true);
   });
+
+  it("escapes & and < in paths", () => {
+    const out = buildPlist({
+      binPath: "/usr/local/bin/trail",
+      logPath: "/tmp/weird&path<file.log",
+      label: "com.trail.daemon",
+    });
+    expect(out).toContain("&amp;");
+    expect(out).toContain("&lt;");
+    expect(out).not.toContain("weird&path<file.log");
+  });
 });
