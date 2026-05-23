@@ -1,0 +1,55 @@
+name: Auto-close Copilot CLI test issues
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions: {}
+
+jobs:
+  close:
+    if: >-
+      github.event.issue.title == 'Test issue from Copilot CLI' &&
+      contains(github.event.issue.body, 'This is a test issue created from the GitHub Copilot CLI to verify issue creation works.')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Close issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue?.title ?? "";
+            const body = issue?.body ?? "";
+
+            const isCopilotCliTestIssue =
+              title === "Test issue from Copilot CLI" &&
+              body.includes(
+                "This is a test issue created from the GitHub Copilot CLI to verify issue creation works.",
+              );
+
+            if (!isCopilotCliTestIssue) {
+              core.info("Issue does not match Copilot CLI test issue signature; skipping.");
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = issue.number;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: "Auto-closing Copilot CLI test issue.",
+            });
+
+            if (issue.state !== "closed") {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number,
+                state: "closed",
+              });
+            }
