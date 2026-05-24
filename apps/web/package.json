@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "@octokit/rest": "^22.0.1",
     "@trail/anonymize": "workspace:*",
     "@trail/client": "workspace:*",
     "@trail/schema": "workspace:*",
