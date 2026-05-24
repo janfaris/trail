@@ -169,6 +169,9 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@20.19.41)(lightningcss@1.32.0)
 
   packages/anonymize:
     dependencies:
@@ -4328,7 +4331,6 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 5.4.21(@types/node@20.19.41)(lightningcss@1.32.0)
-    optional: true
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.19.19)(lightningcss@1.32.0))':
     dependencies:
@@ -5990,7 +5992,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-    optional: true
 
   vite-node@2.1.9(@types/node@22.19.19)(lightningcss@1.32.0):
     dependencies:
@@ -6019,7 +6020,6 @@ snapshots:
       '@types/node': 20.19.41
       fsevents: 2.3.3
       lightningcss: 1.32.0
-    optional: true
 
   vite@5.4.21(@types/node@22.19.19)(lightningcss@1.32.0):
     dependencies:
@@ -6065,7 +6065,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-    optional: true
 
   vitest@2.1.9(@types/node@22.19.19)(lightningcss@1.32.0):
     dependencies:
