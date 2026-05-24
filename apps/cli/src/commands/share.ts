@@ -22,6 +22,13 @@ interface SessionRow {
   redactedAt: string | null;
 }
 
+function listAllLocalSessionIds(): string[] {
+  const rows = db
+    .prepare(`SELECT id FROM sessions ORDER BY started_at DESC`)
+    .all() as Array<{ id: string }>;
+  return rows.map((r) => r.id);
+}
+
 function loadLocalSession(id: string): { session: SessionT; alreadyRedacted: boolean } | null {
   const row = db
     .prepare(
@@ -167,10 +174,200 @@ ${
 </body></html>`;
 }
 
+interface BulkSessionSummary {
+  id: string;
+  startedAt: string;
+  tool: string;
+  eventCount: number;
+  redactionCount: number;
+}
+
+function renderBulkPreviewHtml(summaries: BulkSessionSummary[], totalRedactions: number): string {
+  const totalEvents = summaries.reduce((n, s) => n + s.eventCount, 0);
+  const rows = summaries
+    .map(
+      (s) =>
+        `<tr><td><code>${escapeHtml(s.id.slice(0, 12))}</code></td><td>${escapeHtml(s.startedAt)}</td><td>${escapeHtml(s.tool)}</td><td>${s.eventCount}</td><td>${s.redactionCount}</td></tr>`,
+    )
+    .join("");
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>Trail bulk share preview</title>
+<style>
+  body{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0a0a0a;color:#e7e7e7;margin:0;padding:24px}
+  h1{font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:#a7f300;margin:0 0 4px}
+  h2{font-size:13px;color:#a7f300;margin:24px 0 8px}
+  .meta{color:#a1a1aa;font-size:12px;margin-bottom:16px}
+  .pill{display:inline-block;background:#1f2937;color:#d1d5db;border-radius:999px;padding:2px 8px;font-size:11px;margin-right:6px}
+  table{border-collapse:collapse;font-size:12px;width:100%;margin-top:8px}
+  th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #1f1f1f}
+  th{color:#a1a1aa;font-weight:normal;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  code{background:#111;padding:1px 4px;border-radius:3px;color:#a7f300}
+</style></head>
+<body>
+<h1>Trail · bulk share preview</h1>
+<div class="meta">
+  <span class="pill">${summaries.length} sessions</span>
+  <span class="pill">${totalEvents} events</span>
+  <span class="pill">${totalRedactions} redactions</span>
+</div>
+<p class="meta">All sessions below will be anonymized at upload time. Per-session previews use the same pipeline as <code>trail share &lt;id&gt;</code>. Close this tab and confirm in the terminal to upload.</p>
+<table>
+  <thead><tr><th>Session</th><th>Started</th><th>Tool</th><th>Events</th><th>Redactions</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+}
+
+interface BulkShareOpts {
+  yes: boolean;
+  dryRun: boolean;
+  preview: boolean;
+  promptsOnly: boolean;
+  diffs: boolean;
+  toolArgs: boolean;
+  allowSuspects: boolean;
+  baseUrl: string;
+}
+
+async function runBulkShare(opts: BulkShareOpts): Promise<void> {
+  const ids = listAllLocalSessionIds();
+  if (ids.length === 0) {
+    console.log(chalk.yellow("no local sessions to share"));
+    return;
+  }
+
+  // Anonymize all up front so the preview is honest about what would upload.
+  type Prepared = {
+    id: string;
+    original: SessionT;
+    scrubbed: SessionT;
+    redactionCount: number;
+    suspectCount: number;
+  };
+  const prepared: Prepared[] = [];
+  const skipped: Array<{ id: string; reason: string }> = [];
+
+  for (const sid of ids) {
+    const loaded = loadLocalSession(sid);
+    if (!loaded) {
+      skipped.push({ id: sid, reason: "not found" });
+      continue;
+    }
+    const scoped = applyScopeFilters(loaded.session, {
+      promptsOnly: opts.promptsOnly,
+      noDiffs: !opts.diffs,
+      noToolArgs: !opts.toolArgs,
+    });
+    const { session: scrubbed, report } = anonymize(scoped);
+    prepared.push({
+      id: sid,
+      original: loaded.session,
+      scrubbed,
+      redactionCount: report.total,
+      suspectCount: report.suspects.length,
+    });
+  }
+
+  const totalRedactions = prepared.reduce((n, p) => n + p.redactionCount, 0);
+  const totalSuspects = prepared.reduce((n, p) => n + p.suspectCount, 0);
+  const summaries: BulkSessionSummary[] = prepared.map((p) => ({
+    id: p.id,
+    startedAt: p.original.startedAt,
+    tool: p.original.tool,
+    eventCount: p.scrubbed.events.length,
+    redactionCount: p.redactionCount,
+  }));
+
+  console.log(
+    chalk.cyan("bulk"),
+    `${prepared.length} session(s), ${totalRedactions} redaction(s), ${totalSuspects} entropy suspect(s)`,
+  );
+
+  if (opts.dryRun) {
+    console.log(chalk.yellow("--dry-run: not uploading. Bulk preview:"));
+    for (const s of summaries) {
+      console.log(
+        " ",
+        chalk.cyan(s.id.slice(0, 12)),
+        chalk.dim(s.startedAt),
+        chalk.magenta(s.tool),
+        chalk.dim(`${s.eventCount} ev`),
+        chalk.dim(`${s.redactionCount} redactions`),
+      );
+    }
+    return;
+  }
+
+  if (opts.preview && !opts.yes) {
+    const previewPath = path.join(tmpdir(), `trail-bulk-preview-${Date.now()}.html`);
+    writeFileSync(previewPath, renderBulkPreviewHtml(summaries, totalRedactions), "utf8");
+    console.log(chalk.dim("preview:"), previewPath);
+    openInBrowser(previewPath);
+  }
+
+  if (!opts.yes) {
+    const proceed = await confirm(`Upload ${prepared.length} anonymized session(s)?`);
+    if (!proceed) {
+      console.log(chalk.yellow("aborted"));
+      return;
+    }
+  }
+
+  const cookie = getAuthCookie();
+  if (!cookie) {
+    console.error(chalk.red("✗"), "not logged in — run `trail login` first");
+    process.exit(1);
+  }
+
+  const git = detectGitContext();
+  const linkHeaders: Record<string, string> = {};
+  if (git.repo) linkHeaders["x-trail-linked-repo"] = git.repo;
+  if (git.commitSha) linkHeaders["x-trail-linked-commit"] = git.commitSha;
+  if (git.repoUrl && git.commitSha) {
+    linkHeaders["x-trail-linked-commit-url"] = `${git.repoUrl}/commit/${git.commitSha}`;
+  }
+
+  const client = createTrailClient({
+    baseUrl: opts.baseUrl,
+    getAuthCookie: () => cookie,
+    extraHeaders: {
+      ...(opts.allowSuspects ? { "x-trail-allow-suspects": "true" } : {}),
+      ...linkHeaders,
+    },
+  });
+
+  const succeeded: Array<{ id: string; url: string }> = [];
+  for (let i = 0; i < prepared.length; i++) {
+    const p = prepared[i];
+    console.log(chalk.dim(`Uploading ${i + 1}/${prepared.length}...`), chalk.cyan(p.id.slice(0, 12)));
+    const result = await client.uploadSession(p.scrubbed);
+    if (!result.ok) {
+      console.error(chalk.red("✗"), `failed on ${p.id}: ${result.error.kind}`);
+      if (result.error.kind === "unauthenticated") clearAuth();
+      console.log(
+        chalk.yellow("partial:"),
+        `${succeeded.length}/${prepared.length} uploaded before failure`,
+      );
+      for (const s of succeeded) console.log(chalk.dim("  ✓"), s.url);
+      process.exit(1);
+    }
+    db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, p.id);
+    succeeded.push({ id: p.id, url: result.value.url });
+    console.log(chalk.green("  ✓"), result.value.url);
+  }
+
+  console.log(chalk.green(`done: ${succeeded.length}/${prepared.length} uploaded`));
+  if (skipped.length > 0) {
+    console.log(chalk.yellow(`skipped: ${skipped.length}`));
+    for (const s of skipped) console.log(chalk.dim(`  - ${s.id}: ${s.reason}`));
+  }
+}
+
 export function shareCommand(): Command {
   return new Command("share")
     .description("Anonymize and upload a session, returning a public URL")
-    .argument("<id>", "session id from `trail view` / SQLite")
+    .argument("[id]", "session id from `trail view` / SQLite (omit when using --all)")
+    .option("--all", "share every local session in one flow (mutually exclusive with <id>)", false)
     .option("--yes", "skip confirmation prompt", false)
     .option("--copy", "copy the resulting URL to the clipboard (macOS pbcopy)", false)
     .option("--dry-run", "anonymize + print what would be uploaded; do not upload", false)
@@ -180,7 +377,8 @@ export function shareCommand(): Command {
     .option("--no-tool-args", "drop tool_call args+results (keep tool names)", false)
     .option("--allow-suspects", "publish even if the entropy guard found unknown high-entropy tokens", false)
     .option("--base-url <url>", "Trail web base URL", process.env.TRAIL_API_URL || DEFAULT_TRAIL_API_URL)
-    .action(async (id: string, opts: {
+    .action(async (id: string | undefined, opts: {
+      all: boolean;
       yes: boolean;
       copy: boolean;
       dryRun: boolean;
@@ -191,7 +389,21 @@ export function shareCommand(): Command {
       allowSuspects: boolean;
       baseUrl: string;
     }) => {
-      const loaded = loadLocalSession(id);
+      if (opts.all && id) {
+        console.error(chalk.red("✗"), "--all and <id> are mutually exclusive");
+        process.exit(1);
+      }
+      if (!opts.all && !id) {
+        console.error(chalk.red("✗"), "missing session <id> (or pass --all)");
+        process.exit(1);
+      }
+
+      if (opts.all) {
+        await runBulkShare(opts);
+        return;
+      }
+      const sid = id as string;
+      const loaded = loadLocalSession(sid);
       if (!loaded) {
         console.error(chalk.red("✗"), `no local session with id ${id}`);
         process.exit(1);
@@ -309,7 +521,7 @@ export function shareCommand(): Command {
         process.exit(1);
       }
 
-      db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, id);
+      db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, sid);
 
       const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[] };
       console.log(chalk.green("✓"), r.url);
