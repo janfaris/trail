@@ -8,6 +8,13 @@
       "when": 1779115319063,
       "tag": "0000_reflective_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779664930931,
+      "tag": "0001_sour_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

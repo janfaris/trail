@@ -126,6 +126,10 @@ export const trailSession = pgTable(
     linkedPrUrl: text("linked_pr_url"),       // https://github.com/<owner>/<repo>/pull/<n>
     linkedCommitSha: text("linked_commit_sha"),
     linkedRepo: text("linked_repo"),          // <owner>/<repo>
+    // Phase 2 receipts — set when verifyShipped() confirms linkedCommitSha
+    // is reachable from the default branch of linkedRepo.
+    receiptVerifiedAt: timestamp("receipt_verified_at"),
+    receiptVerifiedSha: text("receipt_verified_sha"),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
