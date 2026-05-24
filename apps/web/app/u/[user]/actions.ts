@@ -108,6 +108,25 @@ export async function bulkSetOutcome(ids: string[], outcome: Outcome) {
   return { ok: true, updated: owned.length };
 }
 
+export async function bulkDeleteSessions(ids: string[]) {
+  const u = await requireUser();
+  const owned = await ownedSessionIds(u.id, ids);
+  if (owned.length === 0) return { ok: true, deleted: 0 };
+  // Drizzle schema declares ON DELETE CASCADE for event/reaction/etc. → the
+  // session delete sweeps children. We assert ownership above so a malicious
+  // caller can't nuke another user's rows via inArray.
+  await db
+    .delete(schema.trailSession)
+    .where(inArray(schema.trailSession.id, owned));
+  const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
+  if (me?.handle) {
+    revalidatePath(`/u/${me.handle}`);
+    revalidatePath(`/u/${me.handle}/interview`);
+    revalidatePath(`/dashboard`);
+  }
+  return { ok: true, deleted: owned.length };
+}
+
 export async function saveProfile(formData: FormData) {
   const u = await requireUser();
   const bio = (formData.get("bio") ?? "").toString().slice(0, 160) || null;
