@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { bulkSetVisibility, bulkSetOutcome } from "@/app/u/[user]/actions";
+import { bulkSetVisibility, bulkSetOutcome, bulkDeleteSessions } from "@/app/u/[user]/actions";
 
 export type SessionRow = {
   id: string;
@@ -91,6 +91,28 @@ export function DashboardClient({
     });
   }
 
+  function runDelete() {
+    const n = ids.length;
+    if (n === 0) return;
+    const ok = window.confirm(
+      `Delete ${n} session(s)? This permanently removes them and all linked events. This cannot be undone.`,
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await bulkDeleteSessions(ids);
+      if (result.ok) {
+        setFlash(`Deleted ${result.deleted} session(s)`);
+        setSelected(new Set());
+        // Server actions revalidate the dashboard route; force a client
+        // refresh too so the deleted rows disappear immediately.
+        window.location.reload();
+      } else {
+        setFlash(`error: ${("error" in result && result.error) || "delete failed"}`);
+      }
+      setTimeout(() => setFlash(null), 3500);
+    });
+  }
+
   const ids = [...selected];
   const hasSelection = ids.length > 0;
 
@@ -147,6 +169,15 @@ export function DashboardClient({
             className="font-mono px-2.5 py-1 rounded border border-zinc-800 text-zinc-500 hover:border-zinc-600 disabled:opacity-30"
           >
             Clear
+          </button>
+          <span className="text-zinc-800">|</span>
+          <button
+            disabled={!hasSelection || pending}
+            onClick={runDelete}
+            className="font-mono px-2.5 py-1 rounded border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/70 disabled:opacity-30 disabled:hover:bg-transparent"
+            title="Permanently delete the selected sessions"
+          >
+            {hasSelection ? `Delete selected (${ids.length})` : "Delete"}
           </button>
         </div>
       </div>
