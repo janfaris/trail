@@ -6,6 +6,10 @@ import { z } from "zod";
 export const UploadSessionResponse = z.object({
   url: z.string().url(),
   slug: z.string().min(1),
+  // receiptStatus mirrors trail_session.receipt_status — one of
+  // 'shipped' | 'draft' | 'unverified'. Optional because legacy/older
+  // servers may not populate it (receipt generation is best-effort).
+  receiptStatus: z.enum(["shipped", "draft", "unverified"]).optional(),
 });
 export type UploadSessionResponse = z.infer<typeof UploadSessionResponse>;
 
