@@ -125,6 +125,22 @@ const STATEMENTS: { name: string; sql: string }[] = [
   { name: "trail_session.linked_commit_sha", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS linked_commit_sha text` },
   { name: "trail_session.linked_repo", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS linked_repo text` },
   { name: "trail_session_linked_pr_idx", sql: `CREATE INDEX IF NOT EXISTS trail_session_linked_pr_idx ON trail_session (linked_pr_url) WHERE linked_pr_url IS NOT NULL` },
+  // Phase 2 receipts — verification + LLM-generated copy + Stripe.
+  { name: "trail_session.receipt_verified_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_verified_at timestamp` },
+  { name: "trail_session.receipt_verified_sha", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_verified_sha text` },
+  { name: "trail_session.receipt_outcome", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_outcome text` },
+  { name: "trail_session.receipt_tldr", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_tldr text` },
+  { name: "trail_session.receipt_decision_summary", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_decision_summary jsonb` },
+  { name: "trail_session.receipt_changed_files", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_changed_files jsonb` },
+  { name: "trail_session.receipt_verification", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_verification jsonb` },
+  { name: "trail_session.receipt_validator_warnings", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_validator_warnings jsonb` },
+  { name: "trail_session.receipt_generated_at", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_generated_at timestamp` },
+  { name: "trail_session.receipt_status", sql: `ALTER TABLE trail_session ADD COLUMN IF NOT EXISTS receipt_status text` },
+  // Stripe (paywall is disabled when STRIPE_SECRET_KEY is unset, but columns must exist for the user query).
+  { name: "user.plan", sql: `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS plan text NOT NULL DEFAULT 'free'` },
+  { name: "user.stripe_customer_id", sql: `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS stripe_customer_id text` },
+  { name: "user.stripe_subscription_id", sql: `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS stripe_subscription_id text` },
+  { name: "user.plan_renews_at", sql: `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS plan_renews_at timestamptz` },
 ];
 
 export async function POST(req: NextRequest) {
