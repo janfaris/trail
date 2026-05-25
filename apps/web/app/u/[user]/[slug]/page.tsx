@@ -108,6 +108,16 @@ export default async function SessionView({
   const viewer = await auth.api.getSession({ headers: h });
   const canExplain = !!viewer?.user;
 
+  // Look up an existing Pulse Recap for this session — surfaced in the
+  // header actions so owners see "Open" instead of "Generate" once made.
+  const existingPulseRecap = await db.query.recap.findFirst({
+    where: and(
+      eq(schema.recap.sessionId, sessionRow.id),
+      eq(schema.recap.tier, "pulse"),
+    ),
+    columns: { slug: true },
+  });
+
   const duration = durationBetween(sessionRow.startedAt, sessionRow.endedAt);
   const firstPrompt = events.find((e) => {
     const d = e.data as EventData;
@@ -251,8 +261,10 @@ export default async function SessionView({
           actions={
             <ReceiptActions
               slug={sessionRow.slug}
+              sessionId={sessionRow.id}
               tldr={sessionRow.receiptTldr}
               isOwner={viewer?.user?.id === userRow.id}
+              existingRecapSlug={existingPulseRecap?.slug ?? null}
             />
           }
         />

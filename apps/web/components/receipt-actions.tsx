@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 
 type Props = {
   slug: string;
+  sessionId: string;
   tldr: string | null;
   isOwner: boolean;
+  /** If set, a pulse recap already exists — link to it instead of generating. */
+  existingRecapSlug?: string | null;
 };
 
 /**
@@ -14,13 +17,22 @@ type Props = {
  * - "Copy receipt link" → window.location.href
  * - "Copy receipt summary" → receipt tldr text
  * - "Regenerate receipt" → POST /api/sessions/:slug/regenerate-receipt (owner only)
+ * - "Pulse Recap" → POST /api/recap/pulse/:sessionId, then nav to /r/<slug>
+ *   (or just nav to existing recap if one exists)
  *
  * Visibility (mark private) is handled in the dashboard bulk toolbar — see
  * /dashboard. We intentionally do not duplicate that control here.
  */
-export function ReceiptActions({ slug, tldr, isOwner }: Props) {
+export function ReceiptActions({
+  slug,
+  sessionId,
+  tldr,
+  isOwner,
+  existingRecapSlug,
+}: Props) {
   const [flash, setFlash] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [recapPending, startRecapTransition] = useTransition();
 
   function copy(text: string, label: string) {
     if (typeof window === "undefined") return;
@@ -89,6 +101,43 @@ export function ReceiptActions({ slug, tldr, isOwner }: Props) {
           {pending ? "Regenerating…" : "Regenerate"}
         </button>
       )}
+      {isOwner && existingRecapSlug ? (
+        <a
+          href={`/r/${existingRecapSlug}`}
+          className={`${btn} no-underline`}
+          title="Open the shareable Pulse Recap"
+        >
+          Pulse Recap →
+        </a>
+      ) : isOwner ? (
+        <button
+          type="button"
+          onClick={() => {
+            startRecapTransition(async () => {
+              try {
+                const res = await fetch(`/api/recap/pulse/${sessionId}`, {
+                  method: "POST",
+                });
+                const data = (await res.json()) as { url?: string; error?: string };
+                if (!res.ok || !data.url) {
+                  setFlash("Recap failed");
+                  window.setTimeout(() => setFlash(null), 1800);
+                  return;
+                }
+                window.location.href = data.url;
+              } catch {
+                setFlash("Recap failed");
+                window.setTimeout(() => setFlash(null), 1800);
+              }
+            });
+          }}
+          disabled={recapPending}
+          className={btn}
+          title="Generate a shareable Pulse Recap"
+        >
+          {recapPending ? "Generating…" : "Pulse Recap"}
+        </button>
+      ) : null}
       {flash && (
         <span className="font-mono text-[10.5px] text-[#a7f300] ml-1">{flash}</span>
       )}
