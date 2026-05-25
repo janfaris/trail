@@ -18,6 +18,7 @@ import { ForkButton } from "@/components/fork-button";
 import { ForkButtons } from "@/components/fork-buttons";
 import { ReactionBar } from "@/components/reaction-bar";
 import { TimelineToggle } from "@/components/timeline-toggle";
+import { ReceiptBlock } from "@/components/receipt-block";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -223,6 +224,19 @@ export default async function SessionView({
           </span>
         </div>
 
+        <ReceiptBlock
+          outcome={sessionRow.receiptOutcome}
+          tldr={sessionRow.receiptTldr}
+          keyDecisions={sessionRow.receiptDecisionSummary}
+          changedFiles={sessionRow.receiptChangedFiles}
+          verification={sessionRow.receiptVerification}
+          generatedAt={sessionRow.receiptGeneratedAt}
+          shippedStatus={sessionRow.receiptStatus}
+          linkedRepo={sessionRow.linkedRepo}
+          linkedCommitSha={sessionRow.linkedCommitSha}
+          validatorWarnings={sessionRow.receiptValidatorWarnings}
+        />
+
         <div className="mb-8">
           <ForkButtons
             shareUrl={fullUrl}
@@ -258,22 +272,32 @@ export default async function SessionView({
           />
         )}
 
-        <div className="space-y-5">
-          {visibleEvents.map((e) => {
-            const ev = e.data as EventData;
-            if (ev.kind === "file_diff") {
-              return (
-                <FileDiff
-                  key={e.id}
-                  path={ev.path}
-                  before={ev.before}
-                  after={ev.after}
-                />
-              );
-            }
-            return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
-          })}
-        </div>
+        <details className="group mt-8">
+          <summary className="cursor-pointer list-none inline-flex items-center gap-1.5 text-sm font-mono text-zinc-400 hover:text-zinc-100 transition-colors mb-4 select-none">
+            <span className="inline-block transition-transform group-open:rotate-90" aria-hidden>
+              ›
+            </span>
+            <span className="group-open:hidden">View full timeline ({events.length} events)</span>
+            <span className="hidden group-open:inline">Hide timeline</span>
+          </summary>
+
+          <div className="space-y-5">
+            {visibleEvents.map((e) => {
+              const ev = e.data as EventData;
+              if (ev.kind === "file_diff") {
+                return (
+                  <FileDiff
+                    key={e.id}
+                    path={ev.path}
+                    before={ev.before}
+                    after={ev.after}
+                  />
+                );
+              }
+              return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
+            })}
+          </div>
+        </details>
 
         <ReactionBar slug={slug} />
       </main>
