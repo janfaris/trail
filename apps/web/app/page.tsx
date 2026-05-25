@@ -1,12 +1,8 @@
 /* Hallmark · macrostructure: receipt-wedge · polish: hp1-vertical-rail · genre: technical-editorial · stamp: trail-2026-05 */
 import Link from "next/link";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
-import { SignOutButton } from "@/components/sign-out-button";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
+import { SiteNav } from "@/components/site-nav";
 
 // Real shipped session — stands in as the example receipt until /r/[id] ships.
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";
@@ -67,39 +63,10 @@ const steps = [
   },
 ];
 
-export default async function Home() {
-  const sessionInfo = await auth.api.getSession({ headers: await headers() });
-  const userRow = sessionInfo?.user
-    ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
-    : null;
-  const handle = userRow?.handle ?? null;
-
+export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-50">
-      {/* Nav */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
-        <div className="mx-auto max-w-6xl px-6 lg:px-10 h-14 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-6 text-[13px]">
-            <Link href={EXAMPLE_HREF} className="text-zinc-400 hover:text-zinc-100 transition-colors">
-              Example receipt
-            </Link>
-            <a href="https://github.com/janfaris/trail" className="text-zinc-400 hover:text-zinc-100 transition-colors">
-              GitHub
-            </a>
-            {handle ? (
-              <>
-                <Link href={`/u/${handle}`} className="font-mono text-zinc-300 hover:text-[#a7f300] transition-colors">
-                  @{handle}
-                </Link>
-                <SignOutButton />
-              </>
-            ) : null}
-          </nav>
-        </div>
-      </header>
+      <SiteNav currentPath="/" />
 
       <main className="flex-1">
         {/* HERO */}
