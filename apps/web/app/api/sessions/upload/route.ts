@@ -193,8 +193,17 @@ export async function POST(req: NextRequest) {
   // Share flow: generate the receipt artifact (LLM copy + verification).
   // Best-effort; failures must not block the upload response. ensureReceipt
   // is idempotent — safe to call on every upload.
+  let receiptStatus: "shipped" | "draft" | "unverified" | undefined;
   try {
     await ensureReceipt(sessionId);
+    const fresh = await db.query.trailSession.findFirst({
+      where: eq(schema.trailSession.id, sessionId),
+      columns: { receiptStatus: true },
+    });
+    const s = fresh?.receiptStatus;
+    if (s === "shipped" || s === "draft" || s === "unverified") {
+      receiptStatus = s;
+    }
   } catch (err) {
     console.error("[upload] receipt generation failed:", (err as Error).message);
   }
@@ -207,6 +216,7 @@ export async function POST(req: NextRequest) {
   } = {
     url: `${baseUrl}/u/${userRow.handle}/${slug}`,
     slug,
+    receiptStatus,
     visibility,
     pendingReviewReasons:
       pendingReasons.length > 0 ? pendingReasons : undefined,

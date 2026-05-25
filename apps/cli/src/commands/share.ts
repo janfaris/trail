@@ -29,6 +29,30 @@ function listAllLocalSessionIds(): string[] {
   return rows.map((r) => r.id);
 }
 
+function getLatestLocalSessionId(): string | null {
+  const row = db
+    .prepare(`SELECT id FROM sessions ORDER BY started_at DESC LIMIT 1`)
+    .get() as { id: string } | undefined;
+  return row?.id ?? null;
+}
+
+// Format receipt verification status for terminal output. Mirrors the
+// three-state classification produced by ensureReceipt() on the server:
+//   shipped    — linked commit confirmed merged on GitHub
+//   draft      — linked commit exists but not yet shipped
+//   unverified — no commit link at all (or status missing from response)
+function formatReceiptStatus(status: "shipped" | "draft" | "unverified" | undefined): string {
+  switch (status) {
+    case "shipped":
+      return chalk.green("[x] Shipped");
+    case "draft":
+      return chalk.yellow("[~] Draft");
+    case "unverified":
+    default:
+      return chalk.dim("[!] Unverified");
+  }
+}
+
 function loadLocalSession(id: string): { session: SessionT; alreadyRedacted: boolean } | null {
   const row = db
     .prepare(
@@ -352,8 +376,10 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
       process.exit(1);
     }
     db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, p.id);
-    succeeded.push({ id: p.id, url: result.value.url });
-    console.log(chalk.green("  ✓"), result.value.url);
+    const v = result.value as { url: string; slug: string; receiptStatus?: "shipped" | "draft" | "unverified" };
+    succeeded.push({ id: p.id, url: v.url });
+    console.log(chalk.green("  ✓"), "Receipt created:", v.url);
+    console.log(chalk.dim("    Status:"), formatReceiptStatus(v.receiptStatus));
   }
 
   console.log(chalk.green(`done: ${succeeded.length}/${prepared.length} uploaded`));
@@ -368,6 +394,7 @@ export function shareCommand(): Command {
     .description("Anonymize and upload a session, returning a public URL")
     .argument("[id]", "session id from `trail view` / SQLite (omit when using --all)")
     .option("--all", "share every local session in one flow (mutually exclusive with <id>)", false)
+    .option("--latest", "share the most recently started local session (mutually exclusive with <id> and --all)", false)
     .option("--yes", "skip confirmation prompt", false)
     .option("--copy", "copy the resulting URL to the clipboard (macOS pbcopy)", false)
     .option("--dry-run", "anonymize + print what would be uploaded; do not upload", false)
@@ -377,8 +404,9 @@ export function shareCommand(): Command {
     .option("--no-tool-args", "drop tool_call args+results (keep tool names)", false)
     .option("--allow-suspects", "publish even if the entropy guard found unknown high-entropy tokens", false)
     .option("--base-url <url>", "Trail web base URL", process.env.TRAIL_API_URL || DEFAULT_TRAIL_API_URL)
-    .action(async (id: string | undefined, opts: {
+    .action(async (idArg: string | undefined, opts: {
       all: boolean;
+      latest: boolean;
       yes: boolean;
       copy: boolean;
       dryRun: boolean;
@@ -389,18 +417,38 @@ export function shareCommand(): Command {
       allowSuspects: boolean;
       baseUrl: string;
     }) => {
+      // Treat a literal `trail share latest` subcommand the same as --latest.
+      let id = idArg;
+      let latest = opts.latest;
+      if (id === "latest") {
+        id = undefined;
+        latest = true;
+      }
       if (opts.all && id) {
         console.error(chalk.red("✗"), "--all and <id> are mutually exclusive");
         process.exit(1);
       }
-      if (!opts.all && !id) {
-        console.error(chalk.red("✗"), "missing session <id> (or pass --all)");
+      if (latest && (opts.all || id)) {
+        console.error(chalk.red("✗"), "--latest is mutually exclusive with --all and <id>");
+        process.exit(1);
+      }
+      if (!opts.all && !latest && !id) {
+        console.error(chalk.red("✗"), "missing session <id> (or pass --all / --latest / `share latest`)");
         process.exit(1);
       }
 
       if (opts.all) {
         await runBulkShare(opts);
         return;
+      }
+      if (latest) {
+        const latestId = getLatestLocalSessionId();
+        if (!latestId) {
+          console.error(chalk.red("✗"), "no local sessions found");
+          process.exit(1);
+        }
+        console.log(chalk.dim("latest:"), chalk.cyan(latestId));
+        id = latestId;
       }
       const sid = id as string;
       const loaded = loadLocalSession(sid);
@@ -523,8 +571,9 @@ export function shareCommand(): Command {
 
       db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, sid);
 
-      const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[] };
-      console.log(chalk.green("✓"), r.url);
+      const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[]; receiptStatus?: "shipped" | "draft" | "unverified" };
+      console.log(chalk.green("✓"), "Receipt created:", r.url);
+      console.log(chalk.dim("Status:"), formatReceiptStatus(r.receiptStatus));
       if (r.visibility === "pending" && r.pendingReviewReasons?.length) {
         console.log(chalk.yellow("hold:"), "session is in pending review:");
         for (const reason of r.pendingReviewReasons) {
