@@ -9,6 +9,7 @@ import { randomBytes } from "node:crypto";
 import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { aggregate, type SessionInput } from "./aggregate";
+import { generateOneLiner } from "./one-liner";
 
 export type GeneratePulseResult =
   | { ok: true; recapId: string; slug: string; created: boolean }
@@ -65,6 +66,15 @@ export async function generatePulseRecap(
 
   const payload = aggregate([rowToInput(row)], { tier: "pulse" });
 
+  // Best-effort one-liner. Failure here is non-blocking — the recap still
+  // ships without it, and the validator output is diagnostic-only.
+  const oneLiner = await generateOneLiner({
+    payload,
+    sessionTitle: row.title,
+    sessionSummary: row.summary,
+    linkedRepo: row.linkedRepo,
+  });
+
   // Slug collision check — retry up to 5x. With 9 chars of base64url-ish entropy
   // this is paranoia, but cheap insurance.
   let slug = newSlug();
@@ -92,6 +102,9 @@ export async function generatePulseRecap(
       windowStart: null,
       windowEnd: null,
       payload,
+      oneLiner: oneLiner.text,
+      oneLinerValidatorWarnings:
+        oneLiner.warnings.length > 0 ? oneLiner.warnings : null,
       visibility,
       sharedAt: visibility === "public" ? new Date() : null,
     });
