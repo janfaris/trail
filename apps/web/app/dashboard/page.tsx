@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
+import { SiteNav } from "@/components/site-nav";
 import { DashboardClient, type SessionRow } from "@/components/dashboard-client";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -56,24 +56,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-4 text-xs font-mono text-zinc-500">
-            <Link href={`/u/${me.handle}`} className="hover:text-zinc-100">
-              profile
-            </Link>
-            <Link href={`/u/${me.handle}/interview`} className="hover:text-zinc-100">
-              recruiter view
-            </Link>
-            <Link href="/settings" className="hover:text-zinc-100">
-              settings
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteNav currentPath="/dashboard" />
 
       <main className="max-w-5xl mx-auto px-6 pt-10 pb-24">
         <div className="mb-8">

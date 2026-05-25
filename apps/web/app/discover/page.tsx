@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import { eq, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
-import { auth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { SignOutButton } from "@/components/sign-out-button";
+import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
 
@@ -50,13 +47,6 @@ async function loadTop(): Promise<Row[]> {
 }
 
 export default async function DiscoverPage() {
-  const sessionInfo = await auth.api.getSession({ headers: await headers() });
-  const handle = sessionInfo?.user
-    ? (await db.query.user.findFirst({
-        where: eq(schema.user.id, sessionInfo.user.id),
-      }))?.handle ?? null
-    : null;
-
   let rows: Row[] = [];
   try {
     rows = await loadTop();
@@ -67,42 +57,7 @@ export default async function DiscoverPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/discover" className="text-zinc-100 transition-colors">
-              Discover
-            </Link>
-            <Link href="/search" className="text-zinc-400 hover:text-zinc-100 transition-colors">
-              Search
-            </Link>
-            <a
-              href="https://github.com/janfaris/trail"
-              className="text-zinc-400 hover:text-zinc-100 transition-colors"
-            >
-              GitHub
-            </a>
-            {handle ? (
-              <>
-                <Link
-                  href={`/u/${handle}`}
-                  className="font-mono text-zinc-300 hover:text-[#a7f300] transition-colors"
-                >
-                  @{handle}
-                </Link>
-                <SignOutButton />
-              </>
-            ) : (
-              <a href="/api/auth/sign-in/github">
-                <Button size="sm">Sign in</Button>
-              </a>
-            )}
-          </nav>
-        </div>
-      </header>
+      <SiteNav currentPath="/discover" />
 
       <main className="flex-1 max-w-5xl mx-auto px-6 py-16 w-full">
         <h1 className="text-4xl font-medium tracking-tight text-zinc-50 mb-2">Discover</h1>

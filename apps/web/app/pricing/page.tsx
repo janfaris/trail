@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { UpgradeButton } from "./UpgradeButton";
+import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: "Pricing — Trail",
@@ -10,13 +11,15 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-semibold tracking-tight">Simple pricing</h1>
-        <p className="mt-3 text-neutral-600">
-          Start free. Upgrade when you want unlimited receipts or private trails.
-        </p>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <SiteNav currentPath="/pricing" />
+      <main className="mx-auto max-w-4xl px-6 py-16 w-full">
+        <header className="mb-12">
+          <h1 className="text-4xl font-semibold tracking-tight">Simple pricing</h1>
+          <p className="mt-3 text-neutral-600">
+            Start free. Upgrade when you want unlimited receipts or private trails.
+          </p>
+        </header>
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-xl border border-neutral-200 p-6">
@@ -60,6 +63,7 @@ export default function PricingPage() {
       <p className="mt-10 text-center text-xs text-neutral-500">
         Payments handled by Stripe. We never see your card details.
       </p>
-    </main>
+      </main>
+    </div>
   );
 }
