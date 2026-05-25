@@ -253,6 +253,50 @@ export const playlistItem = pgTable(
   }),
 );
 
+// Phase R1 — Recaps. Polymorphic by `tier`:
+//   pulse    → references a single trailSession (sessionId set)
+//   project  → references a single trailSession (sessionId set)
+//   weekly   → aggregates sessions in [windowStart, windowEnd) (sessionId null)
+//   monthly  → same
+//   wrapped  → same, annual window
+// Payload is the cached aggregate JSON used by the render layer + OG card so
+// we don't recompute on every share-load. Regenerated when the underlying
+// data changes (cron for windowed tiers, trigger on session edit for pulse/project).
+export const recap = pgTable(
+  "recap",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    tier: text("tier").notNull(), // 'pulse' | 'weekly' | 'monthly' | 'project' | 'wrapped'
+    slug: text("slug").notNull(), // public URL token, e.g. /r/<slug>
+    // For pulse/project — the source session. Null for windowed tiers.
+    sessionId: text("session_id").references(() => trailSession.id, {
+      onDelete: "cascade",
+    }),
+    // For windowed tiers (weekly/monthly/wrapped). Null for pulse/project.
+    windowStart: timestamp("window_start", { withTimezone: true }),
+    windowEnd: timestamp("window_end", { withTimezone: true }),
+    // Cached render-ready aggregate. Shape lives in lib/recap/aggregate.ts.
+    payload: jsonb("payload").notNull(),
+    // LLM-generated one-liner (tone-spec-bound). Diagnostic-validated, never regex-patched.
+    oneLiner: text("one_liner"),
+    oneLinerValidatorWarnings: jsonb("one_liner_validator_warnings").$type<string[]>(),
+    // Visibility mirrors trailSession semantics: public | private | pending.
+    visibility: text("visibility").notNull().default("private"),
+    sharedAt: timestamp("shared_at", { withTimezone: true }),
+    shareCount: integer("share_count").notNull().default(0),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("recap_slug_idx").on(t.slug),
+    userTierIdx: index("recap_user_tier_idx").on(t.userId, t.tier),
+    windowIdx: index("recap_window_idx").on(t.userId, t.tier, t.windowStart),
+  }),
+);
+
 // Short-lived single-use tokens for CLI device-code login. CLI generates id
 // (random hex), opens /cli-auth?token=id; the success page fills in
 // cookie_value + user_handle; /api/cli-auth/poll hands them to the CLI and

@@ -11,9 +11,9 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
-const TITLE = "Trail — The AI coding portfolio recruiters can't read from your commits";
+const TITLE = "Trail — The public log of what you shipped with AI";
 const DESCRIPTION =
-  "Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and turns them into one public profile. Featured trails, anonymized by default, embeddable anywhere.";
+  "Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and turns them into Recaps — share-ready summaries linked to the commits they produced. Pulse, Weekly, Monthly, Project, Wrapped.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://gettrail.vercel.app"),
