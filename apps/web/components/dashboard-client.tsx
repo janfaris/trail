@@ -15,6 +15,18 @@ export type SessionRow = {
   outcome: string | null;
   linkedRepo: string | null;
   linkedCommitSha: string | null;
+  receiptStatus: string | null;
+  receiptVerifiedSha: string | null;
+};
+
+type Filter = "all" | "shipped" | "has-commit" | "needs-review" | "private";
+
+const FILTER_LABEL: Record<Filter, string> = {
+  all: "All",
+  shipped: "Shipped",
+  "has-commit": "Has commit",
+  "needs-review": "Needs review",
+  private: "Private",
 };
 
 const VIS_LABEL: Record<string, string> = {
@@ -44,16 +56,18 @@ export function DashboardClient({
   handle: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<"all" | "public" | "private" | "shipped" | "unmarked">("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
 
   const filtered = rows.filter((r) => {
     if (filter === "all") return true;
-    if (filter === "public") return r.visibility === "public";
+    if (filter === "shipped")
+      return r.receiptStatus === "shipped" || r.receiptVerifiedSha !== null;
+    if (filter === "has-commit") return r.linkedCommitSha !== null;
+    if (filter === "needs-review")
+      return r.receiptStatus === "draft" || r.receiptStatus === null;
     if (filter === "private") return r.visibility === "private";
-    if (filter === "shipped") return r.outcome === "shipped";
-    if (filter === "unmarked") return r.outcome === null;
     return true;
   });
 
@@ -121,7 +135,7 @@ export function DashboardClient({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 sticky top-0 bg-zinc-950/95 backdrop-blur py-3 -mx-6 px-6 border-b border-zinc-900 z-10">
         <div className="flex items-center gap-2 text-xs font-mono">
-          {(["all", "public", "private", "shipped", "unmarked"] as const).map((f) => (
+          {(["all", "shipped", "has-commit", "needs-review", "private"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -131,7 +145,7 @@ export function DashboardClient({
                   : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
-              {f}
+              {FILTER_LABEL[f]}
             </button>
           ))}
           <span className="text-zinc-700 ml-2">·</span>

@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { and, eq } from "drizzle-orm";
-import { db, schema } from "@/db/client";
 import {
   COLORS,
   Footer,
@@ -14,6 +13,7 @@ import {
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 export const alt = "Trail session";
+export const dynamic = "force-dynamic";
 
 export default async function Image({
   params,
@@ -22,6 +22,7 @@ export default async function Image({
 }) {
   const { user, slug } = await params;
   const fonts = await loadOgFonts();
+  const { db, schema } = await import("@/db/client");
 
   const rows = await db
     .select({

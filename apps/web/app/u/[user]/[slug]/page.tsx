@@ -19,6 +19,7 @@ import { ForkButtons } from "@/components/fork-buttons";
 import { ReactionBar } from "@/components/reaction-bar";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import { ReceiptBlock } from "@/components/receipt-block";
+import { ReceiptActions } from "@/components/receipt-actions";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -247,6 +248,13 @@ export default async function SessionView({
           linkedRepo={sessionRow.linkedRepo}
           linkedCommitSha={sessionRow.linkedCommitSha}
           validatorWarnings={sessionRow.receiptValidatorWarnings}
+          actions={
+            <ReceiptActions
+              slug={sessionRow.slug}
+              tldr={sessionRow.receiptTldr}
+              isOwner={viewer?.user?.id === userRow.id}
+            />
+          }
         />
 
         <div className="mb-8">
