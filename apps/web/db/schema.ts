@@ -130,6 +130,22 @@ export const trailSession = pgTable(
     // is reachable from the default branch of linkedRepo.
     receiptVerifiedAt: timestamp("receipt_verified_at"),
     receiptVerifiedSha: text("receipt_verified_sha"),
+    // Task 4 — receipt generation pipeline. LLM-generated client-facing copy
+    // bound to the tone spec at apps/web/prompts/receipt-tone-spec.md.
+    receiptOutcome: text("receipt_outcome"),
+    receiptTldr: text("receipt_tldr"),
+    receiptDecisionSummary: jsonb("receipt_decision_summary").$type<string[]>(),
+    receiptChangedFiles: jsonb("receipt_changed_files").$type<string[]>(),
+    receiptVerification: jsonb("receipt_verification").$type<{
+      shipped: boolean;
+      sha: string | null;
+      repo: string | null;
+      checkedAt: string;
+    }>(),
+    receiptValidatorWarnings: jsonb("receipt_validator_warnings").$type<string[]>(),
+    receiptGeneratedAt: timestamp("receipt_generated_at"),
+    // 'shipped' | 'draft' | 'unverified'. Mirrors verifyShipped() output.
+    receiptStatus: text("receipt_status"),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),

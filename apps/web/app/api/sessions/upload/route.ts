@@ -16,6 +16,7 @@ import {
   countFailedToolCalls,
 } from "@/lib/session-metrics";
 import { eq, sql } from "drizzle-orm";
+import { ensureReceipt } from "@/lib/receipt-generator";
 
 function genSlug() {
   return Math.random().toString(36).slice(2, 10);
@@ -187,6 +188,15 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[upload] embedding failed:", (err as Error).message);
+  }
+
+  // Share flow: generate the receipt artifact (LLM copy + verification).
+  // Best-effort; failures must not block the upload response. ensureReceipt
+  // is idempotent — safe to call on every upload.
+  try {
+    await ensureReceipt(sessionId);
+  } catch (err) {
+    console.error("[upload] receipt generation failed:", (err as Error).message);
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
