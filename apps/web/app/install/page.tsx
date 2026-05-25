@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyButton } from "./CopyButton";
+import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: "Install Trail",
@@ -56,21 +57,7 @@ function Step({
 export default function InstallPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-3xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <a
-              href="https://github.com/janfaris/trail"
-              className="text-zinc-400 hover:text-zinc-100 transition-colors"
-            >
-              GitHub
-            </a>
-          </nav>
-        </div>
-      </header>
+      <SiteNav currentPath="/install" />
 
       <main className="flex-1 max-w-3xl mx-auto px-6 pt-20 pb-24 w-full">
         <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500 mb-6">

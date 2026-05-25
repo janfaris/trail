@@ -6,7 +6,7 @@ import { eq, desc } from "drizzle-orm";
 import { Avatar } from "@/components/ui/avatar";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
-import { SignOutButton } from "@/components/sign-out-button";
+import { SiteNav } from "@/components/site-nav";
 import { FeaturedSessionCard } from "@/components/featured-session-card";
 import { FeatureToggle } from "@/components/feature-toggle";
 import { ProfileIntroCard } from "@/components/profile-intro-card";
@@ -116,33 +116,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight hover:underline underline-offset-4 decoration-zinc-700">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <span className="text-sm font-mono text-zinc-500 flex items-center gap-4">
-            {isSelf && (
-              <>
-                <Link
-                  href="/dashboard"
-                  className="text-zinc-400 hover:text-[#a7f300] transition-colors text-xs font-mono"
-                >
-                  Manage sessions
-                </Link>
-                <Link
-                  href="/settings"
-                  className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs font-mono"
-                >
-                  Edit profile
-                </Link>
-                <SignOutButton className="text-zinc-400 hover:text-zinc-100 transition-colors text-xs font-mono" />
-              </>
-            )}
-            <span>@{userRow.handle}</span>
-          </span>
-        </div>
-      </header>
+      <SiteNav />
 
       <main className="max-w-4xl mx-auto px-6 pt-10 pb-24">
         {showIntro && <ProfileIntroCard />}

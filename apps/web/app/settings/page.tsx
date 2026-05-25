@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
+import { SiteNav } from "@/components/site-nav";
 import { saveProfile } from "@/app/u/[user]/actions";
 
 export default async function SettingsPage() {
@@ -14,19 +14,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-2xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <Link
-            href={`/u/${me.handle}`}
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-100"
-          >
-            ← Back to profile
-          </Link>
-        </div>
-      </header>
+      <SiteNav currentPath="/settings" />
 
       <main className="max-w-2xl mx-auto px-6 pt-12 pb-24">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">

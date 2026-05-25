@@ -2,6 +2,7 @@ import Link from "next/link";
 import { eq, and, desc, isNotNull, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { ToolIcon } from "@/components/tool-icon";
+import { SiteNav } from "@/components/site-nav";
 import { RelativeTime } from "@/components/relative-time";
 
 export const dynamic = "force-dynamic";
@@ -219,24 +220,7 @@ export default async function LearnPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/learn" className="text-zinc-100 transition-colors">
-              Learn
-            </Link>
-            <Link href="/discover" className="text-zinc-400 hover:text-zinc-100 transition-colors">
-              Discover
-            </Link>
-            <Link href="/search" className="text-zinc-400 hover:text-zinc-100 transition-colors">
-              Search
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteNav currentPath="/learn" />
 
       <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-10 w-full">
         <aside>
