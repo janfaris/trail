@@ -13,6 +13,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@octokit/rest": "^22.0.1",
+    "@stripe/stripe-js": "^9.6.0",
     "@trail/anonymize": "workspace:*",
     "@trail/client": "workspace:*",
     "@trail/schema": "workspace:*",
@@ -29,6 +30,7 @@
     "remark-gfm": "^4.0.1",
     "shiki": "^1.24.0",
     "skia-canvas": "^3.0.8",
+    "stripe": "^22.1.1",
     "tailwind-merge": "^2.5.5",
     "ws": "^8.18.0",
     "zod": "^3.23.8"

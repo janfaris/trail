@@ -17,6 +17,7 @@ import {
 } from "@/lib/session-metrics";
 import { eq, sql } from "drizzle-orm";
 import { ensureReceipt } from "@/lib/receipt-generator";
+import { checkPaywall } from "@/lib/paywall";
 
 function genSlug() {
   return Math.random().toString(36).slice(2, 10);
@@ -80,6 +81,27 @@ export async function POST(req: NextRequest) {
   const pendingReasons = [...entropyReasons, ...flagReasons];
   const visibility = pendingReasons.length > 0 ? "pending" : "public";
 
+  // Task 7 — paywall gate. Free plan: max 3 public receipts, no private.
+  // Pending/redacted are not counted. Pro is unlimited.
+  const desiredVisibility =
+    req.headers.get("x-trail-visibility")?.toLowerCase() === "private"
+      ? "private"
+      : visibility;
+  const paywall = await checkPaywall(session.user.id, { visibility: desiredVisibility });
+  if (!paywall.allowed) {
+    const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+    return NextResponse.json(
+      {
+        error: "paywall",
+        reason: paywall.reason,
+        publicCount: paywall.publicCount,
+        limit: paywall.limit,
+        upgradeUrl: `${baseUrl}/pricing`,
+      },
+      { status: 402 },
+    );
+  }
+
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) });
   if (!userRow?.handle) {
     return NextResponse.json({ error: "user has no handle" }, { status: 400 });
@@ -140,7 +162,7 @@ export async function POST(req: NextRequest) {
     distinctFiles,
     promptCount,
     failedToolCalls,
-    visibility,
+    visibility: desiredVisibility,
     pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : null,
     toolsUsed:
       ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,

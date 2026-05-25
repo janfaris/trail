@@ -29,6 +29,12 @@ export const user = pgTable(
     githubHandle: text("github_handle"),
     linkedinHandle: text("linkedin_handle"),
     website: text("website"),
+    // Task 7 — Stripe paywall. 'free' = 3 public receipts, no private.
+    // 'pro' = unlimited public + private. Filled by Stripe webhook.
+    plan: text("plan").notNull().default("free"),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    planRenewsAt: timestamp("plan_renews_at", { withTimezone: true }),
   },
   (t) => ({
     handleIdx: uniqueIndex("user_handle_idx").on(t.handle),
