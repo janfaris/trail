@@ -46,11 +46,23 @@ export async function generateMetadata({
     `${sessionRow.tool} · ${sessionRow.eventCount} events · @${user}`;
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
   const canonical = `${base}/u/${user}/${slug}`;
+  const ogImage = `${base}/api/receipt/${sessionRow.id}/image.png`;
   return {
     title: `${title} — @${user} on Trail`,
     description: desc,
-    openGraph: { title, description: desc, type: "article", url: canonical },
-    twitter: { card: "summary_large_image", title, description: desc },
+    openGraph: {
+      title,
+      description: desc,
+      type: "article",
+      url: canonical,
+      images: [{ url: ogImage, width: 600, height: 900 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: desc,
+      images: [ogImage],
+    },
     alternates: {
       canonical,
       // oEmbed discovery — every consumer that supports oEmbed (X, Slack,
