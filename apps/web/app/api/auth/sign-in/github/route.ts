@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { connection, NextRequest, NextResponse } from "next/server";
 
 // GET shim: lets <a href="/api/auth/sign-in/github"> trigger the OAuth flow
 // (better-auth's canonical endpoint is POST /api/auth/sign-in/social)
 export async function GET(req: NextRequest) {
+  await connection();
+  const { auth } = await import("@/lib/auth");
   const callbackURL = req.nextUrl.searchParams.get("callbackURL") || "/";
   const result = await auth.api.signInSocial({
     body: { provider: "github", callbackURL },

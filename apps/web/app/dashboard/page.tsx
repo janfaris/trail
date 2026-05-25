@@ -36,6 +36,8 @@ export default async function DashboardPage() {
       outcome: schema.trailSession.outcome,
       linkedRepo: schema.trailSession.linkedRepo,
       linkedCommitSha: schema.trailSession.linkedCommitSha,
+      receiptStatus: schema.trailSession.receiptStatus,
+      receiptVerifiedSha: schema.trailSession.receiptVerifiedSha,
     })
     .from(schema.trailSession)
     .where(eq(schema.trailSession.userId, me.id))
