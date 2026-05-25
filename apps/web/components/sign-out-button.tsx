@@ -1,9 +1,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 
 async function signOutAction() {
   "use server";
+  if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) {
+    redirect("/");
+  }
+
+  const { auth } = await import("@/lib/auth");
   await auth.api.signOut({ headers: await headers() });
   redirect("/");
 }

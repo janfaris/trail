@@ -1,8 +1,4 @@
 import Link from "next/link";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
 import { SignOutButton } from "@/components/sign-out-button";
 
 type NavLink = { href: string; label: string; external?: boolean };
@@ -19,11 +15,21 @@ function linkClass(href: string, currentPath?: string) {
 }
 
 export async function SiteNav({ currentPath }: { currentPath?: string }) {
-  const sessionInfo = await auth.api.getSession({ headers: await headers() });
-  const userRow = sessionInfo?.user
-    ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
-    : null;
-  const handle = userRow?.handle ?? null;
+  let handle: string | null = null;
+
+  if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
+    const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
+      import("next/headers"),
+      import("drizzle-orm"),
+      import("@/lib/auth"),
+      import("@/db/client"),
+    ]);
+    const sessionInfo = await auth.api.getSession({ headers: await headers() });
+    const userRow = sessionInfo?.user
+      ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
+      : null;
+    handle = userRow?.handle ?? null;
+  }
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
