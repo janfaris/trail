@@ -16,6 +16,7 @@ type ReceiptBlockProps = {
   linkedRepo: string | null | undefined;
   linkedCommitSha: string | null | undefined;
   validatorWarnings: string[] | null | undefined;
+  actions?: ReactNode;
 };
 
 function Badge({ status }: { status: ShippedStatus }) {
@@ -53,6 +54,7 @@ export function ReceiptBlock({
   linkedRepo,
   linkedCommitSha,
   validatorWarnings,
+  actions,
 }: ReceiptBlockProps) {
   if (!generatedAt) {
     return (
@@ -91,16 +93,19 @@ export function ReceiptBlock({
           </span>
           <Badge status={shippedStatus} />
         </div>
-        {linkedRepo && linkedCommitSha && (
-          <a
-            href={`https://github.com/${linkedRepo}/commit/${linkedCommitSha}`}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="font-mono text-[11px] text-[#8a8fdc] hover:text-[#a5aaeb] transition-colors"
-          >
-            {linkedRepo}@{linkedCommitSha.slice(0, 7)}
-          </a>
-        )}
+        <div className="flex items-center gap-3">
+          {linkedRepo && linkedCommitSha && (
+            <a
+              href={`https://github.com/${linkedRepo}/commit/${linkedCommitSha}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-mono text-[11px] text-[#8a8fdc] hover:text-[#a5aaeb] transition-colors"
+            >
+              {linkedRepo}@{linkedCommitSha.slice(0, 7)}
+            </a>
+          )}
+          {actions}
+        </div>
       </div>
 
       {outcome && (
