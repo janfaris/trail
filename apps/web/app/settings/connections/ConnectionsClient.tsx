@@ -30,6 +30,7 @@ type VendorMeta = {
   id: "anthropic" | "openai" | "cursor" | "copilot";
   name: string;
   live: boolean;
+  tier: "primary" | "partial";
   keyPlaceholder: string;
   keyHint: string;
   workspacePlaceholder: string;
@@ -41,6 +42,7 @@ const VENDORS: VendorMeta[] = [
     id: "anthropic",
     name: "Anthropic",
     live: true,
+    tier: "primary",
     keyPlaceholder: "sk-ant-admin01-…",
     keyHint: "Admin key from console.anthropic.com → Settings → Admin Keys. Starts with sk-ant-admin01-.",
     workspacePlaceholder: "ws_… (optional)",
@@ -50,6 +52,7 @@ const VENDORS: VendorMeta[] = [
     id: "openai",
     name: "OpenAI",
     live: true,
+    tier: "primary",
     keyPlaceholder: "sk-admin-…",
     keyHint: "Admin key from platform.openai.com → Organization → Admin keys.",
     workspacePlaceholder: "org-… (optional)",
@@ -59,19 +62,21 @@ const VENDORS: VendorMeta[] = [
     id: "cursor",
     name: "Cursor",
     live: true,
+    tier: "partial",
     keyPlaceholder: "Cursor admin key",
-    keyHint: "Real sync uses the local CLI uploader; this entry just registers your account.",
+    keyHint: "Registers your Cursor account so the local CLI uploader can ship usage. No public admin API.",
     workspacePlaceholder: "team-id (optional)",
-    description: "Cursor team / per-user usage.",
+    description: "Cursor team usage — partial telemetry only.",
   },
   {
     id: "copilot",
     name: "GitHub Copilot",
     live: true,
+    tier: "partial",
     keyPlaceholder: "ghp_… or github_pat_…",
-    keyHint: "GitHub PAT with admin:org scope. Needs the org login below to query the Copilot Metrics API.",
+    keyHint: "GitHub PAT with admin:org scope + org login. Metrics API gives engagement counts only — no per-user tokens.",
     workspacePlaceholder: "org login (required)",
-    description: "Copilot Enterprise / Business engagement (no per-user token counts; aggregate only).",
+    description: "Copilot Enterprise / Business engagement counts. No per-user dollar attribution available.",
   },
 ];
 
@@ -384,35 +389,55 @@ export function ConnectionsClient({
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
-        Vendor connections
+        Connect your data sources
       </h1>
-      <p className="text-sm text-zinc-400 mb-4 max-w-2xl leading-relaxed">
-        Trail attributes spend to merged PRs. To do that, we need read-only
-        access to your vendor billing APIs. Encrypted with libsodium, used only
-        at sync time, revocable in one click.
+      <p className="text-sm text-zinc-400 mb-6 max-w-2xl leading-relaxed">
+        Trail prices each AI session against current per-token rates and links the cost to the merged commit. The default path is local capture — no admin keys, no proxying. Cross-vendor reconciliation via admin keys is optional.
       </p>
 
-      <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-300 leading-relaxed max-w-3xl">
-        <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-1.5">
-          No admin key? Local capture still works.
+      <div className="mb-8 rounded-lg border border-[#a7f300]/30 bg-[#a7f300]/5 p-5 max-w-3xl">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#a7f300]">
+            Recommended · No keys
+          </span>
         </div>
-        Install the CLI and run <code className="font-mono text-[12.5px] text-[#a7f300]">trail record</code> — Trail tails the JSONL logs your AI tools already write (Claude Code, Codex) and prices each session against the model_price table. No vendor admin keys required for those. Cursor and Copilot need admin connections for accurate per-PR cost (no public per-user token API).
+        <div className="text-base font-medium text-zinc-50 mb-3">
+          Install the CLI
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 flex items-center h-10 px-3 rounded-md border border-zinc-800 bg-zinc-950 font-mono text-[13px] text-zinc-200 overflow-x-auto">
+            <span className="text-zinc-600 select-none mr-2">$</span>
+            <span className="whitespace-nowrap">npm i -g trail &amp;&amp; trail login &amp;&amp; trail record</span>
+          </div>
+        </div>
+        <div className="text-[13px] text-zinc-400 leading-relaxed">
+          Trail tails the JSONL logs your AI agents already write to disk — <span className="text-zinc-200 font-medium">Claude Code</span> and <span className="text-zinc-200 font-medium">Codex</span>. Tokens captured per turn, priced against the model_price table, attributed to the merge commit when you ship. Cursor has partial telemetry; Copilot has none (engagement-only — see Optional below).
+        </div>
+        <div className="mt-3 text-[12px] font-mono text-zinc-600">
+          More setup detail at{" "}
+          <a href="/install" className="text-[#a7f300] hover:underline">
+            /install →
+          </a>
+        </div>
       </div>
 
-      <div className="mb-6 flex items-center gap-3 flex-wrap">
+      <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-base font-semibold text-zinc-50 mb-0.5">
+            Optional · cross-vendor reconciliation
+          </h2>
+          <p className="text-[13px] text-zinc-500 max-w-xl">
+            Connect admin keys to match Trail&apos;s numbers against your vendor invoices exactly. Skippable.
+          </p>
+        </div>
         <button
           type="button"
           onClick={handleSyncNow}
           disabled={syncing || !hasConnections}
-          className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md text-[13px] font-medium bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md text-[13px] font-medium bg-zinc-100 text-zinc-950 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {syncing ? "Syncing…" : "Run sync now"}
         </button>
-        <span className="text-[12px] font-mono text-zinc-500">
-          {hasConnections
-            ? "Fetches the latest billing buckets for your connections."
-            : "Connect a vendor first to enable manual sync."}
-        </span>
       </div>
 
       {syncBanner && (
@@ -432,8 +457,34 @@ export function ConnectionsClient({
         </div>
       )}
 
+      <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+        Primary — full token capture
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {VENDORS.filter((v) => v.tier === "primary").map((v) => {
+          const conn = connByVendor.get(v.id);
+          const isBusy = busy.has(v.id);
+          const msg = messages[v.id];
+          return (
+            <VendorCard
+              key={v.id}
+              vendor={v}
+              connection={conn}
+              busy={isBusy}
+              message={msg}
+              onConnect={(trigger) => openModal(v, trigger)}
+              onTest={() => handleTest(v)}
+              onDisconnect={() => handleDisconnect(v)}
+            />
+          );
+        })}
+      </div>
+
+      <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+        Partial — limited telemetry
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {VENDORS.map((v) => {
+        {VENDORS.filter((v) => v.tier === "partial").map((v) => {
           const conn = connByVendor.get(v.id);
           const isBusy = busy.has(v.id);
           const msg = messages[v.id];
