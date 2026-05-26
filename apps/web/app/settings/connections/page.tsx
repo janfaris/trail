@@ -11,7 +11,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ConnectionsSettingsPage() {
-  const sess = await auth.api.getSession({ headers: await headers() });
+  // BetterAuth can throw on preview branches where the origin isn't on the
+  // trustedOrigins list, instead of returning null. Treat any throw or null
+  // session as unauthenticated and bounce to home.
+  let sess: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+  try {
+    sess = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    sess = null;
+  }
   if (!sess?.user) redirect("/");
 
   // Explicit projection — never select api_key_enc into the client boundary.
