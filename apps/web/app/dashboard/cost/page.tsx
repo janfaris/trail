@@ -403,7 +403,7 @@ function ConnectEmptyState({
           </div>
           <div className="flex items-center h-10 px-3 rounded-md border border-zinc-800 bg-zinc-950 font-mono text-[13px] text-zinc-200 overflow-x-auto mb-3">
             <span className="text-zinc-600 select-none mr-2">$</span>
-            <span className="whitespace-nowrap">npm i -g trail &amp;&amp; trail login &amp;&amp; trail record</span>
+            <span className="break-all">curl -fsSL https://gettrail.vercel.app/install.sh | bash</span>
           </div>
           <div className="text-[12.5px] text-zinc-400 leading-relaxed">
             Tails Claude Code + Codex log files locally. Tokens captured per turn, priced at upload time, attributed to the merge commit when you ship.{" "}
