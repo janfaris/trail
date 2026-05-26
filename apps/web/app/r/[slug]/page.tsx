@@ -22,6 +22,10 @@ async function loadRecap(slug: string) {
     where: eq(schema.recap.slug, slug),
   });
   if (!recap || recap.visibility !== "public") return null;
+  // Cost-tier recaps (Week 5) use a different payload shape — refuse to
+  // render them through the classic recap UI to avoid silent zero/NaN
+  // misreads. A cost-tier renderer can land here later.
+  if (recap.tier.startsWith("cost-")) return null;
 
   const owner = await db.query.user.findFirst({
     where: eq(schema.user.id, recap.userId),

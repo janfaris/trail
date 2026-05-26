@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -152,6 +153,17 @@ export const trailSession = pgTable(
     receiptGeneratedAt: timestamp("receipt_generated_at"),
     // 'shipped' | 'draft' | 'unverified'. Mirrors verifyShipped() output.
     receiptStatus: text("receipt_status"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    cachedTokens: integer("cached_tokens"),
+    modelPriceSnapshot: jsonb("model_price_snapshot").$type<{
+      model: string;
+      inUsdPerMtok: number;
+      outUsdPerMtok: number;
+      capturedAt: string;
+    }>(),
+    estimatedCostUsd: numeric("estimated_cost_usd", { precision: 10, scale: 4 }),
+    costAttributedToPr: boolean("cost_attributed_to_pr").notNull().default(false),
   },
   (t) => ({
     userSlugIdx: uniqueIndex("trail_session_user_slug_idx").on(t.userId, t.slug),
@@ -170,6 +182,17 @@ export const event = pgTable(
     kind: text("kind").notNull(),
     at: timestamp("at").notNull(),
     data: jsonb("data").notNull(),
+    // Week 0 cost-per-PR pivot. Per-event token + model capture for
+    // assistant turns. Older CLI clients leave these NULL (the route never
+    // coerces missing values to 0). Kept split (creation vs read) because
+    // Anthropic prices them differently — collapsing them here would lose
+    // information needed by future cost calc. trail_session aggregates
+    // them as a single cached_tokens sum for the receipt header.
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    cacheCreationInputTokens: integer("cache_creation_input_tokens"),
+    cacheReadInputTokens: integer("cache_read_input_tokens"),
+    model: text("model"),
   },
   (t) => ({
     sessionIdx: index("event_session_idx").on(t.sessionId, t.idx),
@@ -311,3 +334,202 @@ export const cliToken = pgTable("cli_token", {
     .defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
+
+// Task 1.2 — cost-per-PR pivot. Reference table of per-model token prices
+// keyed by (vendor, modelId, effectiveFrom). Receipt cost calc looks up the
+// row whose effectiveFrom <= session start (and effectiveTo IS NULL OR > start)
+// then snapshots the rates into trailSession.modelPriceSnapshot so historical
+// receipts stay stable even as vendors change pricing. Numeric columns are
+// USD per 1M tokens.
+export const modelPrice = pgTable(
+  "model_price",
+  {
+    id: text("id").primaryKey(), // e.g. 'anthropic:claude-sonnet-4-5:2026-05'
+    vendor: text("vendor").notNull(), // 'anthropic' | 'openai' | 'cursor' | 'copilot'
+    modelId: text("model_id").notNull(), // 'claude-sonnet-4-5', 'gpt-4o-2024-08-06', etc.
+    inUsdPerMtok: numeric("in_usd_per_mtok", { precision: 10, scale: 4 }).notNull(),
+    outUsdPerMtok: numeric("out_usd_per_mtok", { precision: 10, scale: 4 }).notNull(),
+    cachedInUsdPerMtok: numeric("cached_in_usd_per_mtok", { precision: 10, scale: 4 }),
+    effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
+    effectiveTo: timestamp("effective_to", { withTimezone: true }),
+    source: text("source"), // URL of the pricing page snapshot
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    vendorModelIdx: index("model_price_vendor_model_idx").on(t.vendor, t.modelId),
+    effectiveIdx: index("model_price_effective_idx").on(
+      t.vendor,
+      t.modelId,
+      t.effectiveFrom,
+    ),
+    // Enforce "only one active row per (vendor, model_id)" where active means
+    // effective_to IS NULL. Without this, lookupModelPrice would pick one of
+    // multiple active rows nondeterministically and silently misprice receipts.
+    modelPriceActiveUniq: uniqueIndex("model_price_active_uniq")
+      .on(t.vendor, t.modelId)
+      .where(sql`effective_to IS NULL`),
+  }),
+);
+
+// Task 1.3 — cost-per-PR pivot. Per-user vendor API key vault. The plaintext
+// key never touches the row; api_key_enc holds the libsodium secretbox
+// (nonce || ciphertext, URL-safe base64) produced by lib/crypto/vendor-keys.
+// One row per (user, vendor) via the unique index; sync_status drives the
+// background poller that fetches token usage from each vendor's API.
+export const vendorConnection = pgTable(
+  "vendor_connection",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    vendor: text("vendor").notNull(),
+    apiKeyEnc: text("api_key_enc").notNull(),
+    workspaceId: text("workspace_id"),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    syncStatus: text("sync_status").notNull().default("pending"),
+    syncErrorMessage: text("sync_error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    userVendorIdx: uniqueIndex("vendor_connection_user_vendor_idx").on(
+      t.userId,
+      t.vendor,
+    ),
+  }),
+);
+
+// Task 2.4 — cost-per-PR pivot. Raw vendor usage-bucket rows pulled from
+// per-vendor org-usage APIs by the hourly sync worker. We DELIBERATELY store
+// the API's native granularity (per-bucket × per-model × per-workspace token
+// counts) without pre-aggregating to PRs — the PR attribution pass (Week 4)
+// joins these rows to trail_session windows. Treat this table as an audit log
+// of what each vendor told us; never mutate a row after the bucket closes
+// other than via the worker's idempotent upsert.
+//
+// Idempotency note: the natural unique key (user, vendor, bucketStart, model,
+// workspaceId, apiKeyId) includes nullable columns. Under Postgres default
+// NULLS DISTINCT semantics, duplicates with NULL values would not conflict on
+// the unique index, so the worker instead derives a deterministic PK from a
+// canonical-JSON hash of the natural key and uses `ON CONFLICT (id) DO NOTHING`.
+// The unique index remains as a query-path accelerator and a secondary guard
+// for the all-non-null case.
+export const vendorUsageBucket = pgTable(
+  "vendor_usage_bucket",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    vendor: text("vendor").notNull(),
+    bucketStart: timestamp("bucket_start", { withTimezone: true }).notNull(),
+    bucketEnd: timestamp("bucket_end", { withTimezone: true }).notNull(),
+    bucketWidth: text("bucket_width").notNull(), // '1h' | '1d'
+    model: text("model"), // model id; nullable when API didn't group by model
+    workspaceId: text("workspace_id"),
+    apiKeyId: text("api_key_id"),
+    serviceTier: text("service_tier"),
+    contextWindow: text("context_window"),
+    uncachedInputTokens: integer("uncached_input_tokens").notNull().default(0),
+    cacheCreationInputTokens: integer("cache_creation_input_tokens")
+      .notNull()
+      .default(0),
+    cacheReadInputTokens: integer("cache_read_input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    estimatedCostUsd: numeric("estimated_cost_usd", { precision: 12, scale: 6 }),
+    modelPriceSnapshot: jsonb("model_price_snapshot").$type<{
+      model: string;
+      inUsdPerMtok: number;
+      outUsdPerMtok: number;
+      cachedReadUsdPerMtok: number | null;
+      cachedCreationUsdPerMtok: number | null;
+      capturedAt: string;
+    }>(),
+    syncedAt: timestamp("synced_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    rawPayload: jsonb("raw_payload"), // full API row for debugging — null OK
+  },
+  (t) => ({
+    userVendorBucketIdx: index("vendor_usage_bucket_user_vendor_bucket_idx").on(
+      t.userId,
+      t.vendor,
+      t.bucketStart,
+    ),
+    userVendorModelIdx: index("vendor_usage_bucket_user_vendor_model_idx").on(
+      t.userId,
+      t.vendor,
+      t.model,
+    ),
+    uniqueBucket: uniqueIndex("vendor_usage_bucket_unique_idx").on(
+      t.userId,
+      t.vendor,
+      t.bucketStart,
+      t.model,
+      t.workspaceId,
+      t.apiKeyId,
+    ),
+  }),
+);
+
+// Week 4 — cost-per-PR pivot. PR-attributed cost ledger. Two attribution paths
+// land rows here:
+//   - 'native'           → trail_session.estimatedCostUsd is already populated
+//                          from per-event tokens (Claude Code / Cursor sessions
+//                          captured by the CLI). attributedCostUsd mirrors that
+//                          value 1:1; vendorBucketId is NULL.
+//   - 'fanout_anthropic' /
+//     'fanout_openai'    → vendor_usage_bucket carries the cost (org-usage API
+//                          gives no per-PR linkage). The engine fans it out
+//                          across shipped trail_session rows that landed inside
+//                          the bucket's window, weighted by session duration
+//                          (or evenly when durations are missing).
+//
+// Idempotency: the engine derives `id` as sha256 of (sessionId + source + bucketId)
+// and uses ON CONFLICT (id) DO NOTHING. The unique index is a secondary guard
+// against accidental hash collisions / direct INSERTs; it only fires for
+// non-null vendorBucketId rows (Postgres default NULLS DISTINCT) but the PK
+// covers the native path regardless.
+export const sessionCostAttribution = pgTable(
+  "session_cost_attribution",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(), // 'native' | 'fanout_anthropic' | 'fanout_openai'
+    vendorBucketId: text("vendor_bucket_id").references(
+      () => vendorUsageBucket.id,
+      { onDelete: "set null" },
+    ), // null for 'native'
+    attributedCostUsd: numeric("attributed_cost_usd", {
+      precision: 12,
+      scale: 6,
+    }).notNull(),
+    attributionMethod: text("attribution_method").notNull(), // 'session_native' | 'fanout_by_duration' | 'fanout_evenly'
+    attributedAt: timestamp("attributed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    notes: text("notes"),
+  },
+  (t) => ({
+    sessionIdx: index("session_cost_attribution_session_idx").on(t.sessionId),
+    userVendorBucketIdx: index("session_cost_attribution_user_bucket_idx").on(
+      t.userId,
+      t.vendorBucketId,
+    ),
+    uniqueBySource: uniqueIndex("session_cost_attribution_unique_idx").on(
+      t.sessionId,
+      t.source,
+      t.vendorBucketId,
+    ),
+  }),
+);

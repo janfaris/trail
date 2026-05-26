@@ -87,6 +87,9 @@ importers:
       '@trail/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@trail/parsers':
+        specifier: workspace:*
+        version: link:../../packages/parsers
       '@trail/schema':
         specifier: workspace:*
         version: link:../../packages/schema
@@ -102,6 +105,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@neondatabase/serverless@0.10.4)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(gel@2.2.0)(kysely@0.28.17)(pg@8.21.0)
+      libsodium-wrappers:
+        specifier: ^0.8.4
+        version: 0.8.4
       next:
         specifier: 16.2.6
         version: 16.2.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -145,6 +151,9 @@ importers:
       '@types/diff':
         specifier: ^8.0.0
         version: 8.0.0
+      '@types/libsodium-wrappers':
+        specifier: ^0.8.2
+        version: 0.8.2
       '@types/node':
         specifier: ^20
         version: 20.19.41
@@ -1782,6 +1791,10 @@ packages:
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
+  '@types/libsodium-wrappers@0.8.2':
+    resolution: {integrity: sha512-+2IDfSULPUskSjIYfZl9suIUsIE5PXwoKZiE/j0MZWd+M9nEGvJDsk/ztMZKNhL1lBL+1CaypW0dQSjqPW2dMg==}
+    deprecated: This is a stub types definition. libsodium-wrappers provides its own type definitions, so you do not need this installed.
+
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
 
@@ -2456,6 +2469,12 @@ packages:
   kysely@0.28.17:
     resolution: {integrity: sha512-nbD8lB9EB3wNdMhOCdx5Li8DxnLbvKByylRLcJ1h+4SkrowVeECAyZlyiKMThF7xFdRz0jSQ2MoJr+wXux2y0Q==}
     engines: {node: '>=20.0.0'}
+
+  libsodium-wrappers@0.8.4:
+    resolution: {integrity: sha512-mu8aAWucZjTB5O/BtGXtW4e1agy7uHxNYG7zPthmmD1jU43LCDmSWZLN4JhflbdPXj3yDO4lxM1O9hLDgIOXDw==}
+
+  libsodium@0.8.4:
+    resolution: {integrity: sha512-lMcYaRi0zcs7tarATsQUYC7rstliIXZuoq0c6zXSgNtSNtdvBgkSegjWhpMJAXzKX3SUSwIp7+zEsob+j3LuRw==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -4427,6 +4446,10 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/libsodium-wrappers@0.8.2':
+    dependencies:
+      libsodium-wrappers: 0.8.4
+
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
@@ -5068,6 +5091,12 @@ snapshots:
   json-with-bigint@3.5.8: {}
 
   kysely@0.28.17: {}
+
+  libsodium-wrappers@0.8.4:
+    dependencies:
+      libsodium: 0.8.4
+
+  libsodium@0.8.4: {}
 
   lightningcss-android-arm64@1.32.0:
     optional: true

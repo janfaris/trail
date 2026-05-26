@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
-import { SiteNav } from "@/components/site-nav";
 import { saveProfile } from "@/app/u/[user]/actions";
 
 export default async function SettingsPage() {
@@ -13,19 +12,16 @@ export default async function SettingsPage() {
   if (!me) redirect("/");
 
   return (
-    <div className="min-h-screen">
-      <SiteNav currentPath="/settings" />
+    <div className="max-w-2xl">
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
+        Edit profile
+      </h1>
+      <p className="text-sm text-zinc-500 mb-8">
+        Public on{" "}
+        <span className="font-mono text-zinc-400">/u/{me.handle}</span>
+      </p>
 
-      <main className="max-w-2xl mx-auto px-6 pt-12 pb-24">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
-          Edit profile
-        </h1>
-        <p className="text-sm text-zinc-500 mb-8">
-          Public on{" "}
-          <span className="font-mono text-zinc-400">/u/{me.handle}</span>
-        </p>
-
-        <form action={saveProfile} className="space-y-6">
+      <form action={saveProfile} className="space-y-6">
           <Field label="Bio" hint="Max 160 characters.">
             <textarea
               name="bio"
@@ -83,7 +79,6 @@ export default async function SettingsPage() {
             </button>
           </div>
         </form>
-      </main>
     </div>
   );
 }

@@ -20,6 +20,18 @@ export const auth = betterAuth({
   },
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  // Preview deploys land at trail-git-<branch>-jan-faris-projects-cfb42434.vercel.app.
+  // Trust the production origin, the project's vercel.app aliases, and localhost.
+  // Without this, server-side auth.api.getSession() throws on preview branches with
+  // a BetterAuthError instead of returning null, which 500s any page that gates on auth.
+  trustedOrigins: [
+    process.env.BETTER_AUTH_URL,
+    "http://localhost:3000",
+    "https://trail.dev",
+    "https://www.trail.dev",
+    // Wildcard catches every vercel.app preview URL for this project.
+    "https://*.vercel.app",
+  ].filter(Boolean) as string[],
   user: {
     additionalFields: {
       handle: {

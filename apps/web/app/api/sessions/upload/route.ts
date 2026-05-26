@@ -18,6 +18,87 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { ensureReceipt } from "@/lib/receipt-generator";
 import { checkPaywall } from "@/lib/paywall";
+import {
+  lookupModelPrice,
+  computeCostUsd,
+  type PriceSnapshot,
+} from "@/lib/cost/price-lookup";
+
+// Week 4 — cost-per-PR pivot. Path A of the attribution engine reads
+// trail_session.estimated_cost_usd as the "native" baseline, so the upload
+// route is responsible for populating it whenever the CLI emits per-event
+// token counts AND we know the model + vendor. We only do this for tools
+// that publish per-token usage natively: claude-code (Anthropic), codex
+// (OpenAI). Cursor uses Claude under the hood but doesn't surface per-event
+// token splits in our event stream (v1: skip). copilot-cli / copilot-chat /
+// hermes / aider / opencode / continue / windsurf / zed / cline have no
+// per-token data either — skip them all, the fanout path attributes those.
+const COST_ELIGIBLE_TOOL_VENDOR: Record<string, "anthropic" | "openai"> = {
+  "claude-code": "anthropic",
+  claude: "anthropic",
+  codex: "openai",
+};
+
+function normalizeModelId(raw: string): string {
+  // Strip leading vendor prefixes ("anthropic/claude-sonnet-4-5" →
+  // "claude-sonnet-4-5") and trailing date suffixes ("...-20250101" →
+  // "..."). lookupModelPrice's prefix-match fallback will catch the
+  // date-suffix case anyway, but normalizing here keeps logs readable.
+  let m = raw.trim();
+  m = m.replace(/^(anthropic|openai)\//, "");
+  m = m.replace(/-\d{8}$/, "");
+  return m;
+}
+
+async function computeSessionCost(
+  tool: string,
+  models: string[] | null,
+  tokens: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    cacheCreationInputTokens: number | null;
+    cacheReadInputTokens: number | null;
+  },
+): Promise<{ estimatedCostUsd: number; modelPriceSnapshot: PriceSnapshot } | null> {
+  const vendor = COST_ELIGIBLE_TOOL_VENDOR[tool];
+  if (!vendor) return null;
+
+  if (!models || models.length === 0) return null;
+  const firstRaw = models.find((m) => m && m.trim().length > 0);
+  if (!firstRaw) return null;
+  const modelId = normalizeModelId(firstRaw);
+  if (!modelId) return null;
+
+  if (tokens.inputTokens == null && tokens.outputTokens == null) return null;
+
+  const snapshot = await lookupModelPrice(vendor, modelId);
+  if (!snapshot) {
+    console.warn(
+      `upload-cost: unknown model ${modelId} for vendor ${vendor}`,
+    );
+    return null;
+  }
+
+  const cacheCreation = tokens.cacheCreationInputTokens ?? 0;
+  const cacheRead = tokens.cacheReadInputTokens ?? 0;
+  const inputTotal = tokens.inputTokens ?? 0;
+  // input_tokens is the FULL input (uncached + cached). Subtract the cached
+  // portions to isolate the priced-at-base-rate slice. clamp >= 0 because
+  // CLI clients occasionally emit slightly inconsistent splits.
+  const uncachedInputTokens = Math.max(0, inputTotal - cacheRead - cacheCreation);
+
+  const estimatedCostUsd = computeCostUsd(
+    {
+      uncachedInputTokens,
+      cacheCreationInputTokens: cacheCreation,
+      cacheReadInputTokens: cacheRead,
+      outputTokens: tokens.outputTokens ?? 0,
+    },
+    snapshot,
+  );
+
+  return { estimatedCostUsd, modelPriceSnapshot: snapshot };
+}
 
 function genSlug() {
   return Math.random().toString(36).slice(2, 10);
@@ -144,6 +225,59 @@ export async function POST(req: NextRequest) {
     console.error("[upload] metrics failed:", (err as Error).message);
   }
 
+  // Week 0 cost-per-PR pivot. Sum per-event token counts into trail_session
+  // top-level columns at insert time (one-shot, not derived live). If EVERY
+  // event has a null value for a field, the session total stays NULL so
+  // pre-token-aware CLI clients don't appear as "0 tokens used" — that
+  // would be indistinguishable from "the model returned no output".
+  // cache_creation and cache_read are summed together at the session level
+  // (the column is `cached_tokens`); the per-event split is preserved on
+  // the event table for the future cost calculator.
+  const sumOrNull = (
+    pick: (e: (typeof s.events)[number]) => number | null | undefined,
+  ): number | null => {
+    let total = 0;
+    let sawValue = false;
+    for (const e of s.events) {
+      const v = pick(e);
+      if (typeof v === "number" && Number.isFinite(v)) {
+        total += v;
+        sawValue = true;
+      }
+    }
+    return sawValue ? total : null;
+  };
+  const inputTokensTotal = sumOrNull((e) => ("inputTokens" in e ? e.inputTokens : null));
+  const outputTokensTotal = sumOrNull((e) => ("outputTokens" in e ? e.outputTokens : null));
+  // Sum cache_creation and cache_read independently first (we need the split
+  // for the cost calc, since they price at different rates). The legacy
+  // cachedTokens column on trail_session stores their sum — schema doesn't
+  // have separate cached_creation / cached_read columns.
+  const cacheCreationTokensTotal = sumOrNull((e) =>
+    "cacheCreationInputTokens" in e ? e.cacheCreationInputTokens : null,
+  );
+  const cacheReadTokensTotal = sumOrNull((e) =>
+    "cacheReadInputTokens" in e ? e.cacheReadInputTokens : null,
+  );
+  const cachedTokensTotal =
+    cacheCreationTokensTotal == null && cacheReadTokensTotal == null
+      ? null
+      : (cacheCreationTokensTotal ?? 0) + (cacheReadTokensTotal ?? 0);
+
+  const aiModels =
+    ai?.models && ai.models.length > 0 ? ai.models : null;
+  let costResult: Awaited<ReturnType<typeof computeSessionCost>> = null;
+  try {
+    costResult = await computeSessionCost(s.tool, aiModels, {
+      inputTokens: inputTokensTotal,
+      outputTokens: outputTokensTotal,
+      cacheCreationInputTokens: cacheCreationTokensTotal,
+      cacheReadInputTokens: cacheReadTokensTotal,
+    });
+  } catch (err) {
+    console.error("[upload] cost computation failed:", (err as Error).message);
+  }
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: session.user.id,
@@ -168,7 +302,7 @@ export async function POST(req: NextRequest) {
       ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,
     frameworks:
       ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
-    models: ai?.models && ai.models.length > 0 ? ai.models : null,
+    models: aiModels,
     taskType: ai?.task_type ?? null,
     // Auto-infer "shipped" when the LLM didn't tag it but the session has
     // strong signals: a linked git commit (recorded from inside a repo) or a
@@ -181,6 +315,12 @@ export async function POST(req: NextRequest) {
     linkedRepo,
     linkedCommitSha,
     linkedPrUrl: null, // populated later when we add PR backfill via GH API
+    inputTokens: inputTokensTotal,
+    outputTokens: outputTokensTotal,
+    cachedTokens: cachedTokensTotal,
+    estimatedCostUsd:
+      costResult != null ? costResult.estimatedCostUsd.toFixed(4) : null,
+    modelPriceSnapshot: costResult?.modelPriceSnapshot ?? null,
   });
 
   if (s.events.length > 0) {
@@ -192,6 +332,16 @@ export async function POST(req: NextRequest) {
         kind: e.kind,
         at: new Date(e.at),
         data: e as unknown as Record<string, unknown>,
+        // Tokens are duplicated here (event.data carries the whole event
+        // object too) so analytics queries can stay on indexable columns
+        // and never have to crack open the jsonb blob.
+        inputTokens: "inputTokens" in e ? e.inputTokens ?? null : null,
+        outputTokens: "outputTokens" in e ? e.outputTokens ?? null : null,
+        cacheCreationInputTokens:
+          "cacheCreationInputTokens" in e ? e.cacheCreationInputTokens ?? null : null,
+        cacheReadInputTokens:
+          "cacheReadInputTokens" in e ? e.cacheReadInputTokens ?? null : null,
+        model: "model" in e ? e.model ?? null : null,
       })),
     );
   }

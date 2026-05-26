@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function UpgradeButton({ label = "Upgrade to Pro — $9/mo" }: { label?: string }) {
+export function UpgradeButton({ label = "Start 14-day trial" }: { label?: string }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -33,11 +33,11 @@ export function UpgradeButton({ label = "Upgrade to Pro — $9/mo" }: { label?: 
       <button
         onClick={go}
         disabled={loading}
-        className="rounded-md bg-black px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium w-full bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] transition-colors disabled:opacity-60"
       >
         {loading ? "Starting checkout…" : label}
       </button>
-      {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
+      {err && <p className="mt-2 text-xs text-red-400 font-mono">{err}</p>}
     </div>
   );
 }
