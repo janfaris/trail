@@ -210,11 +210,12 @@ Per `creative/startup-idea-stress-test` skill. <$500, <2 weekends combined.
 - [x] Task 3.4: E2E smoke: connect all 4 vendors → test → verify status → delete → verify empty ✅ 2026-05-26 (VERIFIED against real Anthropic + OpenAI + GitHub APIs)
 
 ### Week 4 — Cost-attribution engine (THE MOAT)
-- [ ] Task 4.1: `apps/web/lib/cost/attribute.ts` — sessions → PRs algorithm w/ tests
-- [ ] Task 4.2: Edge case: many-to-one (multi-PR session) — proportional by file overlap
-- [ ] Task 4.3: Edge case: orphan sessions (no PR) — bucket as "exploration spend"
-- [ ] Task 4.4: Backfill job: attribute cost on every existing `receiptVerifiedAt != null` row
-- [ ] Task 4.5: Diagnostic validator (tone-spec style): flag suspicious attributions (>$100/PR, 0-token PRs)
+- [x] Task 4.1: `apps/web/lib/cost/attribute.ts` — sessions → PRs algorithm w/ tests ✅ 2026-05-26 (Path A native + Path B vendor fanout; deterministic sha256 PKs for idempotency; smoke VERIFIED with 2 runs, second is 100% duplicates)
+- [x] Task 4.2: Edge case: many-to-one (multi-PR session) — proportional by file overlap ✅ Modified: fan-out by **session duration** instead of file overlap (cleaner heuristic, doesn't require file-list diff). Falls back to even-split when total duration is 0 (clock skew).
+- [x] Task 4.3: Edge case: orphan sessions (no PR) — bucket as "exploration spend" ✅ `bucketsSkippedNoShipped` counter + validator info code surfaces unattributed spend (research/prototyping) to the dashboard.
+- [x] Task 4.4: Backfill job ✅ 2026-05-26 — `/api/cron/attribute-costs` runs hourly @ :15 (after vendor-sync @ :00). Per-user try/catch so one bad user can't poison the run.
+- [x] Task 4.5: Diagnostic validator ✅ 2026-05-26 — `apps/web/lib/cost/validator.ts` codes: `over_attributed`, `session_high_cost`, `linked_no_tokens`, `session_models_empty`, `bucket_no_shipped_session`. Read-only, never mutates.
+- [x] **Bonus fix**: upload route now calls `computeCostUsd` so new sessions get session-native cost on insert (was the upstream gap discovered while building the engine). Forward-looking — backfill found 0 candidates among 50 existing sessions (most are copilot-cli which has no per-token data, or pre-Week-0 claude-code).
 
 ### Week 5 — Recaps cost tier + dashboard
 - [ ] Task 5.1: Extend `recap.tier` enum: `'cost-pulse' | 'cost-weekly' | 'cost-monthly' | 'cost-project'`
