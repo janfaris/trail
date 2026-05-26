@@ -42,3 +42,43 @@ export async function verifyShipped(repo: string, sha: string): Promise<boolean>
     return false;
   }
 }
+
+/**
+ * Find the merged pull request that introduced a commit SHA. Uses GitHub's
+ * `commits/:sha/pulls` endpoint (requires the groot media type historically,
+ * now stable). Returns the HTML URL of the first MERGED PR found, or null
+ * when the SHA isn't associated with any PR or the token is missing.
+ *
+ * Surfaces:
+ *   - direct commits to default branch (no PR) → null
+ *   - PR squash-merged (commit SHA is the squash commit on default) → PR URL
+ *   - PR merged with merge commit (commit SHA is one of the constituent
+ *     commits) → PR URL
+ *
+ * Returns null on any error so the upload route never fails on missing PR.
+ */
+export async function resolvePullRequest(
+  repo: string,
+  sha: string,
+): Promise<string | null> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return null;
+  const [owner, name] = repo.split("/");
+  if (!owner || !name || !sha) return null;
+  try {
+    const gh = new Octokit({ auth: token });
+    const { data } = await gh.repos.listPullRequestsAssociatedWithCommit({
+      owner,
+      repo: name,
+      commit_sha: sha,
+    });
+    const merged = data.find((pr) => pr.merged_at != null);
+    return merged?.html_url ?? null;
+  } catch (err) {
+    console.warn(
+      "[github-verify] resolvePullRequest failed:",
+      (err as Error).message,
+    );
+    return null;
+  }
+}
