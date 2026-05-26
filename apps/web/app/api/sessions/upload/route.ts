@@ -264,8 +264,23 @@ export async function POST(req: NextRequest) {
       ? null
       : (cacheCreationTokensTotal ?? 0) + (cacheReadTokensTotal ?? 0);
 
+  // Models — prefer ground-truth from per-event `model` fields (set by the
+  // parser from the tool's own JSONL). Only fall back to the LLM-inferred
+  // `ai.models` if events carry no model — older parsers (or sessions with
+  // partial token capture) won't have it.
+  const eventModels = Array.from(
+    new Set(
+      events
+        .map((e) => ("model" in e && typeof e.model === "string" ? e.model : null))
+        .filter((m): m is string => m != null && m.length > 0),
+    ),
+  );
   const aiModels =
-    ai?.models && ai.models.length > 0 ? ai.models : null;
+    eventModels.length > 0
+      ? eventModels
+      : ai?.models && ai.models.length > 0
+        ? ai.models
+        : null;
   let costResult: Awaited<ReturnType<typeof computeSessionCost>> = null;
   try {
     costResult = await computeSessionCost(s.tool, aiModels, {
