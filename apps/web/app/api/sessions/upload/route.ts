@@ -295,13 +295,27 @@ export async function POST(req: NextRequest) {
     console.error("[upload] cost computation failed:", (err as Error).message);
   }
 
-  // Resolve linked PR from commit SHA via GitHub API. Best-effort — falls
-  // back to null on missing token, network error, or no associated PR
-  // (direct commits to default branch). Only attempts when we have both
-  // repo and SHA; both come from git context the CLI captured at record time.
+  // Look up the session owner's GitHub OAuth access token from better-auth's
+  // account table. This token is what `resolvePullRequest` uses to query the
+  // GitHub API — running the lookup as the session owner means each user only
+  // sees PRs in repos they themselves have access to (public repos, plus any
+  // private repos they're a member of if they granted `repo` scope). A single
+  // shared bot token does NOT scale — it would have zero access to other
+  // users' private repos. Falls back to GITHUB_TOKEN env when the account
+  // row is missing (shouldn't happen — users sign in via GitHub OAuth — but
+  // keeps the path defensible in tests/dev).
+  let githubUserToken: string | null = null;
+  if (linkedRepo && linkedCommitSha) {
+    const ghAccount = await db.query.account.findFirst({
+      where: (a, { and, eq }) =>
+        and(eq(a.userId, session.user.id), eq(a.providerId, "github")),
+      columns: { accessToken: true },
+    });
+    githubUserToken = ghAccount?.accessToken ?? null;
+  }
   const linkedPrUrl =
     linkedRepo && linkedCommitSha
-      ? await resolvePullRequest(linkedRepo, linkedCommitSha)
+      ? await resolvePullRequest(linkedRepo, linkedCommitSha, githubUserToken)
       : null;
 
   await db.insert(schema.trailSession).values({
