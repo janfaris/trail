@@ -49,3 +49,5 @@ scripts/connections-smoke.ts
 scripts/vendor-sync-smoke.ts
 # throwaway smoke scripts (Task 1.4)
 scripts/cron-refresh-pricing-smoke.ts
+# throwaway smoke scripts (Task 3.4)
+scripts/connections-e2e-smoke.ts
