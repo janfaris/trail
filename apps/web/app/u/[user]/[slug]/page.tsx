@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db/client";
 import { eq, and, asc } from "drizzle-orm";
@@ -20,7 +21,7 @@ import { ReactionBar } from "@/components/reaction-bar";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import { ReceiptBlock } from "@/components/receipt-block";
 import { ReceiptActions } from "@/components/receipt-actions";
-import { SessionCostBlock } from "@/components/session-cost-block";
+import { SessionCostBlock, SessionCostBlockSkeleton } from "@/components/session-cost-block";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -106,8 +107,14 @@ export default async function SessionView({
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("host") ?? "localhost:3000";
   const fullUrl = shareUrl(user, slug, `${proto}://${host}`);
-  const viewer = await auth.api.getSession({ headers: h });
+  let viewer: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+  try {
+    viewer = await auth.api.getSession({ headers: h });
+  } catch {
+    viewer = null;
+  }
   const canExplain = !!viewer?.user;
+  const isOwner = viewer?.user?.id === userRow.id;
 
   // Look up an existing Pulse Recap for this session — surfaced in the
   // header actions so owners see "Open" instead of "Generate" once made.
@@ -248,14 +255,18 @@ export default async function SessionView({
           </span>
         </div>
 
-        <SessionCostBlock
-          sessionId={sessionRow.id}
-          userId={userRow.id}
-          estimatedCostUsd={sessionRow.estimatedCostUsd}
-          inputTokens={sessionRow.inputTokens}
-          outputTokens={sessionRow.outputTokens}
-          cachedTokens={sessionRow.cachedTokens}
-        />
+        {isOwner && (
+          <Suspense fallback={<SessionCostBlockSkeleton />}>
+            <SessionCostBlock
+              sessionId={sessionRow.id}
+              userId={userRow.id}
+              estimatedCostUsd={sessionRow.estimatedCostUsd}
+              inputTokens={sessionRow.inputTokens}
+              outputTokens={sessionRow.outputTokens}
+              cachedTokens={sessionRow.cachedTokens}
+            />
+          </Suspense>
+        )}
 
         <ReceiptBlock
           outcome={sessionRow.receiptOutcome}
@@ -273,7 +284,7 @@ export default async function SessionView({
               slug={sessionRow.slug}
               sessionId={sessionRow.id}
               tldr={sessionRow.receiptTldr}
-              isOwner={viewer?.user?.id === userRow.id}
+              isOwner={isOwner}
               existingRecapSlug={existingPulseRecap?.slug ?? null}
             />
           }

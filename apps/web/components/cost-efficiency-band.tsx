@@ -185,7 +185,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
           {topModel ? (
             <>
               <div className="text-sm font-mono text-zinc-100 truncate" title={topModel.model}>
-                {topModel.model}
+                {topModel.model === "unknown" ? "—" : topModel.model}
               </div>
               <div className="text-[11px] font-mono tabular-nums text-zinc-500 mt-0.5">
                 {fmtMoney(topModel.costUsd)}
@@ -207,6 +207,8 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
               return (
                 <span
                   key={v}
+                  role="img"
+                  aria-label={`${VENDOR_LABEL[v]}: ${connected ? "connected" : "not connected"}`}
                   title={`${VENDOR_LABEL[v]} · ${connected ? "connected" : "not connected"}`}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${
                     connected
@@ -224,6 +226,24 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
 
       <div className="mt-3 text-[11px] font-mono text-zinc-600">
         Last 30 days · receipt-verified only
+      </div>
+    </section>
+  );
+}
+
+export function CostEfficiencyBandSkeleton() {
+  return (
+    <section className="mb-8 border-t border-zinc-900 pt-4">
+      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
+        Cost efficiency
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="border border-zinc-900 rounded-lg px-4 py-3 h-[72px] animate-pulse bg-zinc-900/40"
+          />
+        ))}
       </div>
     </section>
   );

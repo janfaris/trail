@@ -146,3 +146,13 @@ export async function SessionCostBlock({
     </aside>
   );
 }
+
+export function SessionCostBlockSkeleton() {
+  return (
+    <aside className="mb-6 border border-zinc-900 rounded-lg p-4 animate-pulse">
+      <div className="h-3 w-20 bg-zinc-900 rounded mb-3" />
+      <div className="h-5 w-32 bg-zinc-900/60 rounded mb-2" />
+      <div className="h-3 w-48 bg-zinc-900/40 rounded" />
+    </aside>
+  );
+}

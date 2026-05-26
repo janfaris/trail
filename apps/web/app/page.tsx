@@ -1,11 +1,30 @@
 /* Hallmark · macrostructure: cost-per-pr-pivot · polish: hp2-cadence-rail · genre: technical-editorial · stamp: trail-2026-05 */
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { SiteNav } from "@/components/site-nav";
 import { auth } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Trail — What did that PR actually cost?",
+  description:
+    "Trail connects to Anthropic, OpenAI, Cursor, and Copilot billing and captures your local agent sessions, then attributes spend to the merged commit. Cross-vendor cost-per-PR in one number.",
+  openGraph: {
+    title: "Trail — What did that PR actually cost?",
+    description:
+      "Cross-vendor cost-per-PR for devs shipping with AI. Token-verified, per-commit attribution across Anthropic, OpenAI, Cursor, Copilot.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trail — What did that PR actually cost?",
+    description:
+      "Cross-vendor cost-per-PR for devs shipping with AI. Token-verified, per-commit attribution across Anthropic, OpenAI, Cursor, Copilot.",
+  },
+};
 
 // Real shipped session — stands in as the cost example until a cost-pulse recap exists.
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { db, schema } from "@/db/client";
@@ -21,7 +22,7 @@ import { ToolMixBar } from "@/components/tool-mix-bar";
 import { VelocitySparkline } from "@/components/velocity-sparkline";
 import { TopRepos } from "@/components/top-repos";
 import { computeUserStats } from "@/lib/aggregates";
-import { CostEfficiencyBand } from "@/components/cost-efficiency-band";
+import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
 
 function parseUsd(raw: string | null | undefined): number {
   if (raw == null) return 0;
@@ -68,7 +69,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
 
-  const sessionInfo = await auth.api.getSession({ headers: await headers() });
+  let sessionInfo: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+  try {
+    sessionInfo = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    sessionInfo = null;
+  }
   const isSelf = sessionInfo?.user?.id === userRow.id;
 
   const jar = await cookies();
@@ -132,7 +138,11 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
       <main className="max-w-4xl mx-auto px-6 pt-10 pb-24">
         {showIntro && <ProfileIntroCard />}
 
-        {isSelf && <CostEfficiencyBand userId={userRow.id} />}
+        {isSelf && (
+          <Suspense fallback={<CostEfficiencyBandSkeleton />}>
+            <CostEfficiencyBand userId={userRow.id} />
+          </Suspense>
+        )}
 
         <div className="flex items-start gap-5 mb-10">
           <Avatar src={avatar} alt={userRow.handle ?? user} size={64} fallback={userRow.handle ?? user} />
