@@ -218,11 +218,11 @@ Per `creative/startup-idea-stress-test` skill. <$500, <2 weekends combined.
 - [x] **Bonus fix**: upload route now calls `computeCostUsd` so new sessions get session-native cost on insert (was the upstream gap discovered while building the engine). Forward-looking — backfill found 0 candidates among 50 existing sessions (most are copilot-cli which has no per-token data, or pre-Week-0 claude-code).
 
 ### Week 5 — Recaps cost tier + dashboard
-- [ ] Task 5.1: Extend `recap.tier` enum: `'cost-pulse' | 'cost-weekly' | 'cost-monthly' | 'cost-project'`
-- [ ] Task 5.2: Aggregator `apps/web/lib/recap/cost-aggregate.ts` — computes $/PR, top model, best ROI
-- [ ] Task 5.3: Cron `/api/cron/recap-cost-weekly` (Mon 09:00 user local)
-- [ ] Task 5.4: `/dashboard/cost` page — personal cost view
-- [ ] Task 5.5: One-liner LLM gen, tone-spec bound, diagnostic-validated
+- [x] Task 5.1: Extend `recap.tier` (no schema change — tier is free-form text; new values `cost-pulse | cost-weekly | cost-monthly | cost-project` added by virtue of generator writes) ✅ 2026-05-26
+- [x] Task 5.2: Aggregator `apps/web/lib/recap/cost-aggregate.ts` ✅ 2026-05-26 (totalCost / shippedPrCount / $/PR / median / mostExpensive / topModel / topVendor / unattributedCostUsd + per-vendor/model/PR breakdowns. Code-review BLOCKER fix: totalCost and shippedPrCount derive from same linkedPrUrl-NOT-NULL slice.)
+- [x] Task 5.3: Cron `/api/cron/recap-cost-weekly` (Mon 09:00 UTC) ✅ 2026-05-26 (DISTINCT user pre-filter, MAX_USERS_PER_RUN=500 cap with usersDeferred surfaced, CONCURRENCY=8 worker pool, batched handle lookup, per-user try/catch)
+- [x] Task 5.4: `/dashboard/cost` page ✅ 2026-05-26 (server component, ?window=7|30|90 selector w/ Next 16 async searchParams, unattributed callout > $0.50)
+- [x] Task 5.5: One-liner LLM gen for cost-* tiers ✅ 2026-05-26 (tone-spec preserved, diagnostic validator runs same as other tiers). Also: POST /api/recap/cost-pulse/[sessionId] owner-gated route + generate-cost-pulse.ts library + cost-tier render path on /r/[slug] + /api/og/recap/[slug] with defensive 404 guard for foreign payloads.
 
 ### Week 6 — Share artifacts (@vercel/og)
 - [ ] Task 6.1: New OG template: cost-card (1200x675), Pulse tier
