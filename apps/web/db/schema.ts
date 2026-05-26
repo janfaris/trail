@@ -476,3 +476,60 @@ export const vendorUsageBucket = pgTable(
     ),
   }),
 );
+
+// Week 4 — cost-per-PR pivot. PR-attributed cost ledger. Two attribution paths
+// land rows here:
+//   - 'native'           → trail_session.estimatedCostUsd is already populated
+//                          from per-event tokens (Claude Code / Cursor sessions
+//                          captured by the CLI). attributedCostUsd mirrors that
+//                          value 1:1; vendorBucketId is NULL.
+//   - 'fanout_anthropic' /
+//     'fanout_openai'    → vendor_usage_bucket carries the cost (org-usage API
+//                          gives no per-PR linkage). The engine fans it out
+//                          across shipped trail_session rows that landed inside
+//                          the bucket's window, weighted by session duration
+//                          (or evenly when durations are missing).
+//
+// Idempotency: the engine derives `id` as sha256 of (sessionId + source + bucketId)
+// and uses ON CONFLICT (id) DO NOTHING. The unique index is a secondary guard
+// against accidental hash collisions / direct INSERTs; it only fires for
+// non-null vendorBucketId rows (Postgres default NULLS DISTINCT) but the PK
+// covers the native path regardless.
+export const sessionCostAttribution = pgTable(
+  "session_cost_attribution",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    source: text("source").notNull(), // 'native' | 'fanout_anthropic' | 'fanout_openai'
+    vendorBucketId: text("vendor_bucket_id").references(
+      () => vendorUsageBucket.id,
+      { onDelete: "set null" },
+    ), // null for 'native'
+    attributedCostUsd: numeric("attributed_cost_usd", {
+      precision: 12,
+      scale: 6,
+    }).notNull(),
+    attributionMethod: text("attribution_method").notNull(), // 'session_native' | 'fanout_by_duration' | 'fanout_evenly'
+    attributedAt: timestamp("attributed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    notes: text("notes"),
+  },
+  (t) => ({
+    sessionIdx: index("session_cost_attribution_session_idx").on(t.sessionId),
+    userVendorBucketIdx: index("session_cost_attribution_user_bucket_idx").on(
+      t.userId,
+      t.vendorBucketId,
+    ),
+    uniqueBySource: uniqueIndex("session_cost_attribution_unique_idx").on(
+      t.sessionId,
+      t.source,
+      t.vendorBucketId,
+    ),
+  }),
+);
