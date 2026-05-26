@@ -204,10 +204,10 @@ Per `creative/startup-idea-stress-test` skill. <$500, <2 weekends combined.
 - [x] **Bonus fix**: `apps/web/next.config.ts` lacked `@trail/parsers` in `transpilePackages`; index.ts used `.js` suffixes the Next bundler can't resolve. Fixed both. Build now green — `/settings/connections` compiles + all 29 parser tests pass.
 
 ### Week 3 — Copilot + OpenAI importers
-- [ ] Task 3.1: `packages/parsers/copilot` — GitHub Copilot usage API
-- [ ] Task 3.2: `packages/parsers/openai` — OpenAI usage endpoint
-- [ ] Task 3.3: Add to `/settings/connections`
-- [ ] Task 3.4: End-to-end test: connect all 4 vendors, verify costs land in `trailSession`
+- [x] Task 3.1: `packages/parsers/copilot-org` — GitHub Copilot Metrics API client ✅ 2026-05-26 (6/6 tests). Documented limitation: API exposes engagement data only, NOT per-user token counts — Copilot rows land in vendor_usage_bucket with token fields=0 + rawPayload jsonb for later use.
+- [x] Task 3.2: `packages/parsers/openai-org` — OpenAI Organizations Usage API client ✅ 2026-05-26 (7/7 tests incl. epoch-seconds footgun test)
+- [x] Task 3.3: Wire openai + copilot + cursor through `/api/connections/[vendor]/test` and `apps/web/lib/vendor-sync/sync-worker.ts` ✅ 2026-05-26 (404→auth_error for copilot, workspaceId.trim(), cached-subtraction clamp, snapshot+restore in smoke)
+- [x] Task 3.4: E2E smoke: connect all 4 vendors → test → verify status → delete → verify empty ✅ 2026-05-26 (VERIFIED against real Anthropic + OpenAI + GitHub APIs)
 
 ### Week 4 — Cost-attribution engine (THE MOAT)
 - [ ] Task 4.1: `apps/web/lib/cost/attribute.ts` — sessions → PRs algorithm w/ tests
