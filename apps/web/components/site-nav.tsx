@@ -24,12 +24,22 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
       import("@/lib/auth"),
       import("@/db/client"),
     ]);
-    const sessionInfo = await auth.api.getSession({ headers: await headers() });
+    // BetterAuth can throw on preview branches with non-trusted origins.
+    // Treat any throw or null session as anonymous so the marketing nav
+    // still renders.
+    let sessionInfo: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+    try {
+      sessionInfo = await auth.api.getSession({ headers: await headers() });
+    } catch {
+      sessionInfo = null;
+    }
     const userRow = sessionInfo?.user
       ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
       : null;
     handle = userRow?.handle ?? null;
   }
+
+  const costActive = Boolean(currentPath && currentPath.startsWith("/dashboard/cost"));
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
@@ -58,7 +68,17 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
             )}
           </div>
           {handle ? (
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3 sm:gap-5">
+              <Link
+                href="/dashboard/cost"
+                aria-current={costActive ? "page" : undefined}
+                className={`inline-flex items-center gap-1.5 ${
+                  costActive ? "text-[#a7f300]" : "text-zinc-300 hover:text-[#a7f300]"
+                } transition-colors`}
+              >
+                <span className="text-[#a7f300]">$</span>
+                <span>Cost</span>
+              </Link>
               <Link href="/dashboard" className={linkClass("/dashboard", currentPath)}>
                 Dashboard
               </Link>

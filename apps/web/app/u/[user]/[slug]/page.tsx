@@ -20,6 +20,7 @@ import { ReactionBar } from "@/components/reaction-bar";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import { ReceiptBlock } from "@/components/receipt-block";
 import { ReceiptActions } from "@/components/receipt-actions";
+import { SessionCostBlock } from "@/components/session-cost-block";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -246,6 +247,15 @@ export default async function SessionView({
             {new Date(sessionRow.startedAt).toISOString().slice(0, 10)}
           </span>
         </div>
+
+        <SessionCostBlock
+          sessionId={sessionRow.id}
+          userId={userRow.id}
+          estimatedCostUsd={sessionRow.estimatedCostUsd}
+          inputTokens={sessionRow.inputTokens}
+          outputTokens={sessionRow.outputTokens}
+          cachedTokens={sessionRow.cachedTokens}
+        />
 
         <ReceiptBlock
           outcome={sessionRow.receiptOutcome}

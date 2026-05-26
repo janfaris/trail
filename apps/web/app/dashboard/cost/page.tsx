@@ -24,6 +24,14 @@ export const runtime = "nodejs";
 const ALLOWED_WINDOWS = [7, 30, 90] as const;
 type AllowedWindow = (typeof ALLOWED_WINDOWS)[number];
 
+type VendorSlot = "anthropic" | "openai" | "cursor" | "copilot";
+const VENDOR_SLOTS: { id: VendorSlot; name: string; line: string }[] = [
+  { id: "anthropic", name: "Anthropic", line: "Claude API org usage." },
+  { id: "openai", name: "OpenAI", line: "OpenAI org spend." },
+  { id: "cursor", name: "Cursor", line: "Cursor team usage." },
+  { id: "copilot", name: "GitHub Copilot", line: "Copilot seat usage." },
+];
+
 function parseWindow(raw: string | string[] | undefined): AllowedWindow {
   const v = Array.isArray(raw) ? raw[0] : raw;
   const n = Number(v);
@@ -41,6 +49,38 @@ function fmtMoneyCompact(n: number): string {
   if (!Number.isFinite(n)) return "$—";
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n.toFixed(2)}`;
+}
+
+// Hourly cron at :15 past the hour. Compute the next occurrence in UTC so
+// the empty-state copy isn't ambiguous about timezones.
+function nextQuarterPast(now: Date): Date {
+  const next = new Date(now);
+  next.setUTCMinutes(15, 0, 0);
+  if (next.getTime() <= now.getTime()) {
+    next.setUTCHours(next.getUTCHours() + 1);
+  }
+  return next;
+}
+
+function fmtRelativeMinutes(target: Date, now: Date): string {
+  const ms = target.getTime() - now.getTime();
+  if (ms <= 0) return "any minute now";
+  const mins = Math.max(1, Math.round(ms / 60000));
+  if (mins < 60) return `in ${mins} minute${mins === 1 ? "" : "s"}`;
+  const hrs = Math.round(mins / 60);
+  return `in ${hrs} hour${hrs === 1 ? "" : "s"}`;
+}
+
+function fmtLastSync(d: Date | null): string {
+  if (!d) return "never";
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 export default async function CostDashboardPage({
@@ -78,6 +118,24 @@ export default async function CostDashboardPage({
 
   const m = payload.metrics;
   const showUnattributed = m.unattributedCostUsd > 0.5;
+  const hasData = m.shippedPrCount > 0 && m.totalCostUsd > 0;
+
+  // Connections + local-session signal drive the empty-state ladder when
+  // there's no cost-per-PR data yet.
+  const connections = await db
+    .select({
+      vendor: schema.vendorConnection.vendor,
+      lastSyncedAt: schema.vendorConnection.lastSyncedAt,
+    })
+    .from(schema.vendorConnection)
+    .where(eq(schema.vendorConnection.userId, sess.user.id));
+  const hasConnections = connections.length > 0;
+  const lastSyncedAt = connections.reduce<Date | null>((acc, c) => {
+    if (!c.lastSyncedAt) return acc;
+    if (!acc || c.lastSyncedAt.getTime() > acc.getTime()) return c.lastSyncedAt;
+    return acc;
+  }, null);
+  const nextSyncAt = nextQuarterPast(now);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -98,8 +156,23 @@ export default async function CostDashboardPage({
           </p>
         </div>
 
-        {/* Window selector */}
-        <div className="flex items-center gap-2 mb-8">
+        {!hasData && !hasConnections && (
+          <ConnectEmptyState lastSyncedAt={lastSyncedAt} />
+        )}
+
+        {!hasData && hasConnections && (
+          <SyncPendingState
+            now={now}
+            nextSyncAt={nextSyncAt}
+            lastSyncedAt={lastSyncedAt}
+            connectionCount={connections.length}
+          />
+        )}
+
+        {hasData && (
+          <>
+            {/* Window selector */}
+            <div className="flex items-center gap-2 mb-8">
           {ALLOWED_WINDOWS.map((d) => {
             const active = d === windowDays;
             return (
@@ -288,6 +361,8 @@ export default async function CostDashboardPage({
             )}
           </Section>
         </div>
+          </>
+        )}
 
         {/* Footer hint */}
         <div className="mt-16 pt-6 border-t border-zinc-900 text-[11px] font-mono text-zinc-600 flex items-center justify-between">
@@ -299,6 +374,116 @@ export default async function CostDashboardPage({
         </div>
       </main>
     </div>
+  );
+}
+
+function ConnectEmptyState({
+  lastSyncedAt,
+}: {
+  lastSyncedAt: Date | null;
+}) {
+  return (
+    <section className="mb-10">
+      <div className="border border-zinc-800 rounded-lg bg-zinc-900/30 px-6 py-7">
+        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">
+          Connect a vendor to see your real $/PR.
+        </div>
+        <p className="text-sm text-zinc-300 max-w-2xl mb-5">
+          Trail attributes spend to merged PRs by reading your vendor billing
+          APIs. Pick a vendor below — we encrypt the key at rest and only use it
+          at sync time.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {VENDOR_SLOTS.map((v) => (
+            <div
+              key={v.id}
+              className="border border-zinc-800 rounded-lg bg-zinc-950/60 px-4 py-3.5 flex flex-col gap-2"
+            >
+              <div className="text-sm font-semibold text-zinc-100">{v.name}</div>
+              <div className="text-xs text-zinc-500">{v.line}</div>
+              <Link
+                href="/settings/connections"
+                className="mt-1 inline-flex items-center justify-center rounded-md bg-[#a7f300] hover:bg-[#b9ff1f] text-zinc-950 text-xs font-mono font-semibold h-7 px-3 transition-colors"
+              >
+                Add connection
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 pt-5 border-t border-zinc-900 text-xs text-zinc-500">
+          <span className="text-zinc-400">Or capture local sessions</span>
+          {" — "}
+          <Link
+            href="/install"
+            className="text-[#a7f300] hover:underline font-mono"
+          >
+            npm i -g @trail/cli &amp;&amp; trail init →
+          </Link>
+        </div>
+
+        {lastSyncedAt && (
+          <div className="mt-3 text-[11px] font-mono text-zinc-600">
+            Last vendor sync · {fmtLastSync(lastSyncedAt)}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SyncPendingState({
+  now,
+  nextSyncAt,
+  lastSyncedAt,
+  connectionCount,
+}: {
+  now: Date;
+  nextSyncAt: Date;
+  lastSyncedAt: Date | null;
+  connectionCount: number;
+}) {
+  const rel = fmtRelativeMinutes(nextSyncAt, now);
+  const nextStamp = nextSyncAt.toISOString().slice(11, 16) + " UTC";
+  return (
+    <section className="mb-10">
+      <div className="border border-zinc-800 rounded-lg bg-zinc-900/30 px-6 py-6">
+        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">
+          Sync in progress
+        </div>
+        <h2 className="text-lg font-semibold tracking-tight text-zinc-50 mb-2">
+          We're pulling your vendor usage now.
+        </h2>
+        <p className="text-sm text-zinc-400 max-w-2xl mb-4">
+          The hourly cron runs at :15 past every hour and stitches your vendor
+          usage to your shipped PRs. Check back at the next :15 past the hour
+          to see your real $/PR.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+          <div className="border border-zinc-900 rounded-md px-3 py-2.5">
+            <div className="text-zinc-500 mb-1">Connections</div>
+            <div className="text-zinc-100 text-base font-semibold tabular-nums">
+              {connectionCount}
+            </div>
+          </div>
+          <div className="border border-zinc-900 rounded-md px-3 py-2.5">
+            <div className="text-zinc-500 mb-1">Last sync</div>
+            <div className="text-zinc-100">{fmtLastSync(lastSyncedAt)}</div>
+          </div>
+          <div className="border border-zinc-900 rounded-md px-3 py-2.5">
+            <div className="text-zinc-500 mb-1">Next sync</div>
+            <div className="text-[#a7f300]">
+              {nextStamp} <span className="text-zinc-500">· {rel}</span>
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 text-[11px] font-mono text-zinc-600">
+          Once a shipped PR lands inside a synced bucket, it'll show up here
+          automatically.
+        </div>
+      </div>
+    </section>
   );
 }
 

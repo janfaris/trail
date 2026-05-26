@@ -344,9 +344,10 @@ export function ConnectionsClient({
       <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
         Vendor connections
       </h1>
-      <p className="text-sm text-zinc-500 mb-8 max-w-2xl">
-        Connect your AI vendor billing to start tracking cost-per-PR. Keys are
-        encrypted at rest and never sent to Trail.
+      <p className="text-sm text-zinc-400 mb-8 max-w-2xl leading-relaxed">
+        Trail attributes spend to merged PRs. To do that, we need read-only
+        access to your vendor billing APIs. Encrypted with libsodium, used only
+        at sync time, revocable in one click.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
