@@ -29,6 +29,11 @@ export async function GET(
   if (!recap || recap.visibility !== "public") {
     return new Response("Not found", { status: 404 });
   }
+  // Cost-tier recaps use a different payload shape — the classic OG card
+  // would render NaN counts. Return 404 until a cost-specific card lands.
+  if (recap.tier.startsWith("cost-")) {
+    return new Response("Not found", { status: 404 });
+  }
 
   const owner = await db.query.user.findFirst({
     where: eq(schema.user.id, recap.userId),

@@ -55,3 +55,5 @@ scripts/connections-e2e-smoke.ts
 scripts/attribute-cost-smoke.ts
 # throwaway backfill script (Week 4 upstream-gap fix)
 scripts/backfill-session-cost.ts
+# throwaway smoke scripts (Week 5)
+scripts/week5-cost-recap-smoke.ts
