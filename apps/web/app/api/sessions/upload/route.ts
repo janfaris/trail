@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
   // partial token capture) won't have it.
   const eventModels = Array.from(
     new Set(
-      events
+      s.events
         .map((e) => ("model" in e && typeof e.model === "string" ? e.model : null))
         .filter((m): m is string => m != null && m.length > 0),
     ),
