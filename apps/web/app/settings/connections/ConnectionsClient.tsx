@@ -407,7 +407,7 @@ export function ConnectionsClient({
         <div className="flex items-center gap-2 mb-3">
           <div className="flex-1 flex items-center h-10 px-3 rounded-md border border-zinc-800 bg-zinc-950 font-mono text-[13px] text-zinc-200 overflow-x-auto">
             <span className="text-zinc-600 select-none mr-2">$</span>
-            <span className="whitespace-nowrap">npm i -g trail &amp;&amp; trail login &amp;&amp; trail record</span>
+            <span className="break-all">curl -fsSL https://gettrail.vercel.app/install.sh | bash</span>
           </div>
         </div>
         <div className="text-[13px] text-zinc-400 leading-relaxed">
