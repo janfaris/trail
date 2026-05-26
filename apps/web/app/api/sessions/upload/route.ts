@@ -18,6 +18,8 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { ensureReceipt } from "@/lib/receipt-generator";
 import { checkPaywall } from "@/lib/paywall";
+import { resolvePullRequest } from "@/lib/github-verify";
+import { randomUUID } from "node:crypto";
 import {
   lookupModelPrice,
   computeCostUsd,
@@ -293,6 +295,15 @@ export async function POST(req: NextRequest) {
     console.error("[upload] cost computation failed:", (err as Error).message);
   }
 
+  // Resolve linked PR from commit SHA via GitHub API. Best-effort — falls
+  // back to null on missing token, network error, or no associated PR
+  // (direct commits to default branch). Only attempts when we have both
+  // repo and SHA; both come from git context the CLI captured at record time.
+  const linkedPrUrl =
+    linkedRepo && linkedCommitSha
+      ? await resolvePullRequest(linkedRepo, linkedCommitSha)
+      : null;
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: session.user.id,
@@ -329,7 +340,7 @@ export async function POST(req: NextRequest) {
       (linkedCommitSha || s.events.length >= 20 ? "shipped" : null),
     linkedRepo,
     linkedCommitSha,
-    linkedPrUrl: null, // populated later when we add PR backfill via GH API
+    linkedPrUrl,
     inputTokens: inputTokensTotal,
     outputTokens: outputTokensTotal,
     cachedTokens: cachedTokensTotal,
@@ -337,6 +348,28 @@ export async function POST(req: NextRequest) {
       costResult != null ? costResult.estimatedCostUsd.toFixed(4) : null,
     modelPriceSnapshot: costResult?.modelPriceSnapshot ?? null,
   });
+
+  // Insert a `native` attribution row whenever we computed a session-native
+  // cost from per-event tokens. This is Path A of the cost attribution
+  // engine — owner-priced, no vendor-fanout required. The dashboard
+  // aggregator reads from session_cost_attribution, so without this row
+  // sessions never show up in /dashboard/cost even when estimated_cost_usd
+  // is populated. Idempotent via the (session_id, source, vendor_bucket_id)
+  // unique index — re-uploading the same session won't double-attribute.
+  if (costResult != null && costResult.estimatedCostUsd > 0) {
+    await db
+      .insert(schema.sessionCostAttribution)
+      .values({
+        id: randomUUID(),
+        sessionId,
+        userId: session.user.id,
+        source: "native",
+        vendorBucketId: null,
+        attributedCostUsd: costResult.estimatedCostUsd.toFixed(6),
+        attributionMethod: "session_native",
+      })
+      .onConflictDoNothing();
+  }
 
   if (s.events.length > 0) {
     await db.insert(schema.event).values(
