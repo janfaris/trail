@@ -55,13 +55,22 @@ export async function verifyShipped(repo: string, sha: string): Promise<boolean>
  *   - PR merged with merge commit (commit SHA is one of the constituent
  *     commits) → PR URL
  *
+ * Token sourcing — pass the SESSION OWNER's GitHub OAuth token (from
+ * better-auth `account.access_token` where `provider_id = 'github'`) so the
+ * lookup runs with their permissions. Falls back to GITHUB_TOKEN env when
+ * no user token is supplied (mostly useful for tests / public-repo lookups
+ * in environments without OAuth). This is the multi-tenant path: a single
+ * shared bot token never sees other users' private repos, but each user's
+ * own OAuth token does.
+ *
  * Returns null on any error so the upload route never fails on missing PR.
  */
 export async function resolvePullRequest(
   repo: string,
   sha: string,
+  userToken?: string | null,
 ): Promise<string | null> {
-  const token = process.env.GITHUB_TOKEN;
+  const token = userToken ?? process.env.GITHUB_TOKEN;
   if (!token) return null;
   const [owner, name] = repo.split("/");
   if (!owner || !name || !sha) return null;
