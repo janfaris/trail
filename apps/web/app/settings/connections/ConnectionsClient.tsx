@@ -339,16 +339,98 @@ export function ConnectionsClient({
     }
   }
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncBanner, setSyncBanner] = useState<{ kind: "ok" | "err" | "info"; text: string } | null>(null);
+  const hasConnections = initialConnections.length > 0;
+
+  async function handleSyncNow() {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncBanner(null);
+    try {
+      const res = await fetch("/api/connections/sync-now", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        runs?: Array<{ vendor: string; status: string; rowsInserted: number; errorMessage?: string }>;
+        message?: string;
+        error?: string;
+      };
+      if (res.status === 429) {
+        setSyncBanner({ kind: "info", text: data.message ?? "Sync cooldown active. Try again in a moment." });
+      } else if (!res.ok) {
+        setSyncBanner({ kind: "err", text: data.error ?? "Sync failed. Check the page console." });
+      } else {
+        const runs = data.runs ?? [];
+        if (runs.length === 0) {
+          setSyncBanner({ kind: "info", text: data.message ?? "Nothing to sync yet — add a vendor first." });
+        } else {
+          const totalRows = runs.reduce((acc, r) => acc + (r.rowsInserted ?? 0), 0);
+          const failed = runs.filter((r) => r.status !== "ok").length;
+          setSyncBanner({
+            kind: failed === 0 ? "ok" : "info",
+            text: `Synced ${runs.length} connection${runs.length === 1 ? "" : "s"} · ${totalRows} new usage row${totalRows === 1 ? "" : "s"}${failed ? ` · ${failed} failed` : ""}.`,
+          });
+        }
+        router.refresh();
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSyncBanner({ kind: "err", text: `Sync request failed: ${msg}` });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
         Vendor connections
       </h1>
-      <p className="text-sm text-zinc-400 mb-8 max-w-2xl leading-relaxed">
+      <p className="text-sm text-zinc-400 mb-4 max-w-2xl leading-relaxed">
         Trail attributes spend to merged PRs. To do that, we need read-only
         access to your vendor billing APIs. Encrypted with libsodium, used only
         at sync time, revocable in one click.
       </p>
+
+      <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-300 leading-relaxed max-w-3xl">
+        <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-1.5">
+          No admin key? Local capture still works.
+        </div>
+        Install the CLI and run <code className="font-mono text-[12.5px] text-[#a7f300]">trail record</code> — Trail tails the JSONL logs your AI tools already write (Claude Code, Codex) and prices each session against the model_price table. No vendor admin keys required for those. Cursor and Copilot need admin connections for accurate per-PR cost (no public per-user token API).
+      </div>
+
+      <div className="mb-6 flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          onClick={handleSyncNow}
+          disabled={syncing || !hasConnections}
+          className="inline-flex items-center gap-2 h-9 px-3.5 rounded-md text-[13px] font-medium bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {syncing ? "Syncing…" : "Run sync now"}
+        </button>
+        <span className="text-[12px] font-mono text-zinc-500">
+          {hasConnections
+            ? "Fetches the latest billing buckets for your connections."
+            : "Connect a vendor first to enable manual sync."}
+        </span>
+      </div>
+
+      {syncBanner && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            "mb-6 rounded-md border px-3 py-2 text-[13px]",
+            syncBanner.kind === "ok"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : syncBanner.kind === "err"
+                ? "border-rose-500/30 bg-rose-500/10 text-rose-200"
+                : "border-sky-500/30 bg-sky-500/10 text-sky-200",
+          )}
+        >
+          {syncBanner.text}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {VENDORS.map((v) => {
