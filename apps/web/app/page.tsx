@@ -28,47 +28,69 @@ export const metadata: Metadata = {
 
 // Real shipped session — stands in as the cost example until a cost-pulse recap exists.
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";
-const INSTALL = "git clone github.com/janfaris/trail && npm link";
+const INSTALL = "npm i -g trail && trail record";
 
-const tools = [
-  { name: "Claude Code", mode: "Local capture" },
-  { name: "Cursor", mode: "Local capture" },
-  { name: "Copilot", mode: "BYOK billing API" },
-  { name: "Codex", mode: "Local capture" },
-  { name: "Hermes", mode: "Local capture" },
+const primaryTools = [
+  {
+    name: "Claude Code",
+    badge: "Local capture · ✓",
+    tone: "green" as const,
+    description: "JSONL session tail. Tokens recorded per turn.",
+  },
+  {
+    name: "Codex",
+    badge: "Local capture · ✓",
+    tone: "green" as const,
+    description: "Transcript tail. Tokens recorded per turn.",
+  },
+];
+
+const partialTools = [
+  {
+    name: "Cursor",
+    badge: "Local · partial",
+    tone: "amber" as const,
+    description: "SQLite prompt counts. Token data is partial.",
+  },
+  {
+    name: "GitHub Copilot",
+    badge: "Engagement only",
+    tone: "amber" as const,
+    description: "Org Metrics API. Counts, not dollars — no per-user token data.",
+  },
+  {
+    name: "Hermes",
+    badge: "Local capture · ✓",
+    tone: "green" as const,
+    description: "Direct API logging. Tokens per call.",
+  },
 ];
 
 const steps = [
   {
     n: "01",
     verb: "Capture",
-    title: "Trail tails the agent sessions you already run.",
-    body: "Claude Code JSONL, Cursor SQLite, Codex transcripts, Copilot usage. Tokens recorded per turn. Nothing leaves your machine until you say so.",
+    title: "Tail the logs your agents already write.",
+    body: "The daemon tails Claude Code + Codex log files. Tokens recorded per turn.",
   },
   {
     n: "02",
     verb: "Link",
-    title: "Sessions lock to the merge commit.",
-    body: "When the PR ships, Trail pins the session to the SHA. Same receipt machinery that already verifies Recaps — extended to carry cost.",
+    title: "Sessions pin to the merge commit.",
+    body: "When you ship, the open session pins to the merge commit via the existing receipt machinery.",
   },
   {
     n: "03",
-    verb: "Attribute",
-    title: "Hourly cron joins vendor spend to merged PRs.",
-    body: "Trail pulls Anthropic and OpenAI org billing, then fans vendor dollars across sessions in the same window using ship-time as anchor.",
-  },
-  {
-    n: "04",
     verb: "See",
-    title: "One dashboard. Every model. Every vendor.",
-    body: "Cost-per-PR rolled up by repo, model, and prompt. Public proof-of-work optional. Slack alerts when a PR costs more than it should.",
+    title: "One dashboard. Every shipped PR.",
+    body: "Real $/PR for every shipped commit. Refreshed each time you ship.",
   },
 ];
 
 const proofChecks = [
-  { label: "Token-verified", note: "vendor billing API + local capture" },
-  { label: "Cross-vendor", note: "Anthropic · OpenAI · Cursor · Copilot" },
+  { label: "Token-verified", note: "local capture pricing against per-token rates" },
   { label: "Per-commit attribution", note: "session → diff → merge" },
+  { label: "No admin keys required", note: "local capture is the default path" },
 ];
 
 const tiers = [
@@ -76,13 +98,13 @@ const tiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    who: "Anyone trying it on",
+    who: "The default path",
     bullets: [
-      "Local capture, single vendor",
+      "Local capture for Claude Code + Codex",
       "30-day history",
       "Cost-per-PR on /dashboard/cost",
       "Public Recaps + share cards",
-      "No cloud sync",
+      "No admin keys required",
     ],
     cta: { label: "Install", href: "/install", featured: false, kind: "link" as const },
   },
@@ -161,13 +183,13 @@ export default async function Home() {
             </h1>
 
             <p className="text-[16px] sm:text-[17px] leading-[1.6] text-zinc-400 max-w-[52ch] mb-9">
-              Trail connects to Anthropic, OpenAI, Cursor, and Copilot billing and captures your local agent sessions, then attributes spend to the merged commit.
-              {" "}Cross-vendor cost in one number — the part nobody else does.
+              Install the CLI, run <span className="font-mono text-zinc-300">trail record</span>, and Trail tails the JSONL logs your AI agents already write — Claude Code, Codex — pricing each session against current per-token rates.
+              {" "}Optional admin keys reconcile against your vendor invoices.
             </p>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-3 text-[14px] mb-5">
-              <Link href="/dashboard/cost">
-                <Button size="default">See cost-per-PR for your repo →</Button>
+              <Link href="/install">
+                <Button size="default">Install the CLI →</Button>
               </Link>
               <Link
                 href="#how"
@@ -242,11 +264,11 @@ export default async function Home() {
               <div className="px-5 py-3 border-t border-zinc-800 grid grid-cols-3 gap-2 text-[10.5px] font-mono">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <span className="text-[#a7f300]">✓</span>
-                  <span className="truncate">Linked to commit</span>
+                  <span className="truncate">Local capture · zero keys</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <span className="text-[#a7f300]">✓</span>
-                  <span className="truncate">All 4 vendors</span>
+                  <span className="truncate">Linked to commit</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <span className="text-[#a7f300]">✓</span>
@@ -274,35 +296,76 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 01 / CROSS-VENDOR */}
+        {/* 01 / LOCAL CAPTURE */}
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-6 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.22em] text-zinc-600">
-            <span>01 / Cross-vendor</span>
-            <span className="text-zinc-700">5 tools → 1 number</span>
+            <span>01 / Local capture</span>
+            <span className="text-zinc-700">Tail the logs · no proxy</span>
           </div>
           <div className="border-t border-zinc-900">
             <div className="mx-auto max-w-6xl px-6 lg:px-10 py-16 grid grid-cols-12 gap-x-6 gap-y-10">
               <div className="col-span-12 md:col-span-5">
                 <h2 className="font-display text-[34px] sm:text-[42px] leading-[1.02] tracking-[-0.02em] text-zinc-50 mb-5 max-w-[18ch]">
-                  Five tools. One cost-per-PR number.
+                  One CLI for the agents you already use.
                 </h2>
                 <p className="text-[15px] leading-[1.65] text-zinc-400 max-w-[44ch]">
-                  CodeBurn tracks spend. Anthropic Console tracks Anthropic. Cursor admin tracks Cursor. Nobody connects cross-vendor dollars to the commits that actually shipped. Trail does — local capture for what your agents did, BYOK billing APIs for what the vendors charged, all of it pinned to the merge.
+                  Trail tails the JSONL session files Claude Code and Codex already write to disk. No proxying, no API wrapping, no slowdown. Run <span className="font-mono text-zinc-300">trail record</span> once — the daemon watches for new sessions, every turn pinned to a session id.
                 </p>
               </div>
-              <ol className="col-span-12 md:col-span-7 divide-y divide-zinc-900 border-y border-zinc-900">
-                {tools.map((t, i) => (
-                  <li key={t.name} className="py-5 grid grid-cols-12 gap-4">
-                    <div className="col-span-2 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 pt-1">
-                      <span className="text-[#a7f300]">{String(i + 1).padStart(2, "0")}</span>
-                    </div>
-                    <div className="col-span-10 flex items-baseline justify-between gap-4">
-                      <div className="text-[15px] text-zinc-100 font-medium">{t.name}</div>
-                      <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">{t.mode}</div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <div className="col-span-12 md:col-span-7 space-y-7">
+                <div>
+                  <div className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-zinc-500 mb-3 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+                    <span>Primary — full token capture</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {primaryTools.map((t) => (
+                      <div
+                        key={t.name}
+                        className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="text-[14.5px] text-zinc-100 font-medium">{t.name}</div>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-[#a7f300]/40 bg-[#a7f300]/10 text-[10px] font-mono uppercase tracking-[0.16em] text-[#a7f300] whitespace-nowrap">
+                            {t.badge}
+                          </span>
+                        </div>
+                        <div className="text-[12px] font-mono text-zinc-500 leading-[1.55]">{t.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-zinc-500 mb-3 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                    <span>Partial — limited telemetry</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {partialTools.map((t) => {
+                      const badgeCls =
+                        t.tone === "green"
+                          ? "border-[#a7f300]/40 bg-[#a7f300]/10 text-[#a7f300]"
+                          : "border-amber-500/40 bg-amber-500/10 text-amber-400";
+                      return (
+                        <div
+                          key={t.name}
+                          className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="text-[14.5px] text-zinc-100 font-medium">{t.name}</div>
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono uppercase tracking-[0.16em] whitespace-nowrap ${badgeCls}`}
+                            >
+                              {t.badge}
+                            </span>
+                          </div>
+                          <div className="text-[12px] font-mono text-zinc-500 leading-[1.55]">{t.description}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -311,7 +374,7 @@ export default async function Home() {
         <section id="how" className="border-t border-zinc-900 scroll-mt-20">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-6 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.22em] text-zinc-600">
             <span>02 / How it works</span>
-            <span className="text-zinc-700">Capture → Link → Attribute → See</span>
+            <span className="text-zinc-700">Capture → Link → See</span>
           </div>
           {steps.map((s, i) => (
             <div key={s.n} className={`border-t border-zinc-900 ${i % 2 === 1 ? "bg-zinc-950" : ""}`}>
@@ -346,36 +409,25 @@ export default async function Home() {
                     <pre className="px-5 py-5 text-[12.5px] font-mono leading-[1.75] text-zinc-300 overflow-x-auto">
 {s.n === "01" && (
   <>
-{`$ trail record
-`}<span className="text-zinc-500">{`→ watching claude-code, codex, cursor, copilot, hermes…`}</span>{`
+{`$ npm i -g trail && trail login && trail record
+`}<span className="text-zinc-500">{`→ watching claude-code, codex…`}</span>{`
 `}<span className="text-zinc-500">{`→ session 057smo2q started · local only`}</span>{`
 `}<span className="text-zinc-500">{`→ tokens · in 14.2k · out 3.1k · cached 8.0k`}</span>
   </>
 )}
 {s.n === "02" && (
   <>
-{`$ git commit -m "fix: stripe webhook idempotency"
-$ git push && gh pr merge --squash
+{`$ git push && gh pr merge --squash
 `}<span className="text-zinc-500">{`→ trail linked session 057smo2q ↔ a31f9c2`}</span>{`
 `}<span className="text-[#a7f300]">{`✓ pr verified · reachable from main`}</span>
   </>
 )}
 {s.n === "03" && (
   <>
-{`[cron] /api/cron/vendor-sync
-`}<span className="text-zinc-500">{`→ anthropic · 8 buckets synced`}</span>{`
-`}<span className="text-zinc-500">{`→ openai · 6 buckets synced`}</span>{`
-[cron] /api/cron/attribute-costs
-`}<span className="text-[#a7f300]">{`✓ 8 PRs attributed · $5.64 total`}</span>
-  </>
-)}
-{s.n === "04" && (
-  <>
-{`$ trail dashboard
-`}<span className="text-zinc-500">{`→ https://trail.dev/dashboard/cost`}</span>{`
+{`$ open https://gettrail.vercel.app/dashboard/cost
 `}<span className="text-zinc-500">{`  $/PR (30d)      $0.47`}</span>{`
 `}<span className="text-zinc-500">{`  top model       sonnet-4-5`}</span>{`
-`}<span className="text-[#a7f300]">{`✓ slack alert on PRs > $2.00`}</span>
+`}<span className="text-[#a7f300]">{`✓ refreshed each time you ship`}</span>
   </>
 )}
                     </pre>
@@ -384,6 +436,34 @@ $ git push && gh pr merge --squash
               </div>
             </div>
           ))}
+
+          {/* Optional: BYOK reconciliation — local capture works without this */}
+          <div className="border-t border-zinc-900">
+            <div className="mx-auto max-w-6xl px-6 lg:px-10 py-14 grid grid-cols-12 gap-x-6 gap-y-6">
+              <div className="col-span-12 md:col-span-5">
+                <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 mb-5">
+                  <span className="text-zinc-500">+</span>
+                  <span className="text-zinc-700"> / </span>
+                  <span>Optional</span>
+                </div>
+                <h3 className="font-display text-[24px] sm:text-[28px] leading-[1.05] tracking-[-0.015em] text-zinc-50 mb-2 max-w-[18ch]">
+                  Optional: cross-vendor reconciliation
+                </h3>
+              </div>
+              <div className="col-span-12 md:col-span-7 md:col-start-6">
+                <p className="text-[14.5px] leading-[1.7] text-zinc-400 max-w-[58ch]">
+                  If you want Trail&apos;s number to match your vendor invoice exactly (cache pricing nuance, vendor-side billing windows), connect an Anthropic or OpenAI admin key on{" "}
+                  <Link href="/settings/connections" className="text-zinc-200 hover:text-[#a7f300] underline-offset-4 underline decoration-zinc-700 hover:decoration-[#a7f300]/60 transition-colors">
+                    /settings/connections
+                  </Link>
+                  . Cursor admin entry registers the CLI uploader. Copilot Metrics API gives engagement counts only — no per-user tokens.
+                </p>
+                <p className="mt-3 text-[12.5px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                  Skippable. Local capture works without it.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* 03 / RECAPS — compressed */}

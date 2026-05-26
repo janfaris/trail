@@ -386,14 +386,36 @@ function ConnectEmptyState({
     <section className="mb-10">
       <div className="border border-zinc-800 rounded-lg bg-zinc-900/30 px-6 py-7">
         <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-2">
-          Connect a vendor to see your real $/PR.
+          Start tracking your $/PR
         </div>
         <p className="text-sm text-zinc-300 max-w-2xl mb-5">
-          Trail attributes spend to merged PRs by reading your vendor billing
-          APIs. Pick a vendor below — we encrypt the key at rest and only use it
-          at sync time.
+          Trail prices each AI session against current per-token rates and links the cost to the merged commit. Local capture is the default path — no admin keys required for Claude Code or Codex.
         </p>
 
+        <div className="rounded-lg border border-[#a7f300]/30 bg-[#a7f300]/5 p-5 mb-6 max-w-3xl">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-[#a7f300]">
+              Recommended · No keys
+            </span>
+          </div>
+          <div className="text-base font-medium text-zinc-50 mb-3">
+            Install the CLI
+          </div>
+          <div className="flex items-center h-10 px-3 rounded-md border border-zinc-800 bg-zinc-950 font-mono text-[13px] text-zinc-200 overflow-x-auto mb-3">
+            <span className="text-zinc-600 select-none mr-2">$</span>
+            <span className="whitespace-nowrap">npm i -g trail &amp;&amp; trail login &amp;&amp; trail record</span>
+          </div>
+          <div className="text-[12.5px] text-zinc-400 leading-relaxed">
+            Tails Claude Code + Codex log files locally. Tokens captured per turn, priced at upload time, attributed to the merge commit when you ship.{" "}
+            <Link href="/install" className="text-[#a7f300] hover:underline">
+              Full setup →
+            </Link>
+          </div>
+        </div>
+
+        <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+          Or — connect an admin key for org-wide reconciliation
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {VENDOR_SLOTS.map((v) => (
             <div
@@ -404,23 +426,12 @@ function ConnectEmptyState({
               <div className="text-xs text-zinc-500">{v.line}</div>
               <Link
                 href="/settings/connections"
-                className="mt-1 inline-flex items-center justify-center rounded-md bg-[#a7f300] hover:bg-[#b9ff1f] text-zinc-950 text-xs font-mono font-semibold h-7 px-3 transition-colors"
+                className="mt-1 inline-flex items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 text-xs font-mono h-7 px-3 transition-colors"
               >
                 Add connection
               </Link>
             </div>
           ))}
-        </div>
-
-        <div className="mt-6 pt-5 border-t border-zinc-900 text-xs text-zinc-500">
-          <span className="text-zinc-400">Or capture local sessions</span>
-          {" — "}
-          <Link
-            href="/install"
-            className="text-[#a7f300] hover:underline font-mono"
-          >
-            npm i -g @trail/cli &amp;&amp; trail init →
-          </Link>
         </div>
 
         {lastSyncedAt && (
