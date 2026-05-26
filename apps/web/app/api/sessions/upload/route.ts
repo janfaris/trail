@@ -144,6 +144,37 @@ export async function POST(req: NextRequest) {
     console.error("[upload] metrics failed:", (err as Error).message);
   }
 
+  // Week 0 cost-per-PR pivot. Sum per-event token counts into trail_session
+  // top-level columns at insert time (one-shot, not derived live). If EVERY
+  // event has a null value for a field, the session total stays NULL so
+  // pre-token-aware CLI clients don't appear as "0 tokens used" — that
+  // would be indistinguishable from "the model returned no output".
+  // cache_creation and cache_read are summed together at the session level
+  // (the column is `cached_tokens`); the per-event split is preserved on
+  // the event table for the future cost calculator.
+  const sumOrNull = (
+    pick: (e: (typeof s.events)[number]) => number | null | undefined,
+  ): number | null => {
+    let total = 0;
+    let sawValue = false;
+    for (const e of s.events) {
+      const v = pick(e);
+      if (typeof v === "number" && Number.isFinite(v)) {
+        total += v;
+        sawValue = true;
+      }
+    }
+    return sawValue ? total : null;
+  };
+  const inputTokensTotal = sumOrNull((e) => ("inputTokens" in e ? e.inputTokens : null));
+  const outputTokensTotal = sumOrNull((e) => ("outputTokens" in e ? e.outputTokens : null));
+  const cachedTokensTotal = sumOrNull((e) => {
+    const c = "cacheCreationInputTokens" in e ? e.cacheCreationInputTokens : null;
+    const r = "cacheReadInputTokens" in e ? e.cacheReadInputTokens : null;
+    if (c == null && r == null) return null;
+    return (c ?? 0) + (r ?? 0);
+  });
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: session.user.id,
@@ -181,6 +212,9 @@ export async function POST(req: NextRequest) {
     linkedRepo,
     linkedCommitSha,
     linkedPrUrl: null, // populated later when we add PR backfill via GH API
+    inputTokens: inputTokensTotal,
+    outputTokens: outputTokensTotal,
+    cachedTokens: cachedTokensTotal,
   });
 
   if (s.events.length > 0) {
@@ -192,6 +226,16 @@ export async function POST(req: NextRequest) {
         kind: e.kind,
         at: new Date(e.at),
         data: e as unknown as Record<string, unknown>,
+        // Tokens are duplicated here (event.data carries the whole event
+        // object too) so analytics queries can stay on indexable columns
+        // and never have to crack open the jsonb blob.
+        inputTokens: "inputTokens" in e ? e.inputTokens ?? null : null,
+        outputTokens: "outputTokens" in e ? e.outputTokens ?? null : null,
+        cacheCreationInputTokens:
+          "cacheCreationInputTokens" in e ? e.cacheCreationInputTokens ?? null : null,
+        cacheReadInputTokens:
+          "cacheReadInputTokens" in e ? e.cacheReadInputTokens ?? null : null,
+        model: "model" in e ? e.model ?? null : null,
       })),
     );
   }
