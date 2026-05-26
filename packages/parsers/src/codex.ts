@@ -56,6 +56,10 @@ export async function parseCodexSession(
   let endedAt: string | undefined;
   let repo: string | undefined;
   let sessionId: string | undefined;
+  // Codex emits `model` inside response_item payloads. Track the most recent
+  // observation so completion/tool_call events can be tagged with the model
+  // that actually produced them (each turn may switch models in some flows).
+  let currentModel: string | undefined;
 
   const noteTime = (at?: string) => {
     if (!at) return;
@@ -101,6 +105,16 @@ export async function parseCodexSession(
       continue;
     }
 
+    // Variant B — turn_context (precedes the turn it describes; carries the
+    // active model for subsequent token_count/response_item events).
+    if (type === "turn_context") {
+      const p = asObj(row.payload);
+      if (p && typeof p.model === "string" && p.model.length > 0) {
+        currentModel = p.model;
+      }
+      continue;
+    }
+
     // Variant B — event_msg
     if (type === "event_msg") {
       const p = asObj(row.payload);
@@ -110,7 +124,40 @@ export async function parseCodexSession(
       if (t === "user_message" && typeof p.message === "string" && p.message.trim()) {
         events.push({ kind: "prompt", at: ts, text: p.message });
       } else if (t === "agent_message" && typeof p.message === "string" && p.message.trim()) {
-        events.push({ kind: "completion", at: ts, text: p.message });
+        events.push({
+          kind: "completion",
+          at: ts,
+          text: p.message,
+          ...(currentModel ? { model: currentModel } : {}),
+        });
+      } else if (t === "token_count") {
+        // Codex tracks both cumulative (total_token_usage) and per-turn
+        // (last_token_usage) counts. We attach last_token_usage to the most
+        // recent assistant completion so trail_session aggregation sums them
+        // turn-by-turn into trail_session.{input,output,cached}_tokens.
+        // cache_creation_input_tokens isn't surfaced by codex (only OpenAI's
+        // billing API distinguishes creation vs read), so we leave it null
+        // and map cached_input_tokens → cacheReadInputTokens.
+        const info = asObj(p.info);
+        const last = info ? asObj(info.last_token_usage) : undefined;
+        if (last) {
+          const inputT = typeof last.input_tokens === "number" ? last.input_tokens : undefined;
+          const outputT = typeof last.output_tokens === "number" ? last.output_tokens : undefined;
+          const cachedT =
+            typeof last.cached_input_tokens === "number" ? last.cached_input_tokens : undefined;
+          // Find the most recent completion event and patch tokens onto it.
+          for (let i = events.length - 1; i >= 0; i--) {
+            const ev = events[i];
+            if (ev && ev.kind === "completion") {
+              if (inputT !== undefined && ev.inputTokens == null) ev.inputTokens = inputT;
+              if (outputT !== undefined && ev.outputTokens == null) ev.outputTokens = outputT;
+              if (cachedT !== undefined && ev.cacheReadInputTokens == null)
+                ev.cacheReadInputTokens = cachedT;
+              if (currentModel && ev.model == null) ev.model = currentModel;
+              break;
+            }
+          }
+        }
       }
       continue;
     }
@@ -119,6 +166,11 @@ export async function parseCodexSession(
     if (type === "response_item") {
       const p = asObj(row.payload);
       if (!p) continue;
+      // Track model whenever we see one — applies to subsequent completions
+      // until the next response_item with a different model.
+      if (typeof p.model === "string" && p.model.length > 0) {
+        currentModel = p.model;
+      }
       const pt = typeof p.type === "string" ? p.type : undefined;
       const ts = at ?? "";
       if (pt === "message") {
@@ -133,6 +185,7 @@ export async function parseCodexSession(
           kind: role === "assistant" ? "completion" : "prompt",
           at: ts,
           text,
+          ...(role === "assistant" && currentModel ? { model: currentModel } : {}),
         });
       } else if (pt === "function_call") {
         const name = typeof p.name === "string" ? p.name : "unknown";
@@ -144,7 +197,13 @@ export async function parseCodexSession(
             // keep as raw string
           }
         }
-        events.push({ kind: "tool_call", at: ts, name, args });
+        events.push({
+          kind: "tool_call",
+          at: ts,
+          name,
+          args,
+          ...(currentModel ? { model: currentModel } : {}),
+        });
       }
       continue;
     }

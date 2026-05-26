@@ -42,6 +42,7 @@ const rows: SeedRow[] = [
   { vendor: "anthropic", modelId: "claude-opus-4-5",    in: "15",   out: "75",  cachedIn: "1.5",   source: ANTHROPIC_PRICING },
   { vendor: "anthropic", modelId: "claude-sonnet-4-5",  in: "3",    out: "15",  cachedIn: "0.3",   source: ANTHROPIC_PRICING },
   { vendor: "anthropic", modelId: "claude-haiku-4-5",   in: "0.25", out: "1.25",cachedIn: "0.03",  source: ANTHROPIC_PRICING },
+  { vendor: "openai",    modelId: "gpt-5.5",            in: "5",    out: "30",  cachedIn: "0.50",  source: OPENAI_PRICING },
   { vendor: "openai",    modelId: "gpt-4o",             in: "2.50", out: "10",  cachedIn: "1.25",  source: OPENAI_PRICING },
   { vendor: "openai",    modelId: "gpt-4o-mini",        in: "0.15", out: "0.60",cachedIn: "0.075", source: OPENAI_PRICING },
   { vendor: "openai",    modelId: "o1",                 in: "15",   out: "60",  cachedIn: "7.50",  source: OPENAI_PRICING },
