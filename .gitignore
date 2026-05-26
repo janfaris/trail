@@ -9,3 +9,6 @@ dist
 .vercel
 .env.prod.tmp
 .env.prod*
+
+# throwaway smoke scripts that should never land in git
+apps/web/scripts/upload-with-tokens-smoke.ts

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { db, schema } from "@/db/client";
@@ -21,6 +22,17 @@ import { ToolMixBar } from "@/components/tool-mix-bar";
 import { VelocitySparkline } from "@/components/velocity-sparkline";
 import { TopRepos } from "@/components/top-repos";
 import { computeUserStats } from "@/lib/aggregates";
+import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
+
+function parseUsd(raw: string | null | undefined): number {
+  if (raw == null) return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmtUsd(n: number): string {
+  return `$${n.toFixed(2)}`;
+}
 
 function GitHubIcon({ size = 16 }: { size?: number }) {
   return (
@@ -57,7 +69,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
 
-  const sessionInfo = await auth.api.getSession({ headers: await headers() });
+  let sessionInfo: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+  try {
+    sessionInfo = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    sessionInfo = null;
+  }
   const isSelf = sessionInfo?.user?.id === userRow.id;
 
   const jar = await cookies();
@@ -120,6 +137,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
       <main className="max-w-4xl mx-auto px-6 pt-10 pb-24">
         {showIntro && <ProfileIntroCard />}
+
+        {isSelf && (
+          <Suspense fallback={<CostEfficiencyBandSkeleton />}>
+            <CostEfficiencyBand userId={userRow.id} />
+          </Suspense>
+        )}
 
         <div className="flex items-start gap-5 mb-10">
           <Avatar src={avatar} alt={userRow.handle ?? user} size={64} fallback={userRow.handle ?? user} />
@@ -356,6 +379,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                 {recent.map((s) => {
                   const repoShort = formatRepoPath(s.repo);
                   const title = s.title || s.slug;
+                  const costUsd = parseUsd(s.estimatedCostUsd);
                   return (
                     <li key={s.id} className="border-b border-zinc-900 last:border-b-0">
                       <Link
@@ -368,11 +392,21 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                           className="hidden md:block text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300"
                         />
                         <ToolIcon name={s.tool} className="hidden md:block text-zinc-500 group-hover:text-zinc-200" />
-                        <span
-                          className="text-sm text-zinc-200 truncate group-hover:text-zinc-50"
-                          title={title}
-                        >
-                          {title}
+                        <span className="min-w-0 flex items-center gap-2">
+                          <span
+                            className="text-sm text-zinc-200 truncate group-hover:text-zinc-50"
+                            title={title}
+                          >
+                            {title}
+                          </span>
+                          {costUsd > 0 && (
+                            <span
+                              title="estimated cost"
+                              className="shrink-0 inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-zinc-400 group-hover:text-zinc-200"
+                            >
+                              {fmtUsd(costUsd)}
+                            </span>
+                          )}
                         </span>
                         <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
                           {s.eventCount}

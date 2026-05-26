@@ -9,6 +9,13 @@ type Row = {
   message?: {
     role?: string;
     content?: unknown;
+    model?: string;
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cache_creation_input_tokens?: number;
+      cache_read_input_tokens?: number;
+    };
   };
   sessionId?: string;
   cwd?: string;
@@ -36,6 +43,13 @@ function extractText(content: unknown): string {
       .join("\n");
   }
   return "";
+}
+
+// Non-negative integer or null. Anything else (negative, NaN, string,
+// missing) collapses to null so we never plant garbage in token columns.
+function safeInt(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
+  return Math.trunc(v);
 }
 
 export async function parseClaudeCodeSession(
@@ -84,24 +98,66 @@ export async function parseClaudeCodeSession(
       if (text.trim()) events.push({ kind: "prompt", at, text });
     } else if (row.type === "assistant" && row.message) {
       const content = row.message.content;
+      // Token/model usage lives on the assistant message envelope. An
+      // assistant message can fan out into multiple events (one per text or
+      // tool_use block). Attach the message-level usage to the FIRST event
+      // emitted from this message so the session-level sum is correct (no
+      // double counting). Subsequent blocks from the same message get no
+      // tokens but still carry the model name for per-event model attribution.
+      const usage = row.message.usage;
+      const model = typeof row.message.model === "string" ? row.message.model : null;
+      const tokens = {
+        inputTokens: safeInt(usage?.input_tokens),
+        outputTokens: safeInt(usage?.output_tokens),
+        cacheCreationInputTokens: safeInt(usage?.cache_creation_input_tokens),
+        cacheReadInputTokens: safeInt(usage?.cache_read_input_tokens),
+      };
+      let firstBlockOfMessage = true;
+
       if (Array.isArray(content)) {
         for (const blk of content) {
           if (!blk || typeof blk !== "object") continue;
           const b = blk as { type?: string; text?: string; name?: string; input?: unknown };
+          const usageForThisBlock = firstBlockOfMessage
+            ? tokens
+            : {
+                inputTokens: null,
+                outputTokens: null,
+                cacheCreationInputTokens: null,
+                cacheReadInputTokens: null,
+              };
           if (b.type === "text" && b.text) {
-            events.push({ kind: "completion", at, text: b.text });
+            events.push({
+              kind: "completion",
+              at,
+              text: b.text,
+              model,
+              ...usageForThisBlock,
+            });
+            firstBlockOfMessage = false;
           } else if (b.type === "tool_use") {
             events.push({
               kind: "tool_call",
               at,
               name: String(b.name ?? "unknown"),
               args: b.input,
+              model,
+              ...usageForThisBlock,
             });
+            firstBlockOfMessage = false;
           }
         }
       } else {
         const text = extractText(content);
-        if (text.trim()) events.push({ kind: "completion", at, text });
+        if (text.trim()) {
+          events.push({
+            kind: "completion",
+            at,
+            text,
+            model,
+            ...tokens,
+          });
+        }
       }
     }
   }

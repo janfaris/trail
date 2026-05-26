@@ -4,6 +4,85 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Session, Event } from "@trail/schema";
 
+// Non-negative integer or null. Anything else (negative, NaN, infinite,
+// string, missing) collapses to null so we never plant garbage in the
+// token columns. Mirrors safeInt() in claude-code.ts.
+function safeTokenInt(v: unknown): number | null {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
+  return Math.trunc(v);
+}
+
+function pickToken(...candidates: unknown[]): number | null {
+  for (const c of candidates) {
+    if (c === undefined) continue;
+    const n = safeTokenInt(c);
+    if (n !== null) return n;
+  }
+  return null;
+}
+
+function pickModel(...candidates: unknown[]): string | null {
+  for (const c of candidates) {
+    if (typeof c === "string" && c.length > 0) return c;
+  }
+  return null;
+}
+
+// Best-effort probe of token/model fields on a parsed Cursor bubble blob.
+// Cursor's bubble schema is undocumented and has shifted between versions
+// (snake_case usage, camelCase usage, nested tokenCount, top-level
+// promptTokens, …). We try known shapes in priority order; first hit wins
+// per field; everything else stays null so missing values flow through to
+// the DB as NULL rather than 0.
+export function probeCursorTokens(blob: unknown): {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheCreationInputTokens: number | null;
+  cacheReadInputTokens: number | null;
+  model: string | null;
+} {
+  const b = (blob ?? {}) as Record<string, unknown>;
+  const usage = (b.usage ?? {}) as Record<string, unknown>;
+  const tokenCount = (b.tokenCount ?? {}) as Record<string, unknown>;
+  return {
+    inputTokens: pickToken(
+      usage.input_tokens,
+      usage.prompt_tokens,
+      tokenCount.input,
+      tokenCount.prompt,
+      b.promptTokens,
+      b.inputTokens,
+    ),
+    outputTokens: pickToken(
+      usage.output_tokens,
+      usage.completion_tokens,
+      tokenCount.output,
+      tokenCount.completion,
+      b.completionTokens,
+      b.outputTokens,
+    ),
+    cacheCreationInputTokens: pickToken(
+      usage.cache_creation_input_tokens,
+      usage.cacheCreationInputTokens,
+      b.cacheCreationInputTokens,
+    ),
+    cacheReadInputTokens: pickToken(
+      usage.cache_read_input_tokens,
+      usage.cacheReadInputTokens,
+      b.cacheReadInputTokens,
+    ),
+    model: pickModel(b.model, b.modelName, b.modelType, b.requestModel),
+  };
+}
+
+const NULL_TOKENS = {
+  inputTokens: null,
+  outputTokens: null,
+  cacheCreationInputTokens: null,
+  cacheReadInputTokens: null,
+  model: null,
+} as const;
+
 // Cursor chat storage (macOS):
 //   ~/Library/Application Support/Cursor/User/workspaceStorage/<hash>/state.vscdb
 //     ItemTable.composer.composerData -> { allComposers: [{ composerId, createdAt, forceMode }] }
@@ -190,9 +269,18 @@ export async function parseCursorWorkspace(
           if (atMs > latestMs) latestMs = atMs;
         }
         if (type === 1) {
-          events.push({ kind: "prompt", at, text });
+          // User prompts in Cursor never carry usage — explicit nulls so
+          // the shape is stable for downstream consumers.
+          events.push({ kind: "prompt", at, text, ...NULL_TOKENS });
         } else if (type === 2) {
-          events.push({ kind: "completion", at, text });
+          // Assistant completions: probe the bubble for any known token /
+          // model shape. Missing values stay null.
+          events.push({
+            kind: "completion",
+            at,
+            text,
+            ...probeCursorTokens(bub),
+          });
         }
       }
 

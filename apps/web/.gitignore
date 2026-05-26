@@ -40,3 +40,20 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# throwaway smoke scripts (Task 1.3)
+scripts/crypto-smoke.ts
+# throwaway smoke scripts (Task 2.3)
+scripts/connections-smoke.ts
+# throwaway smoke scripts (Task 2.4)
+scripts/vendor-sync-smoke.ts
+# throwaway smoke scripts (Task 1.4)
+scripts/cron-refresh-pricing-smoke.ts
+# throwaway smoke scripts (Task 3.4)
+scripts/connections-e2e-smoke.ts
+# throwaway smoke scripts (Week 4)
+scripts/attribute-cost-smoke.ts
+# throwaway backfill script (Week 4 upstream-gap fix)
+scripts/backfill-session-cost.ts
+# throwaway smoke scripts (Week 5)
+scripts/week5-cost-recap-smoke.ts
