@@ -93,7 +93,14 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
               </Link>
               <SignOutButton />
             </div>
-          ) : null}
+          ) : (
+            <a
+              href="/api/auth/sign-in/github?callbackURL=/dashboard/cost"
+              className="inline-flex items-center h-8 px-3 rounded-md text-[12.5px] font-medium bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] transition-colors"
+            >
+              Sign in
+            </a>
+          )}
         </nav>
       </div>
     </header>
