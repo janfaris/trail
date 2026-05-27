@@ -22,7 +22,12 @@ export interface EntropySuspect {
   location: string;
 }
 
-const TOKEN_RE = /[A-Za-z0-9_\-+/=]{24,}/g;
+// We intentionally do NOT include `/` in the token character class. Path-like
+// strings (e.g. `/Users/anon/Documents/long-hyphenated-name/file`) otherwise
+// get matched as one giant high-entropy token. Real credentials almost never
+// contain internal slashes — the rare ones that do (PEM blocks, base64
+// service-account JSON) are already covered by named detectors that run first.
+const TOKEN_RE = /[A-Za-z0-9_\-+=]{24,}/g;
 const MIN_ENTROPY = 4.0;
 
 function shannon(s: string): number {

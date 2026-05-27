@@ -280,11 +280,49 @@ describe("anonymize: entropy guard (suspects)", () => {
 
   it("ignores already-redacted markers", () => {
     const r = anonymize(
-      s([{ kind: "completion", at: "t", text: "key=sk-ant-abcdefghijklmnop012m" }]),
+      s([{ kind: "completion", at: "t", text: "key=" + "sk-ant-abcdefghijklmnop012m" }]),
     );
     // The token gets replaced with <redacted:anthropic> — entropy scanner
     // strips redaction markers before checking, so no false-positive
     // suspect on the marker itself.
     expect(r.report.suspects).toEqual([]);
+  });
+
+  it("does NOT flag long file paths (slashes break tokens)", () => {
+    // Real false positive observed against jankarlo.faris's prompts:
+    // "/Users/anon/Documents/Codex/2026-05-24/files-mentioned-by-the-user-contrato"
+    // was matched as a single 75-char high-entropy token. Excluding `/` from
+    // TOKEN_RE means each path segment is scanned independently and none are
+    // long enough to clear the 24-char minimum.
+    const r = anonymize(
+      s([
+        {
+          kind: "prompt",
+          at: "t",
+          text:
+            "see /Users/jan/Documents/Codex/2026-05-24/files-mentioned-by-the-user-contrato/draft.md",
+        },
+      ]),
+    );
+    expect(r.report.suspects).toEqual([]);
+  });
+
+  it("masks Vercel dpl_* deployment IDs as a named category", () => {
+    // Vercel deployment IDs are public, but they're 28-char alnum tokens
+    // that easily clear the entropy threshold. Naming them as a known
+    // category keeps the suspects array clean against real Trail bundles.
+    const r = anonymize(
+      s([
+        {
+          kind: "tool_call",
+          at: "t",
+          name: "get_deployment",
+          args: { id: "dpl_8Yjf4BUMaZku34zmxGPGbEU9atiA" },
+        },
+      ]),
+    );
+    expect(r.report.suspects).toEqual([]);
+    // It's masked, not surfaced as a 'secret' (it isn't one).
+    expect(r.report.total).toBeGreaterThan(0);
   });
 });

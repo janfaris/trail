@@ -49,6 +49,11 @@ const SECRET_PATTERNS: DetectorMatch[] = [
   { category: "secret", pattern: /github_pat_[A-Za-z0-9_]{20,}/g, replace: () => "<redacted:github-pat>" },
   { category: "secret", pattern: /glpat-[A-Za-z0-9_\-]{20,}/g, replace: () => "<redacted:gitlab-pat>" },
 
+  // Vercel — `dpl_*` deployment IDs are public, not credentials, but they're
+  // high-entropy enough to trip the entropy guard if left untouched. Mask
+  // them so they stop generating suspects in real coding-agent sessions.
+  { category: "internal-host", pattern: /\bdpl_[A-Za-z0-9]{24,}\b/g, replace: () => "<redacted:vercel-deployment-id>" },
+
   // Payments / billing
   { category: "secret", pattern: /whsec_[A-Za-z0-9]{20,}/g, replace: () => "<redacted:stripe-webhook>" },
   { category: "secret", pattern: /\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g, replace: () => "<redacted:stripe>" },
