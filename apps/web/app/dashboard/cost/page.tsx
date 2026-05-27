@@ -100,11 +100,16 @@ export default async function CostDashboardPage({
 
   const me = await db.query.user.findFirst({
     where: eq(schema.user.id, sess.user.id),
-    columns: { handle: true },
+    columns: { handle: true, plan: true },
   });
+  const isFree = (me?.plan ?? "free") === "free";
 
   const sp = await searchParams;
-  const windowDays = parseWindow(sp?.window);
+  // Free tier: clamp window to 30d max regardless of query string. Cheaper
+  // queries, simpler upgrade story ("see lifetime cost with Pro"). Paid
+  // tiers honor the 7/30/90 selector unchanged.
+  const requested = parseWindow(sp?.window);
+  const windowDays = isFree ? Math.min(requested, 30) : requested;
   const now = new Date();
   const windowEnd = now;
   const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
@@ -175,6 +180,19 @@ export default async function CostDashboardPage({
             <div className="flex items-center gap-2 mb-8">
           {ALLOWED_WINDOWS.map((d) => {
             const active = d === windowDays;
+            const locked = isFree && d > 30;
+            if (locked) {
+              return (
+                <Link
+                  key={d}
+                  href="/pricing"
+                  title="Upgrade to Pro to unlock 90-day cost history"
+                  className="px-3 py-1.5 rounded-md text-xs font-mono border border-zinc-800 text-zinc-600 hover:text-[#a7f300] hover:border-[#a7f300]/30 transition-colors"
+                >
+                  {d}d · pro
+                </Link>
+              );
+            }
             return (
               <Link
                 key={d}

@@ -20,6 +20,7 @@ import {
   parseCursorWorkspace,
 } from "@trail/parsers";
 import { saveSession } from "../db.js";
+import { maybeAutoUpload, logDecision, rescanPendingUploads } from "../lib/auto-upload.js";
 
 const COPILOT_CHAT_DB = path.join(
   homedir(),
@@ -140,12 +141,18 @@ export function recordCommand(): Command {
             parsed.id,
             chalk.dim(`(${parsed.tool}, ${parsed.events.length} events)`),
           );
+          try {
+            const d = await maybeAutoUpload(parsed.id, filePath);
+            logDecision(parsed.id, d);
+          } catch (e) {
+            console.error(chalk.red("auto-upload error"), parsed.id, (e as Error).message);
+          }
         } catch (err) {
           console.error(chalk.red("error"), filePath, (err as Error).message);
         }
       };
 
-      const pollCopilotChat = () => {
+      const pollCopilotChat = async () => {
         if (!existsSync(COPILOT_CHAT_DB)) return;
         try {
           const since = readCopilotChatWatermark();
@@ -159,6 +166,12 @@ export function recordCommand(): Command {
               s.id,
               chalk.dim(`(${s.tool}, ${s.events.length} events)`),
             );
+            try {
+              const d = await maybeAutoUpload(s.id, COPILOT_CHAT_DB);
+              logDecision(s.id, d);
+            } catch (e) {
+              console.error(chalk.red("auto-upload error"), s.id, (e as Error).message);
+            }
             if (s.endedAt && (!latest || s.endedAt > latest)) latest = s.endedAt;
           }
           if (latest && latest !== since) writeCopilotChatWatermark(latest);
@@ -204,6 +217,12 @@ export function recordCommand(): Command {
                 s.id,
                 chalk.dim(`(${s.tool}, ${s.events.length} events)`),
               );
+              try {
+                const d = await maybeAutoUpload(s.id, dbPath);
+                logDecision(s.id, d);
+              } catch (e) {
+                console.error(chalk.red("auto-upload error"), s.id, (e as Error).message);
+              }
             }
             cursors[dbPath] = mtime;
             changed = true;
@@ -234,18 +253,21 @@ export function recordCommand(): Command {
         await new Promise<void>((resolve) =>
           watcher.on("ready", () => resolve()),
         );
-        pollCopilotChat();
+        await pollCopilotChat();
         await pollCursor();
         await watcher.close();
         return;
       }
 
       // Initial poll + interval for the sqlite-backed sources.
-      pollCopilotChat();
+      void pollCopilotChat();
       void pollCursor();
-      setInterval(pollCopilotChat, 30_000).unref();
-      setInterval(() => {
-        void pollCursor();
-      }, 30_000).unref();
+      setInterval(() => { void pollCopilotChat(); }, 30_000).unref();
+      setInterval(() => { void pollCursor(); }, 30_000).unref();
+
+      // Auto-upload rescan: every 5 minutes, re-check unshipped sessions
+      // whose commit may now be on origin/main. No-op if autoUpload=false.
+      void rescanPendingUploads();
+      setInterval(() => { void rescanPendingUploads(); }, 5 * 60 * 1000).unref();
     });
 }

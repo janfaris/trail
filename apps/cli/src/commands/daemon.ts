@@ -166,7 +166,12 @@ async function restartAction(): Promise<void> {
 async function statusAction(): Promise<void> {
   assertMac();
   const s = await getDaemonStatus();
-  console.log(formatStatus(s));
+  const { loadConfig } = await import("../lib/config.js");
+  const cfg = loadConfig();
+  const upload = cfg.autoUpload
+    ? " · auto-upload ON"
+    : " · auto-upload OFF (run `trail config set autoUpload true` to enable)";
+  console.log(formatStatus(s) + (s.kind === "missing" ? "" : upload));
 }
 
 function wrap(fn: () => Promise<void>): () => Promise<void> {

@@ -15,7 +15,7 @@ import {
   countPrompts,
   countFailedToolCalls,
 } from "@/lib/session-metrics";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, gte } from "drizzle-orm";
 import { ensureReceipt } from "@/lib/receipt-generator";
 import { checkPaywall } from "@/lib/paywall";
 import { resolvePullRequest } from "@/lib/github-verify";
@@ -188,6 +188,38 @@ export async function POST(req: NextRequest) {
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.id, session.user.id) });
   if (!userRow?.handle) {
     return NextResponse.json({ error: "user has no handle" }, { status: 400 });
+  }
+
+  // Free-tier quota gate: 200 sessions per rolling 30 days. Pro/Team uncapped.
+  // We count distinct trail_session rows owned by this user in the window.
+  // Counting at insert time (not via a trigger) keeps the schema simple and
+  // gives us a precise 409 error path for the CLI to surface to users.
+  if (userRow.plan === "free") {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const countRows = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(schema.trailSession)
+      .where(
+        and(
+          eq(schema.trailSession.userId, session.user.id),
+          gte(schema.trailSession.createdAt, since),
+        ),
+      );
+    const current = Number(countRows[0]?.c ?? 0);
+    const FREE_LIMIT = 200;
+    if (current >= FREE_LIMIT) {
+      return NextResponse.json(
+        {
+          error: "free_tier_session_cap",
+          message: `Free tier stores up to ${FREE_LIMIT} sessions per 30 days. Upgrade for unlimited or wait for older sessions to roll off.`,
+          upgrade_url: "https://gettrail.vercel.app/pricing",
+          current_count: current,
+          limit: FREE_LIMIT,
+          window_days: 30,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   const slug = s.shareSlug || genSlug();

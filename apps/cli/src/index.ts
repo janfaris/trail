@@ -11,13 +11,14 @@ import { listCommand } from "./commands/list.js";
 import { deleteCommand } from "./commands/delete.js";
 import { loginCommand, logoutCommand, whoamiCommand } from "./commands/auth.js";
 import { daemonCommand } from "./commands/daemon.js";
+import { configCommand } from "./commands/config.js";
 import { TRAIL_DIR } from "./lib/daemon-paths.js";
 import { DB_PATH } from "./db.js";
 
 const program = new Command()
   .name("trail")
   .description("Record and share your AI coding sessions")
-  .version("0.2.2");
+  .version("0.3.0");
 
 program.addCommand(recordCommand());
 program.addCommand(viewCommand());
@@ -30,6 +31,7 @@ program.addCommand(loginCommand());
 program.addCommand(logoutCommand());
 program.addCommand(whoamiCommand());
 program.addCommand(daemonCommand());
+program.addCommand(configCommand());
 
 function maybePrintFirstRunHint(): void {
   try {

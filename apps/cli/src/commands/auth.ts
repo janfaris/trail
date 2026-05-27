@@ -71,6 +71,30 @@ async function offerDaemonStart(): Promise<void> {
       .toLowerCase();
     if (answer === "" || answer === "y" || answer === "yes") {
       await daemonInstallAction();
+      // Second prompt: auto-upload. Default N (consent-preserving).
+      const upAnswer = (
+        await rl.question(
+          chalk.cyan(
+            "Auto-upload shipped sessions to your dashboard? (entropy-guarded; you can flip this later via `trail config set autoUpload`) [y/N] ",
+          ),
+        )
+      )
+        .trim()
+        .toLowerCase();
+      if (upAnswer === "y" || upAnswer === "yes") {
+        const { setConfigValue } = await import("../lib/config.js");
+        setConfigValue("autoUpload", true);
+        console.log(
+          chalk.green("✓"),
+          "Auto-upload enabled. Sessions ship to your dashboard when their PR merges.",
+        );
+      } else {
+        console.log(
+          chalk.gray(
+            "Skipped auto-upload. Enable later with `trail config set autoUpload true`.",
+          ),
+        );
+      }
     } else {
       console.log(
         chalk.gray(
