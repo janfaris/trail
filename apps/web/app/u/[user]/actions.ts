@@ -140,10 +140,12 @@ export async function saveProfile(formData: FormData) {
   const linkedinHandleValue = linkedinHandle || null;
   let website = (formData.get("website") ?? "").toString().trim() || null;
   if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`;
+  // Checkboxes only submit when checked — absence in formData = unchecked.
+  const spendAuditOptIn = formData.get("spendAuditOptIn") === "on";
 
   await db
     .update(schema.user)
-    .set({ bio, xHandle, githubHandle, linkedinHandle: linkedinHandleValue, website })
+    .set({ bio, xHandle, githubHandle, linkedinHandle: linkedinHandleValue, website, spendAuditOptIn })
     .where(eq(schema.user.id, u.id));
 
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });

@@ -36,6 +36,11 @@ export const user = pgTable(
     stripeCustomerId: text("stripe_customer_id"),
     stripeSubscriptionId: text("stripe_subscription_id"),
     planRenewsAt: timestamp("plan_renews_at", { withTimezone: true }),
+    // Layer 2 spend audit gate. Opt-in is required before any prompt text or
+    // tool_call args leave the database for an LLM call, even though they're
+    // anonymized first. Default false on every user — Pro plan alone is not
+    // consent.
+    spendAuditOptIn: boolean("spend_audit_opt_in").notNull().default(false),
   },
   (t) => ({
     handleIdx: uniqueIndex("user_handle_idx").on(t.handle),
@@ -531,5 +536,51 @@ export const sessionCostAttribution = pgTable(
       t.source,
       t.vendorBucketId,
     ),
+  }),
+);
+
+// Layer 2 spend audit. One row per (user, window) AI audit run. Findings
+// cache lives here so re-renders of the same window are free; the rate
+// limit (1/24h, 10/mo) is enforced by counting rows.
+export const spendAudit = pgTable(
+  "spend_audit",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    windowDays: integer("window_days").notNull(), // 7 | 30 | 365
+    // Bucket key for the rate-limit + cache. ISO date of when this audit
+    // was bucketed (UTC day). Two runs on the same calendar day for the
+    // same window share a bucket.
+    windowBucket: text("window_bucket").notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    model: text("model").notNull(),
+    // Top-level summary: $-savings the model thinks the user could capture
+    // by applying every finding.
+    totalPotentialSavingsUsd: numeric("total_potential_savings_usd", { precision: 10, scale: 4 }),
+    // Cost of running THIS audit itself, so users can see the ROI.
+    auditCostUsd: numeric("audit_cost_usd", { precision: 10, scale: 4 }),
+    // [{title, severity:'low'|'medium'|'high', recommendation,
+    //   estimated_monthly_savings_usd, evidence_event_ids?:string[]}]
+    findings: jsonb("findings").notNull().$type<Array<{
+      title: string;
+      severity: "low" | "medium" | "high";
+      recommendation: string;
+      estimatedMonthlySavingsUsd: number;
+      evidenceEventIds?: string[];
+    }>>(),
+    // Anonymize report kept for transparency / debugging.
+    redactionReport: jsonb("redaction_report").$type<{
+      total: number;
+      byCategory: Record<string, number>;
+      suspectCount: number;
+    }>(),
+  },
+  (t) => ({
+    userIdx: index("spend_audit_user_idx").on(t.userId, t.generatedAt),
+    bucketIdx: uniqueIndex("spend_audit_user_window_bucket_idx").on(t.userId, t.windowDays, t.windowBucket),
   }),
 );

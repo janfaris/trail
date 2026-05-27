@@ -27,6 +27,8 @@ import {
   getTopExpensiveSessions,
   type WindowDays,
 } from "@/lib/spend/queries";
+import { getCachedAudit } from "@/lib/spend/audit";
+import { AuditFooter } from "./AuditFooter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -90,6 +92,7 @@ export default async function SpendPage({
     cache,
     byOutcome,
     topSessions,
+    existingAudit,
   ] = await Promise.all([
     getTokensByEventKind(userRow.id, windowDays),
     getTokensByToolName(userRow.id, windowDays),
@@ -97,6 +100,7 @@ export default async function SpendPage({
     getCacheHitStats(userRow.id, windowDays),
     getCostByOutcome(userRow.id, windowDays),
     getTopExpensiveSessions(userRow.id, windowDays, 10),
+    getCachedAudit(userRow.id, windowDays),
   ]);
 
   return (
@@ -280,26 +284,12 @@ export default async function SpendPage({
           </Card>
         </div>
 
-        <footer className="mt-10 border border-dashed border-zinc-800 rounded-lg p-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm text-zinc-200 font-medium">
-              Run AI Audit
-            </div>
-            <p className="text-[13px] text-zinc-500 mt-1 max-w-md">
-              Feed your top expensive prompts into a single model call and get
-              concrete, prompt-aware recommendations with estimated $-saved.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-zinc-500 cursor-not-allowed select-none"
-          >
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-700" />
-            Coming soon to Pro
-          </button>
-        </footer>
+        <AuditFooter
+          userPlan={userRow.plan}
+          optedIn={userRow.spendAuditOptIn}
+          windowDays={windowDays}
+          existingAudit={existingAudit}
+        />
       </main>
     </div>
   );

@@ -70,6 +70,23 @@ export default async function SettingsPage() {
             />
           </Field>
 
+          <Field
+            label="Spend Audit (Pro)"
+            hint="Allow Trail to analyze your prompt text for spend audits. Secrets and PII are redacted before analysis."
+          >
+            <label className="flex items-center gap-3">
+              <input
+                name="spendAuditOptIn"
+                type="checkbox"
+                defaultChecked={me.spendAuditOptIn}
+                className="size-4 accent-[#a7f300] bg-zinc-900 border-zinc-800 rounded"
+              />
+              <span className="text-sm text-zinc-300">
+                Opt in to AI Spend Audit
+              </span>
+            </label>
+          </Field>
+
           <div className="pt-2">
             <button
               type="submit"
