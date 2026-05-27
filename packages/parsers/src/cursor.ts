@@ -191,7 +191,7 @@ export async function parseCursorWorkspace(
       .prepare(
         "SELECT value FROM ItemTable WHERE key = 'composer.composerData'",
       )
-      .get() as { value: unknown } | undefined;
+      .get() as unknown as { value: unknown } | undefined;
     if (row) {
       const parsed = parseJsonBlob(row.value) as
         | { allComposers?: ComposerHead[] }
@@ -227,7 +227,7 @@ export async function parseCursorWorkspace(
 
     for (const head of composerHeads) {
       const composerKey = `composerData:${head.composerId}`;
-      const cRow = composerStmt.get(composerKey) as
+      const cRow = composerStmt.get(composerKey) as unknown as
         | { value: unknown }
         | undefined;
       if (!cRow) continue;
@@ -253,7 +253,7 @@ export async function parseCursorWorkspace(
       for (const h of headers) {
         const bRow = bubbleStmt.get(
           `bubbleId:${head.composerId}:${h.bubbleId}`,
-        ) as { value: unknown } | undefined;
+        ) as unknown as { value: unknown } | undefined;
         if (!bRow) continue;
         const bub = parseJsonBlob(bRow.value) as BubbleData | null;
         if (!bub) continue;

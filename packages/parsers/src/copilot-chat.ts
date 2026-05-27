@@ -52,7 +52,7 @@ export function parseCopilotChatDB(
            FROM sessions ${where}
            ORDER BY created_at ASC`,
       )
-      .all(params) as SessionRow[];
+      .all(params) as unknown as SessionRow[];
 
     if (sessionRows.length === 0) return [];
 
@@ -63,7 +63,7 @@ export function parseCopilotChatDB(
 
     const out: Session[] = [];
     for (const s of sessionRows) {
-      const turns = turnsStmt.all(s.id) as TurnRow[];
+      const turns = turnsStmt.all(s.id) as unknown as TurnRow[];
       const events: Event[] = [];
       for (const t of turns) {
         const at = t.timestamp || s.created_at;
