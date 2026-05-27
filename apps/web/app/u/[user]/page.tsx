@@ -241,6 +241,18 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                 <span>
                   <span className="tabular-nums text-zinc-200">{totalEvents}</span> events
                 </span>
+                {isSelf && (
+                  <>
+                    <span className="text-zinc-700">·</span>
+                    <Link
+                      href={`/u/${userRow.handle}/spend`}
+                      className="text-zinc-400 hover:text-[#a7f300] transition-colors"
+                      title="Private — only you can see this"
+                    >
+                      Spend →
+                    </Link>
+                  </>
+                )}
               </div>
               {tools.length > 0 && (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
