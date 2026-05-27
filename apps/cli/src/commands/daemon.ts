@@ -58,16 +58,42 @@ function assertMac(): void {
   }
 }
 
-async function resolveBinPath(): Promise<string> {
+async function resolveProgramArgs(): Promise<{
+  binPath: string;
+  extraArgs: string[];
+}> {
+  // We bind launchd to Node directly instead of going through the `trail`
+  // shim. The shim is a CommonJS wrapper that re-execs Node via shebang
+  // (`#!/usr/bin/env node`) — but launchd user agents don't inherit a
+  // login shell PATH, so `env node` can't find Node and the daemon
+  // restart-loops with exit 127.
+  //
+  // process.execPath is set when the user runs `trail login` (which loaded
+  // Node to interpret the CLI), so it's a reliable absolute path to the
+  // exact Node binary that just worked. We re-use the resolved
+  // dist/index.js path computed by the launcher (bin/trail.cjs) — the
+  // same module being interpreted right now.
+  const nodePath = process.execPath;
+  // Resolve the bundled CLI entry. Two cases:
+  //   1) Invoked from the installed npm tree: import.meta.url is dist/index.js
+  //      itself (because tsup bundles auth.ts into dist/index.js). Use that.
+  //   2) Invoked from a dev tsx run: src/commands/daemon.ts. We can't bundle
+  //      that under launchd, so fall back to `which trail` + ["record"].
+  const url = import.meta.url;
+  if (url.includes("/dist/index.js")) {
+    const indexPath = new URL(url).pathname;
+    return { binPath: nodePath, extraArgs: [indexPath, "record"] };
+  }
+  // Dev / fallback path: try to find the trail binary via PATH.
   try {
     const { stdout } = await execFileP("which", ["trail"]);
     const p = stdout.trim();
-    if (p) return p;
+    if (p) return { binPath: p, extraArgs: ["record"] };
   } catch {
     // fall through
   }
   throw new DaemonError(
-    "Could not locate `trail` binary on PATH. Install globally or symlink it before running `trail daemon install`.",
+    "Could not locate the trail CLI bundle. Reinstall via `npm install -g @gettrail/cli` and rerun `trail daemon install`.",
   );
 }
 
@@ -103,11 +129,20 @@ async function installAction(): Promise<void> {
   assertMac();
   await mkdir(TRAIL_DIR, { recursive: true });
   await mkdir(LAUNCH_AGENTS_DIR, { recursive: true });
-  const binPath = await resolveBinPath();
-  const plist = buildPlist({ binPath, logPath: LOG_PATH, label: DAEMON_LABEL });
+  const { binPath, extraArgs } = await resolveProgramArgs();
+  const plist = buildPlist({
+    binPath,
+    extraArgs,
+    logPath: LOG_PATH,
+    label: DAEMON_LABEL,
+  });
   await writeFile(PLIST_PATH, plist, "utf8");
   await bootstrap();
-  console.log(chalk.green(`Installed ${DAEMON_LABEL} (bin: ${binPath})`));
+  console.log(
+    chalk.green(
+      `Installed ${DAEMON_LABEL} (program: ${binPath}${extraArgs.length ? " " + extraArgs.join(" ") : ""})`,
+    ),
+  );
 }
 
 async function uninstallAction(): Promise<void> {

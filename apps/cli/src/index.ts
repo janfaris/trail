@@ -17,7 +17,7 @@ import { DB_PATH } from "./db.js";
 const program = new Command()
   .name("trail")
   .description("Record and share your AI coding sessions")
-  .version("0.2.1");
+  .version("0.2.2");
 
 program.addCommand(recordCommand());
 program.addCommand(viewCommand());

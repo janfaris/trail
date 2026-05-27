@@ -1,6 +1,6 @@
 {
   "name": "@gettrail/cli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Local-capture CLI for cost-per-PR tracking on Claude Code, Codex, and other AI coding agents. No admin keys required.",
   "keywords": [
     "ai",
