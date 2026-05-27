@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 // Real shipped session — stands in as the cost example until a cost-pulse recap exists.
 const EXAMPLE_HREF = "/u/jankarlo.faris/057smo2q";
-const INSTALL = "curl -fsSL https://gettrail.vercel.app/install.sh | bash";
+const INSTALL = "npm install -g @gettrail/cli";
 
 const primaryTools = [
   {
@@ -409,7 +409,7 @@ export default async function Home() {
                     <pre className="px-5 py-5 text-[12.5px] font-mono leading-[1.75] text-zinc-300 overflow-x-auto">
 {s.n === "01" && (
   <>
-{`$ curl -fsSL https://gettrail.vercel.app/install.sh | bash
+{`$ npm install -g @gettrail/cli
 $ trail login
 $ trail record
 `}<span className="text-zinc-500">{`→ watching claude-code, codex…`}</span>{`

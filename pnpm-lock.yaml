@@ -24,8 +24,30 @@ importers:
   apps/cli:
     dependencies:
       '@hono/node-server':
-        specifier: ^1.13.7
-        version: 1.19.14(hono@4.12.19)
+        specifier: 1.13.7
+        version: 1.13.7(hono@4.6.12)
+      better-sqlite3:
+        specifier: 11.5.0
+        version: 11.5.0
+      chalk:
+        specifier: 5.3.0
+        version: 5.3.0
+      chokidar:
+        specifier: 4.0.1
+        version: 4.0.1
+      commander:
+        specifier: 12.1.0
+        version: 12.1.0
+      hono:
+        specifier: 4.6.12
+        version: 4.6.12
+      open:
+        specifier: 10.1.0
+        version: 10.1.0
+      zod:
+        specifier: 3.23.8
+        version: 3.23.8
+    devDependencies:
       '@trail/anonymize':
         specifier: workspace:*
         version: link:../../packages/anonymize
@@ -38,28 +60,6 @@ importers:
       '@trail/schema':
         specifier: workspace:*
         version: link:../../packages/schema
-      better-sqlite3:
-        specifier: ^11.5.0
-        version: 11.10.0
-      chalk:
-        specifier: ^5.3.0
-        version: 5.6.2
-      chokidar:
-        specifier: ^4.0.1
-        version: 4.0.3
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      hono:
-        specifier: ^4.6.12
-        version: 4.12.19
-      open:
-        specifier: ^10.1.0
-        version: 10.2.0
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.12
         version: 7.6.13
@@ -1215,8 +1215,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@hono/node-server@1.19.14':
-    resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
+  '@hono/node-server@1.13.7':
+    resolution: {integrity: sha512-kTfUMsoloVKtRA2fLiGSd9qBddmru9KadNyhJCwgKBxTiNkaAJEwkVN9KV/rS4HtmmNRtUh6P+YpmjRMl0d9vQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
@@ -1971,6 +1971,9 @@ packages:
   better-sqlite3@11.10.0:
     resolution: {integrity: sha512-EwhOpyXiOEL/lKzHz9AW1msWFNzGc/z+LzeB3/jnFJpxu+th2yqvzsSWas1v9jgs9+xiXJcD5A8CJxAG2TaghQ==}
 
+  better-sqlite3@11.5.0:
+    resolution: {integrity: sha512-e/6eggfOutzoK0JWiU36jsisdWoHOfN9iWiW/SieKvb7SAa6aGNmBM/UKyp+/wWSXpLlWNN8tCPwoDNPhzUvuQ==}
+
   bindings@1.5.0:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
 
@@ -2011,8 +2014,8 @@ packages:
     resolution: {integrity: sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==}
     engines: {node: '>=18'}
 
-  chalk@5.6.2:
-    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+  chalk@5.3.0:
+    resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
 
   character-entities-html4@2.1.0:
@@ -2030,6 +2033,10 @@ packages:
   check-error@2.1.3:
     resolution: {integrity: sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA==}
     engines: {node: '>= 16'}
+
+  chokidar@4.0.1:
+    resolution: {integrity: sha512-n8enUVCED/KVRQlab1hr3MVpcVMvxtZjmEa956u+4YijlmQED223XMSYj2tLuKvr4jcCTzNNMpQDUer72MMmzA==}
+    engines: {node: '>= 14.16.0'}
 
   chokidar@4.0.3:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
@@ -2370,8 +2377,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.12.19:
-    resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
+  hono@4.6.12:
+    resolution: {integrity: sha512-eHtf4kSDNw6VVrdbd5IQi16r22m3s7mWPLd7xOMhg1a/Yyb1A0qpUFq8xYMX4FMuDe1nTKeMX5rTx7Nmw+a+Ag==}
     engines: {node: '>=16.9.0'}
 
   html-url-attributes@3.0.1:
@@ -2770,8 +2777,8 @@ packages:
   oniguruma-to-es@2.3.0:
     resolution: {integrity: sha512-bwALDxriqfKGfUufKGGepCzu9x7nJQuoRoAFp4AnwehhC2crqrDIAP/uN2qdlsAvSMpeRC3+Yzhqc7hLmle5+g==}
 
-  open@10.2.0:
-    resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
+  open@10.1.0:
+    resolution: {integrity: sha512-mnkeQ1qP5Ue2wd+aivTD3NHd/lZ96Lu0jgf0pwktLPtx6cTZiH7tyeGRRHs0zX0rbrahXPnXlUnbeXyaBBuIaw==}
     engines: {node: '>=18'}
 
   openai@6.38.0:
@@ -3365,10 +3372,6 @@ packages:
       utf-8-validate:
         optional: true
 
-  wsl-utils@0.1.0:
-    resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
-    engines: {node: '>=18'}
-
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
@@ -3376,6 +3379,9 @@ packages:
   yaml@1.10.3:
     resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
     engines: {node: '>= 6'}
+
+  zod@3.23.8:
+    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -3994,9 +4000,9 @@ snapshots:
   '@esbuild/win32-x64@0.28.0':
     optional: true
 
-  '@hono/node-server@1.19.14(hono@4.12.19)':
+  '@hono/node-server@1.13.7(hono@4.6.12)':
     dependencies:
-      hono: 4.12.19
+      hono: 4.6.12
 
   '@img/colour@1.1.0':
     optional: true
@@ -4611,6 +4617,11 @@ snapshots:
       bindings: 1.5.0
       prebuild-install: 7.1.3
 
+  better-sqlite3@11.5.0:
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.3
+
   bindings@1.5.0:
     dependencies:
       file-uri-to-path: 1.0.0
@@ -4653,7 +4664,7 @@ snapshots:
       loupe: 3.2.1
       pathval: 2.0.1
 
-  chalk@5.6.2: {}
+  chalk@5.3.0: {}
 
   character-entities-html4@2.1.0: {}
 
@@ -4664,6 +4675,10 @@ snapshots:
   character-reference-invalid@2.0.1: {}
 
   check-error@2.1.3: {}
+
+  chokidar@4.0.1:
+    dependencies:
+      readdirp: 4.1.2
 
   chokidar@4.0.3:
     dependencies:
@@ -5021,7 +5036,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.12.19: {}
+  hono@4.6.12: {}
 
   html-url-attributes@3.0.1: {}
 
@@ -5578,12 +5593,12 @@ snapshots:
       regex: 5.1.1
       regex-recursion: 5.1.1
 
-  open@10.2.0:
+  open@10.1.0:
     dependencies:
       default-browser: 5.5.0
       define-lazy-prop: 3.0.0
       is-inside-container: 1.0.0
-      wsl-utils: 0.1.0
+      is-wsl: 3.1.1
 
   openai@6.38.0(ws@8.20.1)(zod@3.25.76):
     optionalDependencies:
@@ -6314,13 +6329,11 @@ snapshots:
 
   ws@8.20.1: {}
 
-  wsl-utils@0.1.0:
-    dependencies:
-      is-wsl: 3.1.1
-
   xtend@4.0.2: {}
 
   yaml@1.10.3: {}
+
+  zod@3.23.8: {}
 
   zod@3.25.76: {}
 

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "Install the Trail CLI, sign in, and start recording your AI coding sessions.",
 };
 
-const INSTALL_CMD = "curl -fsSL https://gettrail.vercel.app/install.sh | bash";
+const INSTALL_CMD = "npm install -g @gettrail/cli";
 const SIGNIN_CMD = "trail login";
 const RECORD_CMD = "trail record";
 

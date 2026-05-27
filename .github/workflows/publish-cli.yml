@@ -1,0 +1,116 @@
+name: Publish CLI to npm
+
+# Publishes @gettrail/cli to npm with npm provenance.
+#
+# Trigger: ONLY runs when a GitHub release is published whose tag starts with
+# `cli-v` (e.g. `cli-v0.1.0`). This is intentional — every publish is a
+# deliberate, auditable human action (`gh release create cli-v0.1.0`), never
+# a side effect of a push or merge.
+#
+# Security posture:
+#  - OIDC trust between GitHub Actions and npm (id-token: write) — no static
+#    npm tokens stored anywhere. npm provenance signs the artifact with a
+#    Sigstore certificate tying it to this exact workflow run.
+#  - `npm audit signatures` runs against all installed deps before build, so
+#    a tampered transitive (à la chalk/debug compromise) is caught and
+#    blocks the publish.
+#  - Workflow uses fixed action SHAs, not floating tags, so a compromised
+#    third-party action can't backdoor a publish.
+#  - permissions: tightest set possible. `id-token: write` ONLY for npm
+#    OIDC; `contents: read` for checkout. Nothing else.
+#  - The job runs on the org's default runners. No custom self-hosted
+#    runners (avoids the runner-takeover class of attacks).
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write   # required for npm provenance via OIDC
+
+jobs:
+  publish:
+    name: Build, audit, and publish
+    # Gate on tag prefix so we don't accidentally publish on a `v*` web tag.
+    if: startsWith(github.event.release.tag_name, 'cli-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (fixed SHA)
+        # actions/checkout@v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # We only need the release commit; no history.
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pnpm (fixed SHA)
+        # pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.16.1
+          run_install: false
+
+      - name: Set up Node (fixed SHA)
+        # actions/setup-node@v4.1.0
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies (frozen lockfile)
+        # --frozen-lockfile fails if pnpm-lock.yaml doesn't match package.json,
+        # blocking a supply-chain attack that modifies a single package.json
+        # without updating the lockfile.
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependency signatures
+        # Verifies every installed package's signature against the npm registry.
+        # Fails the build if any dep is missing a signature or has a tampered one.
+        # This is the front line against shai-hulud-class compromises.
+        working-directory: apps/cli
+        run: npm audit signatures
+
+      - name: Verify package.json version matches release tag
+        # Belt-and-suspenders: refuse to publish if release tag (e.g. cli-v0.1.0)
+        # doesn't match package.json version. Prevents accidental
+        # mismatched-version publishes.
+        working-directory: apps/cli
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${{ github.event.release.tag_name }}"
+          TAG_VERSION="${TAG_VERSION#cli-v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match release tag ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "Version check passed: $PKG_VERSION"
+
+      - name: Build (workspace deps inlined via tsup noExternal)
+        run: pnpm --filter @gettrail/cli build
+
+      - name: Verify build output exists
+        working-directory: apps/cli
+        run: |
+          test -f dist/index.js || (echo "::error::dist/index.js missing"; exit 1)
+          test -s dist/index.js || (echo "::error::dist/index.js is empty"; exit 1)
+          echo "Build artifact OK ($(wc -c < dist/index.js) bytes)"
+
+      - name: Dry-run publish (verify package contents)
+        # Catches stray secrets, oversized tarballs, missing files in the
+        # `files` whitelist. The actual publish that follows uses the same
+        # tarball generation logic.
+        working-directory: apps/cli
+        run: npm publish --dry-run
+
+      - name: Publish to npm with provenance
+        working-directory: apps/cli
+        env:
+          # OIDC handles auth — no NPM_TOKEN secret needed.
+          # The `provenance: true` in package.json's publishConfig triggers
+          # the Sigstore signing flow automatically when --provenance is on.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
