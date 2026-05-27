@@ -114,7 +114,7 @@ export default async function Home() {
           </div>
 
           {/* Qualifier — small, italic Fraunces, what the number is. */}
-          <p className="font-display italic text-zinc-400 text-[18px] md:text-[22px] leading-[1.5] max-w-[34ch] mb-12">
+          <p className="italic text-zinc-300 text-[17px] md:text-[20px] leading-[1.5] max-w-[40ch] mb-12">
             …is what it cost to ship{" "}
             <Link
               href={EXAMPLE_HREF}
@@ -184,7 +184,7 @@ export default async function Home() {
               </div>
             </div>
 
-            <p className="font-display italic text-zinc-500 text-[15px] mt-8 max-w-[60ch]">
+            <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[64ch] leading-[1.6]">
               Pricing reads from a versioned table —{" "}
               <span className="text-zinc-300">openai gpt-5.5: $5 in / $30 out / $0.50 cached per million tokens</span>.
               Multiplication, no model.
@@ -241,7 +241,7 @@ export default async function Home() {
             <h2 className="font-display text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] text-zinc-50 mb-3 max-w-[24ch]">
               What Trail actually sees.
             </h2>
-            <p className="font-display italic text-zinc-500 text-[16px] mb-10 max-w-[56ch]">
+            <p className="italic text-zinc-400 text-[15px] mb-10 max-w-[60ch] leading-[1.55]">
               Honest about what the vendors expose. Copilot's metrics API has no per-user tokens — we say so instead of inventing a number.
             </p>
 
@@ -269,7 +269,7 @@ export default async function Home() {
               ))}
             </div>
 
-            <p className="font-display italic text-zinc-500 text-[14px] mt-8 max-w-[58ch]">
+            <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[62ch] leading-[1.55]">
               Optional · BYOK admin keys (Anthropic, OpenAI) add cross-vendor reconciliation when you outgrow local capture. Encrypted with libsodium, revocable in one click.
             </p>
           </div>
@@ -278,7 +278,7 @@ export default async function Home() {
         {/* INSTALL — repeat the primary action at the bottom, single CTA. */}
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-24 text-center">
-            <p className="font-display italic text-zinc-400 text-[20px] md:text-[24px] mb-8 max-w-[42ch] mx-auto leading-[1.4]">
+            <p className="italic text-zinc-300 text-[18px] md:text-[22px] mb-8 max-w-[46ch] mx-auto leading-[1.45]">
               See where every dollar of your AI bill went, by the PR it shipped in.
             </p>
             <div className="inline-flex items-center gap-0 border border-zinc-800 bg-black rounded-md overflow-hidden">
