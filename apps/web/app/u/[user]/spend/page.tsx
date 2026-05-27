@@ -232,7 +232,7 @@ export default async function SpendPage({
 
           <Card
             title="Cost by outcome"
-            blurb="How much you spent on sessions that shipped vs got abandoned vs went down a rabbithole. The abandoned number is usually the eye-opener."
+            blurb="How much you spent on sessions that shipped vs got abandoned vs went down a rabbithole. The abandoned number is usually the eye-opener. $0.00 rows are sessions captured before per-event token capture landed (Week 0 pivot, mid-May 2026)."
           >
             {byOutcome.length === 0 ? (
               <Empty>No sessions in window.</Empty>
