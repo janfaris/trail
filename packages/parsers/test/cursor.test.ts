@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { parseCursorWorkspace, probeCursorTokens } from "../src/cursor.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,7 +59,7 @@ function buildSyntheticCursorDbs(bubbles: {
   const wsDbPath = path.join(dir, "workspace.vscdb");
   const gDbPath = path.join(dir, "global.vscdb");
 
-  const ws = new Database(wsDbPath);
+  const ws = new DatabaseSync(wsDbPath);
   ws.exec("CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value BLOB)");
   ws.prepare("INSERT INTO ItemTable (key, value) VALUES (?, ?)").run(
     "composer.composerData",
@@ -71,7 +71,7 @@ function buildSyntheticCursorDbs(bubbles: {
   );
   ws.close();
 
-  const g = new Database(gDbPath);
+  const g = new DatabaseSync(gDbPath);
   g.exec("CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value BLOB)");
   const ins = g.prepare("INSERT INTO cursorDiskKV (key, value) VALUES (?, ?)");
   ins.run(

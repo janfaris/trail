@@ -1,4 +1,9 @@
-import Database from "better-sqlite3";
+// node:sqlite is built into Node 22+ (stable). We use the synchronous API
+// (DatabaseSync / StatementSync) which uses the same SQLite C library that
+// better-sqlite3 wraps — same engine, same perf, no native module to ship.
+// This removes the prebuild-install footgun that was breaking `npm i -g`
+// for new users on v0.1.0.
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { homedir } from "node:os";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
@@ -7,8 +12,10 @@ const TRAIL_DIR = path.join(homedir(), ".trail");
 mkdirSync(TRAIL_DIR, { recursive: true });
 export const DB_PATH = path.join(TRAIL_DIR, "db.sqlite");
 
-export const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+export const db = new DatabaseSync(DB_PATH);
+// PRAGMA via exec — node:sqlite doesn't have a dedicated .pragma() helper.
+// WAL is required for safe concurrent read while the daemon writes.
+db.exec("PRAGMA journal_mode = WAL");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS sessions (
@@ -49,9 +56,32 @@ for (const col of ["redacted_at TEXT", "redaction_count INTEGER"]) {
   }
 }
 
+/**
+ * Execute `fn` inside a SQLite transaction. better-sqlite3's
+ * `db.transaction(fn)` helper isn't available in node:sqlite, so we wrap
+ * BEGIN/COMMIT/ROLLBACK by hand. Synchronous — fn must not return a Promise.
+ * Returns whatever fn returns. Re-throws after ROLLBACK on error.
+ */
+export function transaction<T>(fn: () => T): T {
+  db.exec("BEGIN");
+  try {
+    const result = fn();
+    db.exec("COMMIT");
+    return result;
+  } catch (err) {
+    try {
+      db.exec("ROLLBACK");
+    } catch {
+      // ROLLBACK after COMMIT is harmless; ROLLBACK after a failed BEGIN
+      // would also be a no-op. Swallow so the original error surfaces.
+    }
+    throw err;
+  }
+}
+
 import type { Session } from "@trail/schema";
 
-const upsertSession = db.prepare(`
+const upsertSession: StatementSync = db.prepare(`
   INSERT INTO sessions (id, user, tool, started_at, ended_at, repo, source_path, redacted_at, redaction_count, updated_at)
   VALUES (@id, @user, @tool, @startedAt, @endedAt, @repo, @sourcePath, @redactedAt, @redactionCount, datetime('now'))
   ON CONFLICT(id) DO UPDATE SET
@@ -62,12 +92,14 @@ const upsertSession = db.prepare(`
     updated_at = datetime('now')
 `);
 
-const deleteEvents = db.prepare(`DELETE FROM events WHERE session_id = ?`);
-const deleteFts = db.prepare(`DELETE FROM events_fts WHERE session_id = ?`);
-const insertEvent = db.prepare(
+const deleteEvents: StatementSync = db.prepare(`DELETE FROM events WHERE session_id = ?`);
+const deleteFts: StatementSync = db.prepare(`DELETE FROM events_fts WHERE session_id = ?`);
+const insertEvent: StatementSync = db.prepare(
   `INSERT INTO events (session_id, at, kind, payload) VALUES (?, ?, ?, ?)`,
 );
-const insertFts = db.prepare(`INSERT INTO events_fts (session_id, payload) VALUES (?, ?)`);
+const insertFts: StatementSync = db.prepare(
+  `INSERT INTO events_fts (session_id, payload) VALUES (?, ?)`,
+);
 
 import { redactSessionForCapture } from "./lib/capture-redact.js";
 
@@ -77,7 +109,7 @@ export function saveSession(session: Session, sourcePath: string): void {
   // anonymize() pass as a fallback for legacy rows captured pre-redaction.
   const { session: redacted, redactedAt, redactionCount } =
     redactSessionForCapture(session);
-  const tx = db.transaction(() => {
+  transaction(() => {
     upsertSession.run({
       id: redacted.id,
       user: redacted.user,
@@ -108,5 +140,4 @@ export function saveSession(session: Session, sourcePath: string): void {
       insertFts.run(redacted.id, text);
     }
   });
-  tx();
 }

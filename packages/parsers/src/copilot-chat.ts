@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import type { Session, Event } from "@trail/schema";
 
 // VSCode Copilot Chat session store:
@@ -37,7 +37,8 @@ export function parseCopilotChatDB(
   user: string,
   opts: ParseCopilotChatOptions = {},
 ): Session[] {
-  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  // fileMustExist isn't needed: readOnly:true throws on missing file in node:sqlite.
+  const db = new DatabaseSync(dbPath, { readOnly: true });
   try {
     const params: Record<string, string> = {};
     let where = "";

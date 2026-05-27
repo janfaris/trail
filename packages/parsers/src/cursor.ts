@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -182,9 +182,8 @@ export async function parseCursorWorkspace(
 ): Promise<Session[]> {
   if (!existsSync(workspaceDbPath)) return [];
 
-  const wsDb = new Database(workspaceDbPath, {
-    readonly: true,
-    fileMustExist: true,
+  const wsDb = new DatabaseSync(workspaceDbPath, {
+    readOnly: true,
   });
   let composerHeads: ComposerHead[] = [];
   try {
@@ -213,9 +212,8 @@ export async function parseCursorWorkspace(
     // Without the global store we can't recover bubble text.
     return [];
   }
-  const gDb = new Database(globalDbPath, {
-    readonly: true,
-    fileMustExist: true,
+  const gDb = new DatabaseSync(globalDbPath, {
+    readOnly: true,
   });
 
   const out: Session[] = [];

@@ -10,7 +10,7 @@ No admin keys, no proxy, no rewiring your agents. Trail tails your local agent l
 npm install -g @gettrail/cli
 ```
 
-Requires Node.js >= 20.
+Requires Node.js >= 22 (uses the built-in `node:sqlite` module — no native binaries to install, no `node-gyp`).
 
 ## Quick start
 

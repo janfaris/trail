@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseCopilotChatDB } from "../src/copilot-chat.js";
 
 function seed(dbPath: string) {
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath);
   db.exec(`
     CREATE TABLE sessions (
       id TEXT PRIMARY KEY, cwd TEXT, repository TEXT, host_type TEXT,

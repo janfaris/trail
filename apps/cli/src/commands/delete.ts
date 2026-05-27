@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import { createInterface } from "node:readline";
-import { db } from "../db.js";
+import { db, transaction } from "../db.js";
 
 interface Match {
   id: string;
@@ -73,13 +73,12 @@ export function deleteSessionIds(ids: string[]): number {
   const delFts = db.prepare(`DELETE FROM events_fts WHERE session_id IN (${placeholders})`);
   const delSess = db.prepare(`DELETE FROM sessions WHERE id IN (${placeholders})`);
   let deleted = 0;
-  const tx = db.transaction(() => {
+  transaction(() => {
     delEvents.run(...ids);
     delFts.run(...ids);
     const r = delSess.run(...ids);
     deleted = Number(r.changes ?? 0);
   });
-  tx();
   return deleted;
 }
 

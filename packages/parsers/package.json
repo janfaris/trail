@@ -10,11 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trail/schema": "workspace:*",
-    "better-sqlite3": "^11.5.0"
+    "@trail/schema": "workspace:*"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
-    "vitest": "^2.1.8"
+    "vitest": "^3"
   }
 }
