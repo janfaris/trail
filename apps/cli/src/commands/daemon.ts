@@ -154,3 +154,8 @@ export function daemonCommand(): Command {
   cmd.command("restart").description("Restart the daemon").action(wrap(restartAction));
   return cmd;
 }
+
+// Re-export the install action so `trail login` can call it directly after
+// a successful sign-in. Uses the same `wrap` helper for friendly error
+// formatting (DaemonError -> red ✗ message, anything else -> stack).
+export const daemonInstallAction = wrap(installAction);
