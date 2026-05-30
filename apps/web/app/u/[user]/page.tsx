@@ -3,13 +3,14 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { db, schema } from "@/db/client";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { Avatar } from "@/components/ui/avatar";
 import { ToolIcon } from "@/components/tool-icon";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
 import { FeaturedSessionCard } from "@/components/featured-session-card";
 import { FeatureToggle } from "@/components/feature-toggle";
+import { FollowButton } from "@/components/follow-button";
 import { ProfileIntroCard } from "@/components/profile-intro-card";
 import { EmptyInstallCard } from "@/components/empty-install-card";
 import { githubAvatar } from "@/lib/share";
@@ -103,6 +104,28 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const site = userRow.website;
   const hasSocials = Boolean(gh || x || li || site);
 
+  const viewerId = sessionInfo?.user?.id ?? null;
+  const [followerRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.follow)
+    .where(eq(schema.follow.followingId, userRow.id));
+  const [followingRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.follow)
+    .where(eq(schema.follow.followerId, userRow.id));
+  const followerCount = followerRow?.count ?? 0;
+  const followingCount = followingRow?.count ?? 0;
+  let isFollowing = false;
+  if (viewerId && !isSelf) {
+    const existing = await db.query.follow.findFirst({
+      where: and(
+        eq(schema.follow.followerId, viewerId),
+        eq(schema.follow.followingId, userRow.id),
+      ),
+    });
+    isFollowing = Boolean(existing);
+  }
+
   const heroFeatured = featured[0];
   const compactFeatured = featured.slice(1);
 
@@ -147,9 +170,22 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
         <div className="flex items-start gap-5 mb-10">
           <Avatar src={avatar} alt={userRow.handle ?? user} size={64} fallback={userRow.handle ?? user} />
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight text-zinc-50">
-              @{userRow.handle}
-            </h1>
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight text-zinc-50">
+                @{userRow.handle}
+              </h1>
+              {!isSelf &&
+                (viewerId ? (
+                  <FollowButton targetUserId={userRow.id} initialFollowing={isFollowing} />
+                ) : (
+                  <Link
+                    href={`/api/auth/sign-in/github?callbackURL=/u/${userRow.handle}`}
+                    className="px-3 py-1 rounded-md text-sm font-medium border border-[#a7f300] bg-[#a7f300] text-black hover:bg-[#b6ff14] transition-colors"
+                  >
+                    Sign in to follow
+                  </Link>
+                ))}
+            </div>
             {userRow.name && userRow.name !== userRow.handle && (
               <p className="text-sm text-zinc-400 mt-0.5">{userRow.name}</p>
             )}
@@ -240,6 +276,15 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                 <span className="text-zinc-700">·</span>
                 <span>
                   <span className="tabular-nums text-zinc-200">{totalEvents}</span> events
+                </span>
+                <span className="text-zinc-700">·</span>
+                <span>
+                  <span className="tabular-nums text-zinc-200">{followerCount}</span>{" "}
+                  follower{followerCount === 1 ? "" : "s"}
+                </span>
+                <span className="text-zinc-700">·</span>
+                <span>
+                  <span className="tabular-nums text-zinc-200">{followingCount}</span> following
                 </span>
                 {isSelf && (
                   <>

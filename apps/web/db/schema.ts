@@ -9,6 +9,7 @@ import {
   numeric,
   uniqueIndex,
   index,
+  check,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -582,5 +583,28 @@ export const spendAudit = pgTable(
   (t) => ({
     userIdx: index("spend_audit_user_idx").on(t.userId, t.generatedAt),
     bucketIdx: uniqueIndex("spend_audit_user_window_bucket_idx").on(t.userId, t.windowDays, t.windowBucket),
+  }),
+);
+
+// Phase 2 (30d social primitives) — directed follow graph. A row means
+// `followerId` follows `followingId`. Uniqueness on the pair makes follow
+// idempotent; the CHECK guards against self-follows at the DB layer (the app
+// also guards in `lib/follow.ts`).
+export const follow = pgTable(
+  "follow",
+  {
+    id: text("id").primaryKey(),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("follow_pair_idx").on(t.followerId, t.followingId),
+    followingIdx: index("follow_following_idx").on(t.followingId),
+    noSelf: check("follow_no_self_check", sql`${t.followerId} <> ${t.followingId}`),
   }),
 );

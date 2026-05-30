@@ -79,6 +79,9 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
                 <span className="text-[#a7f300]">$</span>
                 <span>Cost</span>
               </Link>
+              <Link href="/feed" className={linkClass("/feed", currentPath)}>
+                Feed
+              </Link>
               <Link href="/dashboard" className={linkClass("/dashboard", currentPath)}>
                 Dashboard
               </Link>
