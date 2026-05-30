@@ -87,7 +87,14 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const all = await db
     .select()
     .from(schema.trailSession)
-    .where(eq(schema.trailSession.userId, userRow.id))
+    .where(
+      and(
+        eq(schema.trailSession.userId, userRow.id),
+        // Owners see every visibility on their own profile; everyone else
+        // (anon + signed-in strangers) only sees public sessions.
+        isSelf ? undefined : eq(schema.trailSession.visibility, "public"),
+      ),
+    )
     .orderBy(desc(schema.trailSession.isFeatured), desc(schema.trailSession.startedAt))
     .limit(100);
 
