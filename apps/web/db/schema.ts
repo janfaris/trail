@@ -9,6 +9,7 @@ import {
   numeric,
   uniqueIndex,
   index,
+  check,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -582,5 +583,62 @@ export const spendAudit = pgTable(
   (t) => ({
     userIdx: index("spend_audit_user_idx").on(t.userId, t.generatedAt),
     bucketIdx: uniqueIndex("spend_audit_user_window_bucket_idx").on(t.userId, t.windowDays, t.windowBucket),
+  }),
+);
+
+// Phase 2 (30d social primitives) — directed follow graph. A row means
+// `followerId` follows `followingId`. Uniqueness on the pair makes follow
+// idempotent; the CHECK guards against self-follows at the DB layer (the app
+// also guards in `lib/follow.ts`).
+export const follow = pgTable(
+  "follow",
+  {
+    id: text("id").primaryKey(),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("follow_pair_idx").on(t.followerId, t.followingId),
+    followingIdx: index("follow_following_idx").on(t.followingId),
+    noSelf: check("follow_no_self_check", sql`${t.followerId} <> ${t.followingId}`),
+  }),
+);
+
+// 30d→60d bridge — normalized projection of each session's LLM-extracted
+// `tool`/`toolsUsed`/`frameworks`/`models` into a tag corpus. trail_session
+// keeps those jsonb arrays for /learn faceting; this table is the indexed,
+// outcome-rankable grain the 60-day entity pages (/tools/[slug],
+// /frameworks/[slug]) build on (tag × reaction joins, related-tool
+// co-occurrence, per-builder rollups, slug lookups). Kept as a PURE projection:
+// visibility/outcome are NOT denormalized here — queries join trail_session and
+// filter visibility='public' at read time, so a session going private needs no
+// write here. Slug canonicalization lives in lib/tags.ts.
+export const sessionTag = pgTable(
+  "session_tag",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(), // canonical slug, the stable URL key (e.g. "nextjs")
+    label: text("label").notNull(), // display label derived from the slug (e.g. "Next.js")
+    kind: text("kind").notNull(), // 'tool' | 'framework' | 'model'
+    confidence: numeric("confidence", { precision: 4, scale: 3 }).notNull().default("1.000"),
+    source: text("source").notNull().default("llm"), // 'llm' | 'heuristic'
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    // One row per (session, slug, kind). The same slug may appear under two
+    // kinds (e.g. tool:react + framework:react) — that's intentional, so kind
+    // is part of the unique grain.
+    pairIdx: uniqueIndex("session_tag_session_tag_kind_idx").on(t.sessionId, t.tag, t.kind),
+    // Covering order for the hot entity-page path: look up by kind+tag, then
+    // join out to trail_session by sessionId.
+    lookupIdx: index("session_tag_kind_tag_idx").on(t.kind, t.tag, t.sessionId),
   }),
 );

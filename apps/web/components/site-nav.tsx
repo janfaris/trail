@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ProfileMenu } from "@/components/profile-menu";
 import { SignOutButton } from "@/components/sign-out-button";
 
 type NavLink = { href: string; label: string; external?: boolean };
@@ -16,6 +17,8 @@ function linkClass(href: string, currentPath?: string) {
 
 export async function SiteNav({ currentPath }: { currentPath?: string }) {
   let handle: string | null = null;
+  let name: string | null = null;
+  let image: string | null = null;
 
   if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
     const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
@@ -37,9 +40,9 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
       ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
       : null;
     handle = userRow?.handle ?? null;
+    name = userRow?.name ?? null;
+    image = userRow?.image ?? null;
   }
-
-  const costActive = Boolean(currentPath && currentPath.startsWith("/dashboard/cost"));
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
@@ -48,50 +51,47 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           <span className="text-[#a7f300]">/</span>trail
         </Link>
         <nav className="flex items-center gap-5 text-[13px]">
-          <div className="hidden md:flex items-center gap-5">
-            {PRIMARY_LINKS.map((l) =>
-              l.external ? (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  target="_blank"
-                  rel="noopener"
-                  className={linkClass(l.href, currentPath)}
-                >
-                  {l.label}
-                </a>
-              ) : (
-                <Link key={l.href} href={l.href} className={linkClass(l.href, currentPath)}>
-                  {l.label}
-                </Link>
-              ),
-            )}
-          </div>
+          {handle ? null : (
+            <div className="hidden md:flex items-center gap-5">
+              {PRIMARY_LINKS.map((l) =>
+                l.external ? (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener"
+                    className={linkClass(l.href, currentPath)}
+                  >
+                    {l.label}
+                  </a>
+                ) : (
+                  <Link key={l.href} href={l.href} className={linkClass(l.href, currentPath)}>
+                    {l.label}
+                  </Link>
+                ),
+              )}
+            </div>
+          )}
           {handle ? (
             <div className="flex items-center gap-3 sm:gap-5">
               <Link
-                href="/dashboard/cost"
-                aria-current={costActive ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 ${
-                  costActive ? "text-[#a7f300]" : "text-zinc-300 hover:text-[#a7f300]"
-                } transition-colors`}
+                href="/feed"
+                className={`hidden md:inline ${linkClass("/feed", currentPath)}`}
               >
-                <span className="text-[#a7f300]">$</span>
-                <span>Cost</span>
-              </Link>
-              <Link href="/dashboard" className={linkClass("/dashboard", currentPath)}>
-                Dashboard
-              </Link>
-              <Link href="/settings" className={linkClass("/settings", currentPath)}>
-                Settings
+                Feed
               </Link>
               <Link
-                href={`/u/${handle}`}
-                className="font-mono text-zinc-300 hover:text-[#a7f300] transition-colors"
+                href="/dashboard"
+                className={`hidden md:inline ${linkClass("/dashboard", currentPath)}`}
               >
-                @{handle}
+                Dashboard
               </Link>
-              <SignOutButton />
+              <ProfileMenu
+                handle={handle}
+                name={name}
+                image={image}
+                signOut={<SignOutButton />}
+              />
             </div>
           ) : (
             <a

@@ -19,6 +19,7 @@ import { eq, sql, and, gte } from "drizzle-orm";
 import { ensureReceipt } from "@/lib/receipt-generator";
 import { checkPaywall } from "@/lib/paywall";
 import { resolvePullRequest } from "@/lib/github-verify";
+import { extractSessionTags } from "@/lib/tags";
 import { randomUUID } from "node:crypto";
 import {
   lookupModelPrice,
@@ -394,6 +395,38 @@ export async function POST(req: NextRequest) {
       costResult != null ? costResult.estimatedCostUsd.toFixed(4) : null,
     modelPriceSnapshot: costResult?.modelPriceSnapshot ?? null,
   });
+
+  // Project this session's LLM taxonomy into the normalized session_tag corpus
+  // that powers the 60-day /tools/[slug] and /frameworks/[slug] entity pages.
+  // sessionId is freshly minted per upload (genId above), so a plain insert is
+  // safe — there are no stale rows to clear. The backfill script is the
+  // re-runnable path that uses delete+reinsert. Visibility is intentionally not
+  // copied here; entity-page queries join trail_session and filter at read time.
+  const sessionTags = extractSessionTags({
+    tool: s.tool,
+    toolsUsed: ai?.tools_used ?? null,
+    frameworks: ai?.frameworks ?? null,
+    models: aiModels,
+  });
+  if (sessionTags.length > 0) {
+    // Tag projection is non-critical metadata; never fail an otherwise-good
+    // upload because of it. The backfill script repairs any gaps.
+    try {
+      await db.insert(schema.sessionTag).values(
+        sessionTags.map((t) => ({
+          id: genId(),
+          sessionId,
+          tag: t.tag,
+          label: t.label,
+          kind: t.kind,
+          confidence: t.confidence.toFixed(3),
+          source: t.source,
+        })),
+      );
+    } catch (err) {
+      console.error("[upload] session_tag insert failed", { sessionId, err });
+    }
+  }
 
   // Insert a `native` attribution row whenever we computed a session-native
   // cost from per-event tokens. This is Path A of the cost attribution

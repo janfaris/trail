@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
+import { canFollow, toggleDecision } from "@/lib/follow";
 
 const MAX_FEATURED = 3;
 
@@ -154,4 +155,71 @@ export async function saveProfile(formData: FormData) {
     redirect(`/u/${me.handle}`);
   }
   redirect("/");
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Social graph — follow/unfollow another user. Idempotent: a unique index on
+// (followerId, followingId) plus onConflictDoNothing means double-clicks and
+// races never throw. Returns a structured result so the client can refresh
+// without surfacing noisy errors for expected cases (self-follow, anon, etc.).
+// ──────────────────────────────────────────────────────────────────────────
+export async function toggleFollow(followingId: string) {
+  let me: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    me = await requireUser();
+  } catch {
+    // Expired/anon session: return a structured result instead of throwing so
+    // the client can revert cleanly without hitting an error boundary.
+    return { ok: false as const, error: "unauthorized" };
+  }
+  if (!canFollow(me.id, followingId)) {
+    return { ok: false as const, error: "cannot follow this user" };
+  }
+
+  const target = await db.query.user.findFirst({
+    where: eq(schema.user.id, followingId),
+  });
+  if (!target) return { ok: false as const, error: "user not found" };
+  // Public profiles are handle-based, so disallow following handle-less users —
+  // they'd produce broken /u/<handle> links in the feed.
+  if (!target.handle) return { ok: false as const, error: "user not followable" };
+
+  const existing = await db.query.follow.findFirst({
+    where: and(
+      eq(schema.follow.followerId, me.id),
+      eq(schema.follow.followingId, followingId),
+    ),
+  });
+
+  const decision = toggleDecision(Boolean(existing));
+  if (decision === "removed") {
+    await db
+      .delete(schema.follow)
+      .where(
+        and(
+          eq(schema.follow.followerId, me.id),
+          eq(schema.follow.followingId, followingId),
+        ),
+      );
+  } else {
+    await db
+      .insert(schema.follow)
+      .values({
+        id: crypto.randomUUID(),
+        followerId: me.id,
+        followingId,
+      })
+      .onConflictDoNothing({
+        target: [schema.follow.followerId, schema.follow.followingId],
+      });
+  }
+
+  if (target.handle) revalidatePath(`/u/${target.handle}`);
+  const meRow = await db.query.user.findFirst({
+    where: eq(schema.user.id, me.id),
+  });
+  if (meRow?.handle) revalidatePath(`/u/${meRow.handle}`);
+  revalidatePath("/feed");
+
+  return { ok: true as const, following: decision === "added" };
 }
