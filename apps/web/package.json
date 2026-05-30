@@ -9,7 +9,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "recipes:backfill": "tsx scripts/backfill-recipes.ts"
+    "recipes:backfill": "tsx scripts/backfill-recipes.ts",
+    "tags:backfill": "tsx scripts/backfill-session-tags.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
