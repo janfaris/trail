@@ -176,6 +176,8 @@ function reactionSummary(row: BaseFeedRow): string {
 }
 
 function feedReason(row: BaseFeedRow): string {
+  if ("isFollowing" in row && row.isFollowing && row.handle)
+    return `Because you follow @${row.handle}`;
   if (row.commentCount > 0 && row.positiveReactions + row.negativeReactions > 0) {
     return `${pluralize(row.commentCount, "reply", "replies")} and ${reactionSummary(row).toLowerCase()}`;
   }
@@ -982,6 +984,7 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
 function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | null }) {
   const authorHref = profileHref(r);
   const currentReceiptHref = receiptHref(r);
+  const forkHref = `${currentReceiptHref}/fork`;
   const displayName = r.name || r.handle || "Trail builder";
   const handleLabel = r.handle ? `@${r.handle}` : "anonymous";
   const repoLabel = r.linkedRepo ?? r.repo;
@@ -1203,6 +1206,12 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               copiedLabel="Copied"
               className="min-h-9 rounded-full border-transparent bg-transparent px-3 text-[11px] text-zinc-500 hover:bg-zinc-900 hover:text-zinc-100"
             />
+            <Link
+              href={forkHref}
+              className="inline-flex min-h-9 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
+            >
+              Fork
+            </Link>
             <a
               href={tweetHref}
               target="_blank"

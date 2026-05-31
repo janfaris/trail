@@ -1,9 +1,11 @@
+import { FollowButton } from "@/components/follow-button";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
 import { sql } from "drizzle-orm";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +65,7 @@ type BuilderRow = {
   reactionCount: unknown;
   commentCount: unknown;
   latestSharedAt: Date;
+  isFollowing: boolean | null;
 };
 
 type StackRow = {
@@ -192,7 +195,19 @@ function githubRepoUrl(repo: string): string {
   return `https://github.com/${repo.replace(/^(https?:\/\/)?github\.com\//, "")}`;
 }
 
-async function loadDiscoverData(): Promise<DiscoverData> {
+function signInHref(callbackURL: string): string {
+  return `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
+async function loadViewerId(): Promise<string | null> {
+  if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) return null;
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  return session?.user?.id ?? null;
+}
+
+async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> {
   const { db } = await import("@/db/client");
 
   const publicSessions = sql`
@@ -326,9 +341,14 @@ async function loadDiscoverData(): Promise<DiscoverData> {
           coalesce(f."followerCount", 0)::int as "followerCount",
           br."reactionCount",
           br."commentCount",
-          br."latestSharedAt"
+          br."latestSharedAt",
+          coalesce(vf.follower_id is not null, false) as "isFollowing"
         from builder_receipts br
         left join followers f on f.following_id = br.id
+        left join follow vf
+          on vf.following_id = br.id
+         and vf.follower_id = ${viewerId}
+        where (${viewerId}::text is null or br.id <> ${viewerId})
         order by
           br."receiptCount" * 2
           + br."shippedCount" * 3
@@ -424,9 +444,10 @@ async function loadDiscoverData(): Promise<DiscoverData> {
 }
 
 export default async function DiscoverPage() {
+  const viewerId = await loadViewerId();
   let data = emptyData;
   try {
-    data = await loadDiscoverData();
+    data = await loadDiscoverData(viewerId);
   } catch (error) {
     console.error("Failed to load discovery data", error);
   }
@@ -526,7 +547,12 @@ export default async function DiscoverPage() {
                   />
                   <div className="mt-5 space-y-3">
                     {data.builders.map((builder, index) => (
-                      <BuilderCard key={builder.id} builder={builder} rank={index + 1} />
+                      <BuilderCard
+                        key={builder.id}
+                        builder={builder}
+                        rank={index + 1}
+                        viewerId={viewerId}
+                      />
                     ))}
                   </div>
                 </section>
@@ -656,6 +682,7 @@ function SectionHeader({
 
 function ReceiptCard({ receipt, rank }: { receipt: ReceiptRow; rank: number }) {
   const href = `/u/${receipt.handle}/${receipt.slug}`;
+  const forkHref = `${href}/fork`;
   const title = receiptTitle(receipt);
   const copy = receiptCopy(receipt);
   const url = shareUrl(receipt.handle, receipt.slug, PUBLIC_APP_URL);
@@ -700,10 +727,16 @@ function ReceiptCard({ receipt, rank }: { receipt: ReceiptRow; rank: number }) {
           </div>
         </div>
       </Link>
-      <div className="grid grid-cols-3 border-t border-zinc-900 bg-black/25 text-xs text-zinc-500 sm:grid-cols-[repeat(5,minmax(0,1fr))]">
+      <div className="grid grid-cols-3 border-t border-zinc-900 bg-black/25 text-xs text-zinc-500 sm:grid-cols-6">
         <ProofMetric label="events" value={formatCount(receipt.eventCount)} />
         <ProofMetric label="reactions" value={formatCount(receipt.reactions)} />
         <ProofMetric label="comments" value={formatCount(receipt.comments)} />
+        <Link
+          href={forkHref}
+          className="flex items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition hover:bg-lime-300/10 hover:text-lime-100"
+        >
+          fork
+        </Link>
         <Link
           href={href}
           className="flex items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition hover:bg-lime-300/10 hover:text-lime-100"
@@ -732,38 +765,67 @@ function ProofMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BuilderCard({ builder, rank }: { builder: BuilderRow; rank: number }) {
+function BuilderCard({
+  builder,
+  rank,
+  viewerId,
+}: {
+  builder: BuilderRow;
+  rank: number;
+  viewerId: string | null;
+}) {
   return (
-    <Link
-      href={`/u/${builder.handle}`}
-      className="group flex items-center gap-3 rounded-2xl border border-zinc-800 bg-black/35 p-3 transition hover:border-lime-300/40 hover:bg-lime-300/[0.06]"
-    >
-      <div className="relative h-11 w-11 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900">
-        <img
-          src={builderAvatar(builder)}
-          alt=""
-          className="h-full w-full object-cover"
-          width={44}
-          height={44}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-semibold text-white group-hover:text-lime-100">
-            {builderLabel(builder)}
-          </span>
-          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-500">
-            #{rank}
-          </span>
+    <div className="group rounded-2xl border border-zinc-800 bg-black/35 p-3 transition hover:border-lime-300/40 hover:bg-lime-300/[0.06]">
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/u/${builder.handle}`}
+          className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-900"
+        >
+          <img
+            src={builderAvatar(builder)}
+            alt=""
+            className="h-full w-full object-cover"
+            width={44}
+            height={44}
+          />
+        </Link>
+        <Link href={`/u/${builder.handle}`} className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-white group-hover:text-lime-100">
+              {builderLabel(builder)}
+            </span>
+            <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-500">
+              #{rank}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-xs text-zinc-500">@{builder.handle}</p>
+          <p className="mt-1 text-xs text-zinc-400">{builderReason(builder)}</p>
+        </Link>
+        <div className="text-right text-[11px] text-zinc-500">
+          <div className="font-semibold text-zinc-200">{formatCount(builder.receiptCount)}</div>
+          <div>receipts</div>
         </div>
-        <p className="mt-1 truncate text-xs text-zinc-500">@{builder.handle}</p>
-        <p className="mt-1 text-xs text-zinc-400">{builderReason(builder)}</p>
       </div>
-      <div className="text-right text-[11px] text-zinc-500">
-        <div className="font-semibold text-zinc-200">{formatCount(builder.receiptCount)}</div>
-        <div>receipts</div>
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-zinc-900 pt-3">
+        <span className="text-[11px] text-zinc-500">
+          {builder.isFollowing ? "In your graph" : "Add to Following"}
+        </span>
+        {viewerId ? (
+          <FollowButton
+            targetUserId={builder.id}
+            initialFollowing={builder.isFollowing === true}
+            className="min-h-8 px-3 text-[10px]"
+          />
+        ) : (
+          <Link
+            href={signInHref(`/u/${builder.handle}`)}
+            className="inline-flex min-h-8 items-center rounded-full bg-lime-300 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-lime-200"
+          >
+            Follow
+          </Link>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }
 
