@@ -3,31 +3,31 @@ import { SiteNav } from "@/components/site-nav";
 import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-/* Hallmark · macrostructure: 04-stat-led · genre: technical · theme: trail-dark-lime
+/* Hallmark · macrostructure: 05-proof-led · genre: technical · theme: trail-dark-lime
  * paper: oklch(15% 0.01 280) #09090b · accent: oklch(94% 0.27 130) #a7f300 (lime · cool axis)
  * display: Fraunces (italic-serif) · body: Geist · outlier: Geist Mono (chips/labels only)
- * sections: hero-stat · breakdown · how-it-works · what-trail-captures · install · footer
+ * sections: hero-proof · breakdown · how-it-works · what-trail-captures · install · footer
  * motion: none — typography only · contrast: pass · slop test: 69/69 ✓
- * The single number $3.77 is the design. Everything else qualifies it.
+ * A public profile is the design. Cost is evidence, not the headline.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Trail — a receipt for every PR you ship with AI",
+  title: "Trail — verified AI work history",
   description:
-    "Trail turns your AI coding sessions into receipts: the real dollar cost, the model, and the merged GitHub PR behind the work. Verifiable proof that compounds into a public track record.",
+    "Trail turns AI coding sessions into GitHub-linked receipts that compound into a public, recruiter-ready proof-of-work profile.",
   openGraph: {
-    title: "Trail — a receipt for every PR you ship with AI",
+    title: "Trail — verified AI work history",
     description:
-      "The real cost, the model, and the merged GitHub PR behind the work — one verifiable receipt. Receipts compound into a public builder track record.",
+      "GitHub-linked receipts for the AI work you actually ship — cost, model, transcript, and merged PR in one public profile.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trail — a receipt for every PR you ship with AI",
+    title: "Trail — verified AI work history",
     description:
-      "The real cost, the model, and the merged GitHub PR behind the work — one verifiable receipt. Receipts compound into a public builder track record.",
+      "GitHub-linked receipts for the AI work you actually ship — cost, model, transcript, and merged PR in one public profile.",
   },
 };
 
@@ -49,6 +49,12 @@ const HERO_STAT = {
   cachedTokens: "4,410,112",
   duration: "8h 27m",
 };
+
+const heroProofs = [
+  { label: "public receipts", value: "GitHub-linked", tone: "text-zinc-50" },
+  { label: "recruiter view", value: "shipped work only", tone: "text-[#a7f300]" },
+  { label: "sample receipt", value: "$3.77 · #23", tone: "text-zinc-50" },
+];
 
 // Anatomy of the same receipt — only fields that are independently true today.
 const receiptFields = [
@@ -120,72 +126,109 @@ export default async function Home() {
       <SiteNav currentPath="/" />
 
       <main className="flex-1">
-        {/* HERO — Stat-Led. The number IS the page above the fold. */}
-        <section className="mx-auto max-w-5xl px-6 lg:px-10 pt-24 md:pt-32 pb-20 md:pb-24">
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-10">
-            <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Receipts &nbsp;·&nbsp; verified
-            &nbsp;·&nbsp; one shipped PR
-          </div>
+        {/* HERO — Proof-led. The public work history is above the fold; cost is evidence. */}
+        <section className="mx-auto max-w-6xl px-6 lg:px-10 pt-20 md:pt-28 pb-20 md:pb-24">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+                <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;GitHub-linked receipts
+                &nbsp;·&nbsp; public profiles &nbsp;·&nbsp; recruiter-ready
+              </div>
 
-          {/* The number. Tabular figures, Fraunces, optical-size large. */}
-          <div className="flex items-baseline gap-3 mb-8">
-            <span className="font-display text-[28px] md:text-[40px] text-zinc-500 leading-none tabular-nums">
-              $
-            </span>
-            <span
-              className="font-display text-[120px] md:text-[200px] leading-[0.86] tracking-[-0.04em] text-zinc-50 tabular-nums"
-              style={{ fontFeatureSettings: '"tnum", "ss01"' }}
-            >
-              {HERO_STAT.cost}
-            </span>
-          </div>
+              <h1 className="font-display text-[58px] md:text-[96px] leading-[0.92] tracking-[-0.045em] text-zinc-50 max-w-[11ch] mb-8">
+                Prove the AI work you actually ship.
+              </h1>
 
-          {/* Qualifier — small, italic Fraunces, what the number is. */}
-          <p className="italic text-zinc-300 text-[17px] md:text-[20px] leading-[1.5] max-w-[42ch] mb-5">
-            …is what it cost to ship{" "}
-            <a
-              href={PR_HREF}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-50 underline decoration-[#a7f300]/60 underline-offset-4 decoration-2 hover:decoration-[#a7f300]"
-            >
-              {HERO_STAT.pr}
-            </a>{" "}
-            with {HERO_STAT.model} — a receipt anyone can verify on GitHub.
-          </p>
+              <p className="italic text-zinc-300 text-[18px] md:text-[23px] leading-[1.45] max-w-[52ch] mb-5">
+                Trail turns coding-agent sessions into public receipts tied to merged GitHub PRs —
+                the work, the model, the cost, and the proof in one profile.
+              </p>
 
-          <p className="text-[12px] font-mono text-zinc-500 mb-12">
-            <a
-              href={PR_HREF}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-[#a7f300] underline decoration-zinc-700 underline-offset-2 hover:decoration-[#a7f300]"
-            >
-              Verify the merged PR on GitHub ↗
-            </a>
-            <span className="text-zinc-700"> — the cost is Trail's; the merge is GitHub's.</span>
-          </p>
+              <p className="text-[12px] font-mono text-zinc-500 mb-12 max-w-[72ch] leading-[1.7]">
+                Cost is not the product. It is the audit trail. The product is a verified work
+                history you can send to recruiters, customers, collaborators, or anyone asking what
+                you have shipped with AI.
+              </p>
 
-          {/* Two equal CTAs. Side-by-side on desktop, stacked mobile. */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden">
-              <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap">
-                <span className="text-zinc-600">$&nbsp;</span>
-                {INSTALL}
-              </code>
-              <CopyButton value={INSTALL} />
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <Link
+                  href={SIGNIN_HREF}
+                  className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/50 bg-[#a7f300] text-black text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#c8ff5e] transition-colors"
+                >
+                  Start your proof profile →
+                </Link>
+                <Link
+                  href={PROFILE_HREF}
+                  className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-700 hover:text-zinc-50 transition-colors"
+                >
+                  View live profile
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden w-fit max-w-full">
+                <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap overflow-x-auto">
+                  <span className="text-zinc-600">$&nbsp;</span>
+                  {INSTALL}
+                </code>
+                <CopyButton value={INSTALL} />
+              </div>
             </div>
-            <Link
-              href={SIGNIN_HREF}
-              className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/40 bg-[#a7f300]/5 text-[#a7f300] text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#a7f300]/10 hover:border-[#a7f300]/60 transition-colors"
-            >
-              Sign in with GitHub →
-            </Link>
-          </div>
 
-          <p className="text-[12px] font-mono text-zinc-600">
-            Free tier · no card · local capture works offline until you ship.
-          </p>
+            <div className="border border-zinc-900 bg-black rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(167,243,0,0.04),0_30px_80px_rgba(0,0,0,0.45)]">
+              <div className="border-b border-zinc-900 px-5 py-4 flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    Public profile
+                  </div>
+                  <div className="font-display text-[24px] text-zinc-50 mt-1">@jankarlo.faris</div>
+                </div>
+                <span className="rounded-full border border-dashed border-zinc-700 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                  Badge locked
+                </span>
+              </div>
+
+              <div className="divide-y divide-zinc-900">
+                {heroProofs.map((proof) => (
+                  <div key={proof.label} className="px-5 py-4 grid grid-cols-[1fr_auto] gap-5">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                      {proof.label}
+                    </div>
+                    <div
+                      className={`font-mono text-[12px] uppercase tracking-[0.08em] ${proof.tone}`}
+                    >
+                      {proof.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-5">
+                <a
+                  href={PR_HREF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block rounded-lg border border-zinc-900 bg-zinc-950/70 p-4 hover:border-[#a7f300]/40 transition-colors"
+                >
+                  <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-5">
+                    Sample shipped receipt
+                  </div>
+                  <div className="flex items-baseline justify-between gap-6 mb-3">
+                    <div className="font-display text-[34px] leading-none text-zinc-50 tabular-nums">
+                      ${HERO_STAT.cost}
+                    </div>
+                    <div className="font-mono text-[11px] text-[#a7f300] uppercase tracking-[0.12em]">
+                      PR #23 ↗
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                    {HERO_STAT.model} session linked to{" "}
+                    <span className="text-zinc-300 group-hover:text-[#a7f300]">{HERO_STAT.pr}</span>
+                    . The cost is Trail's measurement; the merge is GitHub's public record.
+                  </p>
+                </a>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* BREAKDOWN — the number, decomposed. Hairline rules, tabular-nums everywhere. */}
