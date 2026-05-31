@@ -215,9 +215,104 @@ interface FeedRow extends BaseFeedRow {
 
 type FeedRowWithoutStats = Omit<BaseFeedRow, "positiveReactions" | "negativeReactions">;
 
+interface FeedStats {
+  receipts: number;
+  builders: number;
+  shipped: number;
+  reactions: number;
+}
+
+interface BuilderRecommendation {
+  id: string;
+  handle: string;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  receiptCount: number;
+  shippedCount: number;
+  reactionCount: number;
+  followerCount: number;
+  latestAt: Date | string | null;
+  topTools: string[];
+  isFollowing: boolean;
+}
+
+interface TrendingStack {
+  kind: string;
+  tag: string;
+  label: string;
+  receiptCount: number;
+  builderCount: number;
+}
+
+interface FeedDiscovery {
+  stats: FeedStats;
+  builders: BuilderRecommendation[];
+  stacks: TrendingStack[];
+}
+
+interface FeedStatsRaw {
+  [key: string]: unknown;
+  receipts: unknown;
+  builders: unknown;
+  shipped: unknown;
+  reactions: unknown;
+}
+
+interface BuilderRecommendationRaw {
+  [key: string]: unknown;
+  id: string;
+  handle: string;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  receiptCount: unknown;
+  shippedCount: unknown;
+  reactionCount: unknown;
+  followerCount: unknown;
+  latestAt: Date | string | null;
+  topTools: string[] | null;
+  isFollowing: boolean | null;
+}
+
+interface TrendingStackRaw {
+  [key: string]: unknown;
+  kind: string;
+  tag: string;
+  label: string | null;
+  receiptCount: unknown;
+  builderCount: unknown;
+}
+
 type FeedSearchParams = {
   view?: string | string[];
 };
+
+function rowsOf<T>(res: unknown): T[] {
+  if (Array.isArray(res)) return res as T[];
+  if (res && typeof res === "object" && "rows" in res) {
+    const rows = (res as { rows?: unknown }).rows;
+    if (Array.isArray(rows)) return rows as T[];
+  }
+  return [];
+}
+
+function toCount(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatCount(value: number): string {
+  return new Intl.NumberFormat("en", { notation: value >= 1000 ? "compact" : "standard" }).format(
+    value,
+  );
+}
+
+function stackHref(stack: TrendingStack): string {
+  if (stack.kind === "framework") return `/frameworks/${stack.tag}`;
+  if (stack.kind === "tool") return `/tools/${stack.tag}`;
+  return "/tools";
+}
 
 async function loadViewerId(): Promise<string | null> {
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) return null;
@@ -389,6 +484,274 @@ async function attachReactionStats(rows: FeedRowWithoutStats[]): Promise<BaseFee
   }));
 }
 
+async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery> {
+  const { db } = await import("@/db/client");
+
+  const [statsRes, buildersRes, stacksRes] = await Promise.all([
+    db.execute<FeedStatsRaw>(sql`
+      SELECT
+        count(DISTINCT ts.id) AS receipts,
+        count(DISTINCT ts.user_id) AS builders,
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) AS shipped,
+        count(sr.id) AS reactions
+      FROM trail_session ts
+      INNER JOIN "user" u ON u.id = ts.user_id
+      LEFT JOIN session_reaction sr ON sr.session_id = ts.id
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+    `),
+    db.execute<BuilderRecommendationRaw>(sql`
+      SELECT
+        u.id,
+        u.handle,
+        coalesce(u.name, u.handle) AS name,
+        u.image,
+        u.bio,
+        count(DISTINCT ts.id) AS "receiptCount",
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) AS "shippedCount",
+        count(DISTINCT sr.id) AS "reactionCount",
+        count(DISTINCT follower.follower_id) AS "followerCount",
+        max(coalesce(ts.shared_at, ts.started_at)) AS "latestAt",
+        array_remove(array_agg(DISTINCT ts.tool), NULL) AS "topTools",
+        coalesce(bool_or(viewer_follow.follower_id IS NOT NULL), false) AS "isFollowing"
+      FROM "user" u
+      INNER JOIN trail_session ts ON ts.user_id = u.id
+      LEFT JOIN session_reaction sr ON sr.session_id = ts.id
+      LEFT JOIN "follow" follower ON follower.following_id = u.id
+      LEFT JOIN "follow" viewer_follow
+        ON viewer_follow.following_id = u.id
+       AND viewer_follow.follower_id = ${viewerId}
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+        AND (${viewerId}::text IS NULL OR u.id <> ${viewerId})
+      GROUP BY u.id
+      ORDER BY
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) DESC,
+        count(DISTINCT sr.id) DESC,
+        max(coalesce(ts.shared_at, ts.started_at)) DESC
+      LIMIT 5
+    `),
+    db.execute<TrendingStackRaw>(sql`
+      SELECT
+        st.kind,
+        st.tag,
+        max(st.label) AS label,
+        count(DISTINCT ts.id) AS "receiptCount",
+        count(DISTINCT ts.user_id) AS "builderCount"
+      FROM session_tag st
+      INNER JOIN trail_session ts ON ts.id = st.session_id
+      INNER JOIN "user" u ON u.id = ts.user_id
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+        AND st.kind IN ('tool', 'framework', 'model')
+      GROUP BY st.kind, st.tag
+      ORDER BY
+        count(DISTINCT ts.id) DESC,
+        count(DISTINCT ts.user_id) DESC,
+        max(coalesce(ts.shared_at, ts.started_at)) DESC
+      LIMIT 8
+    `),
+  ]);
+
+  const statsRow = rowsOf<FeedStatsRaw>(statsRes)[0];
+  const stats: FeedStats = {
+    receipts: toCount(statsRow?.receipts),
+    builders: toCount(statsRow?.builders),
+    shipped: toCount(statsRow?.shipped),
+    reactions: toCount(statsRow?.reactions),
+  };
+
+  const builders = rowsOf<BuilderRecommendationRaw>(buildersRes).map((builder) => ({
+    id: builder.id,
+    handle: builder.handle,
+    name: builder.name,
+    image: builder.image,
+    bio: builder.bio,
+    receiptCount: toCount(builder.receiptCount),
+    shippedCount: toCount(builder.shippedCount),
+    reactionCount: toCount(builder.reactionCount),
+    followerCount: toCount(builder.followerCount),
+    latestAt: builder.latestAt,
+    topTools: Array.isArray(builder.topTools) ? builder.topTools.filter(Boolean).slice(0, 3) : [],
+    isFollowing: builder.isFollowing === true,
+  }));
+
+  const stacks = rowsOf<TrendingStackRaw>(stacksRes).map((stack) => ({
+    kind: stack.kind,
+    tag: stack.tag,
+    label: stack.label ?? formatToolName(stack.tag),
+    receiptCount: toCount(stack.receiptCount),
+    builderCount: toCount(stack.builderCount),
+  }));
+
+  return { stats, builders, stacks };
+}
+
+function FeedDiscoveryPanel({
+  discovery,
+  viewerId,
+}: {
+  discovery: FeedDiscovery;
+  viewerId: string | null;
+}) {
+  return (
+    <>
+      <section className="rounded-[26px] bg-[#101012] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_20px_70px_rgba(0,0,0,0.35)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+              Builder radar
+            </div>
+            <h3 className="mt-2 text-[20px] font-medium tracking-[-0.03em] text-zinc-50">
+              People shipping now
+            </h3>
+          </div>
+          <span className="rounded-full bg-black px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+            Follow graph
+          </span>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {discovery.builders.length === 0 ? (
+            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
+              Fresh builder recommendations appear here as more public receipts are published.
+            </p>
+          ) : (
+            discovery.builders.map((builder, index) => (
+              <div
+                key={builder.id}
+                className="group relative overflow-hidden rounded-[20px] bg-black/55 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black/80 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+              >
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#a7f300] opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="flex items-start gap-3">
+                  <Link href={`/u/${builder.handle}`} className="shrink-0">
+                    <Avatar
+                      src={builder.image ?? githubAvatar(builder.handle)}
+                      alt={builder.name}
+                      fallback={builder.handle}
+                      className="h-11 w-11 rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                    />
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <Link href={`/u/${builder.handle}`} className="min-w-0">
+                        <div className="truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-100">
+                          {builder.name}
+                        </div>
+                        <div className="truncate font-mono text-[11px] text-zinc-600">
+                          @{builder.handle}
+                        </div>
+                      </Link>
+                      <span className="rounded-full bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-500 tabular-nums">
+                        #{index + 1}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-500">
+                      {builder.bio ||
+                        `${formatCount(builder.shippedCount)} shipped receipts in public.`}
+                    </p>
+                    {builder.topTools.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {builder.topTools.map((tool) => (
+                          <span
+                            key={tool}
+                            className="rounded-full bg-zinc-900 px-2 py-1 font-mono text-[10px] text-zinc-400"
+                          >
+                            {formatToolName(tool)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.11em] text-zinc-600">
+                      <span>{formatCount(builder.receiptCount)} receipts</span>
+                      <span>{formatCount(builder.reactionCount)} reactions</span>
+                      <span>{formatCount(builder.followerCount)} followers</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="font-mono text-[10px] text-zinc-600">
+                        Latest{" "}
+                        {builder.latestAt ? <RelativeTime date={builder.latestAt} /> : "recently"}
+                      </span>
+                      {viewerId ? (
+                        <FollowButton
+                          targetUserId={builder.id}
+                          initialFollowing={builder.isFollowing}
+                          className="h-8 px-3 text-[10px]"
+                        />
+                      ) : (
+                        <TrailLink
+                          href={signInHref(`/u/${builder.handle}`)}
+                          className="inline-flex h-8 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+                        >
+                          Follow
+                        </TrailLink>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+              Trending stacks
+            </div>
+            <h3 className="mt-2 text-[18px] font-medium tracking-[-0.03em] text-zinc-100">
+              What the network is using
+            </h3>
+          </div>
+          <Link
+            href="/tools"
+            className="rounded-full bg-black px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-colors hover:text-white"
+          >
+            Explore
+          </Link>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          {discovery.stacks.length === 0 ? (
+            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
+              Stack trends will fill in as published receipts are tagged.
+            </p>
+          ) : (
+            discovery.stacks.map((stack) => (
+              <Link
+                key={`${stack.kind}:${stack.tag}`}
+                href={stackHref(stack)}
+                className="group flex items-center justify-between gap-4 rounded-[18px] bg-black/55 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium tracking-[-0.02em] text-zinc-200">
+                    {stack.label}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                    {stack.kind}
+                  </div>
+                </div>
+                <div className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 tabular-nums">
+                  <div className="text-[#a7f300]">{formatCount(stack.receiptCount)} receipts</div>
+                  <div>{formatCount(stack.builderCount)} builders</div>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default async function FeedPage({
   searchParams,
 }: {
@@ -399,14 +762,17 @@ export default async function FeedPage({
 
   let viewerId: string | null;
   let rows: FeedRow[];
+  let discovery: FeedDiscovery;
 
+  viewerId = await loadViewerId();
   if (view === "following") {
-    viewerId = await loadViewerId();
     if (!viewerId) redirect(FOLLOWING_SIGN_IN_HREF);
-    rows = await loadFollowingFeed(viewerId);
+    [rows, discovery] = await Promise.all([
+      loadFollowingFeed(viewerId),
+      loadFeedDiscovery(viewerId),
+    ]);
   } else {
-    viewerId = await loadViewerId();
-    rows = await loadPublicFeed(viewerId);
+    [rows, discovery] = await Promise.all([loadPublicFeed(viewerId), loadFeedDiscovery(viewerId)]);
   }
 
   const isFollowingView = view === "following";
@@ -416,7 +782,6 @@ export default async function FeedPage({
     : "Public AI-building sessions stay open. Sign in only when you want to follow, react, and build a personal timeline.";
   const feedTitle = isFollowingView ? "Your builder radar." : "Watch AI builders ship in public.";
   const feedCountLabel = `${rows.length} ${rows.length === 1 ? "receipt" : "receipts"}`;
-  const identityLabel = viewerId ? "Signed in" : "Anonymous mode";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -453,11 +818,12 @@ export default async function FeedPage({
                   </Link>
                 </div>
 
-                <dl className="mt-8 grid max-w-2xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-3">
+                <dl className="mt-8 grid max-w-3xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-4">
                   {[
-                    ["Mode", identityLabel],
-                    ["Current view", isFollowingView ? "Following" : "Everyone"],
-                    ["Loaded", feedCountLabel],
+                    ["Builders", formatCount(discovery.stats.builders)],
+                    ["Receipts", formatCount(discovery.stats.receipts)],
+                    ["Shipped", formatCount(discovery.stats.shipped)],
+                    ["Reactions", formatCount(discovery.stats.reactions)],
                   ].map(([label, value]) => (
                     <div key={label} className="bg-black/70 px-4 py-3">
                       <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
@@ -800,8 +1166,14 @@ export default async function FeedPage({
             )}
           </section>
 
+          <div className="space-y-4 lg:hidden">
+            <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+          </div>
+
           <aside className="hidden lg:block">
             <div className="sticky top-24 space-y-4">
+              <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+
               <section className="rounded-[26px] bg-zinc-950 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.26)]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
                   How to read it
