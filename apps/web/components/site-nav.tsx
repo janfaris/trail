@@ -16,6 +16,7 @@ const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
+  { href: "/notifications", label: "Inbox" },
   { href: "/dashboard", label: "Dashboard" },
 ];
 
@@ -32,10 +33,12 @@ function NavLinkItem({
   link,
   currentPath,
   className,
+  badge,
 }: {
   link: NavLink;
   currentPath?: string;
   className?: string;
+  badge?: string | null;
 }) {
   if (link.external) {
     return (
@@ -53,6 +56,11 @@ function NavLinkItem({
   return (
     <Link href={link.href} className={linkClass(link.href, currentPath, className)}>
       {link.label}
+      {badge ? (
+        <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-[#a7f300] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -61,9 +69,10 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
   let handle: string | null = null;
   let name: string | null = null;
   let image: string | null = null;
+  let unreadNotifications = 0;
 
   if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
-    const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
+    const [{ headers }, { and, eq, isNull }, { auth }, { db, schema }] = await Promise.all([
       import("next/headers"),
       import("drizzle-orm"),
       import("@/lib/auth"),
@@ -78,15 +87,26 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
     } catch {
       sessionInfo = null;
     }
-    const userRow = sessionInfo?.user
-      ? await db.query.user.findFirst({ where: eq(schema.user.id, sessionInfo.user.id) })
-      : null;
-    handle = userRow?.handle ?? null;
-    name = userRow?.name ?? null;
-    image = userRow?.image ?? null;
+    const userId = sessionInfo?.user?.id;
+    if (userId) {
+      const [userRow, unreadRows] = await Promise.all([
+        db.query.user.findFirst({ where: eq(schema.user.id, userId) }),
+        db
+          .select({ id: schema.notification.id })
+          .from(schema.notification)
+          .where(and(eq(schema.notification.userId, userId), isNull(schema.notification.readAt)))
+          .limit(10),
+      ]);
+      handle = userRow?.handle ?? null;
+      name = userRow?.name ?? null;
+      image = userRow?.image ?? null;
+      unreadNotifications = unreadRows.length;
+    }
   }
 
   const mobileLinks = handle ? SIGNED_IN_LINKS : PRIMARY_LINKS;
+  const notificationBadge =
+    unreadNotifications >= 10 ? "9+" : unreadNotifications > 0 ? String(unreadNotifications) : null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/80 backdrop-blur-md">
@@ -110,6 +130,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
                   link={link}
                   currentPath={currentPath}
                   className="hidden md:inline"
+                  badge={link.href === "/notifications" ? notificationBadge : null}
                 />
               ))}
               <ProfileMenu handle={handle} name={name} image={image} signOut={<SignOutButton />} />
@@ -131,6 +152,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
             link={link}
             currentPath={currentPath}
             className="inline-flex min-h-8 shrink-0 items-center rounded-full bg-black/35 px-3 font-mono uppercase tracking-[0.12em] shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+            badge={link.href === "/notifications" ? notificationBadge : null}
           />
         ))}
       </nav>

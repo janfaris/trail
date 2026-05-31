@@ -1,28 +1,37 @@
-import Link from "next/link";
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { db, schema } from "@/db/client";
-import { eq, and, asc } from "drizzle-orm";
-import { TimelineEvent, type EventData } from "@/components/timeline-event";
-import { ToolIcon } from "@/components/tool-icon";
+import { CommentThread, type ReceiptComment } from "@/components/comment-thread";
 import { CopyButton } from "@/components/copy-button";
-import { RelativeTime } from "@/components/relative-time";
-import { absoluteTime, durationBetween } from "@/lib/time";
-import { shareUrl, tweetIntent } from "@/lib/share";
-import { deriveTitle } from "@/lib/derive-title";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import { ExplainButton } from "@/components/explain-button";
 import { FileDiff } from "@/components/file-diff";
-import { RecipeCard } from "@/components/recipe-card";
 import { ForkButton } from "@/components/fork-button";
 import { ForkButtons } from "@/components/fork-buttons";
 import { ReactionBar } from "@/components/reaction-bar";
-import { TimelineToggle } from "@/components/timeline-toggle";
-import { ReceiptBlock } from "@/components/receipt-block";
 import { ReceiptActions } from "@/components/receipt-actions";
+import { ReceiptBlock } from "@/components/receipt-block";
+import { RecipeCard } from "@/components/recipe-card";
+import { RelativeTime } from "@/components/relative-time";
 import { SessionCostBlock, SessionCostBlockSkeleton } from "@/components/session-cost-block";
+import { type EventData, TimelineEvent } from "@/components/timeline-event";
+import { TimelineToggle } from "@/components/timeline-toggle";
+import { ToolIcon } from "@/components/tool-icon";
+import { db, schema } from "@/db/client";
+import { auth } from "@/lib/auth";
+import { deriveTitle } from "@/lib/derive-title";
+import { shareUrl, tweetIntent } from "@/lib/share";
+import { absoluteTime, durationBetween } from "@/lib/time";
+import { and, asc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+
+function signInHref(callbackURL: string): string {
+  return `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
 
 export async function generateMetadata({
   params,
@@ -33,7 +42,11 @@ export async function generateMetadata({
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return {};
   const sessionRow = await db.query.trailSession.findFirst({
-    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
+    where: and(
+      eq(schema.trailSession.userId, userRow.id),
+      eq(schema.trailSession.slug, slug),
+      eq(schema.trailSession.visibility, "public"),
+    ),
   });
   if (!sessionRow) return {};
   const firstPrompt = await db.query.event.findFirst({
@@ -46,8 +59,7 @@ export async function generateMetadata({
       : undefined;
   const title = sessionRow.title || deriveTitle(fpText, sessionRow.slug);
   const desc =
-    sessionRow.summary ||
-    `${sessionRow.tool} · ${sessionRow.eventCount} events · @${user}`;
+    sessionRow.summary || `${sessionRow.tool} · ${sessionRow.eventCount} events · @${user}`;
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
   const canonical = `${base}/u/${user}/${slug}`;
   const ogImage = `${base}/api/receipt/${sessionRow.id}/image.png`;
@@ -92,17 +104,6 @@ export default async function SessionView({
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
 
-  const sessionRow = await db.query.trailSession.findFirst({
-    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
-  });
-  if (!sessionRow) return notFound();
-
-  const events = await db
-    .select()
-    .from(schema.event)
-    .where(eq(schema.event.sessionId, sessionRow.id))
-    .orderBy(asc(schema.event.idx));
-
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("host") ?? "localhost:3000";
@@ -113,17 +114,74 @@ export default async function SessionView({
   } catch {
     viewer = null;
   }
-  const canExplain = !!viewer?.user;
+
+  const sessionRow = await db.query.trailSession.findFirst({
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
+  });
+  if (!sessionRow) return notFound();
+
   const isOwner = viewer?.user?.id === userRow.id;
+  if (sessionRow.visibility !== "public" && !isOwner) return notFound();
+
+  const events = await db
+    .select()
+    .from(schema.event)
+    .where(eq(schema.event.sessionId, sessionRow.id))
+    .orderBy(asc(schema.event.idx));
+
+  const canExplain = !!viewer?.user;
 
   // Look up an existing Pulse Recap for this session — surfaced in the
   // header actions so owners see "Open" instead of "Generate" once made.
   const existingPulseRecap = await db.query.recap.findFirst({
-    where: and(
-      eq(schema.recap.sessionId, sessionRow.id),
-      eq(schema.recap.tier, "pulse"),
-    ),
+    where: and(eq(schema.recap.sessionId, sessionRow.id), eq(schema.recap.tier, "pulse")),
     columns: { slug: true },
+  });
+
+  const [commentRows, viewerRow] = await Promise.all([
+    db
+      .select({
+        id: schema.sessionComment.id,
+        parentId: schema.sessionComment.parentId,
+        body: schema.sessionComment.body,
+        createdAt: schema.sessionComment.createdAt,
+        updatedAt: schema.sessionComment.updatedAt,
+        deletedAt: schema.sessionComment.deletedAt,
+        authorId: schema.user.id,
+        authorName: schema.user.name,
+        authorHandle: schema.user.handle,
+        authorImage: schema.user.image,
+      })
+      .from(schema.sessionComment)
+      .innerJoin(schema.user, eq(schema.sessionComment.userId, schema.user.id))
+      .where(eq(schema.sessionComment.sessionId, sessionRow.id))
+      .orderBy(asc(schema.sessionComment.createdAt), asc(schema.sessionComment.id))
+      .limit(200),
+    viewer?.user?.id
+      ? db.query.user.findFirst({
+          where: eq(schema.user.id, viewer.user.id),
+          columns: { id: true, name: true, handle: true, image: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  const comments: ReceiptComment[] = commentRows.map((comment) => {
+    const deletedAt = comment.deletedAt ? toIso(comment.deletedAt) : null;
+
+    return {
+      id: comment.id,
+      parentId: comment.parentId,
+      body: deletedAt ? null : comment.body,
+      createdAt: toIso(comment.createdAt),
+      updatedAt: toIso(comment.updatedAt),
+      deletedAt,
+      author: {
+        id: comment.authorId,
+        name: comment.authorName,
+        handle: comment.authorHandle,
+        image: comment.authorImage,
+      },
+    };
   });
 
   const duration = durationBetween(sessionRow.startedAt, sessionRow.endedAt);
@@ -142,9 +200,7 @@ export default async function SessionView({
     keyPromptIdxs.length > 0
       ? events
           .filter(
-            (e) =>
-              keyPromptIdxs.includes(e.idx) &&
-              (e.data as { kind?: string }).kind === "prompt",
+            (e) => keyPromptIdxs.includes(e.idx) && (e.data as { kind?: string }).kind === "prompt",
           )
           .map((e) => ({
             idx: e.idx,
@@ -196,6 +252,7 @@ export default async function SessionView({
                   title={`Shipped in ${sessionRow.linkedRepo}@${sessionRow.linkedCommitSha}`}
                 >
                   <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                    <title>GitHub</title>
                     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
                   </svg>
                   Shipped {sessionRow.linkedCommitSha.slice(0, 7)}
@@ -235,6 +292,7 @@ export default async function SessionView({
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <title>X</title>
               <path d="M12.6 1.5h2.3L9.85 7.27 15.7 14.5h-4.66l-3.65-4.77L3.2 14.5H.88l5.4-6.17L.66 1.5h4.78l3.3 4.36zm-.81 11.6h1.27L4.27 2.82H2.9z" />
             </svg>
             Share to X
@@ -319,10 +377,7 @@ export default async function SessionView({
         />
 
         {highlightIdxs.length > 0 && (
-          <TimelineToggle
-            totalEvents={events.length}
-            highlightCount={highlightIdxs.length}
-          />
+          <TimelineToggle totalEvents={events.length} highlightCount={highlightIdxs.length} />
         )}
 
         <details className="group mt-8">
@@ -338,21 +393,24 @@ export default async function SessionView({
             {visibleEvents.map((e) => {
               const ev = e.data as EventData;
               if (ev.kind === "file_diff") {
-                return (
-                  <FileDiff
-                    key={e.id}
-                    path={ev.path}
-                    before={ev.before}
-                    after={ev.after}
-                  />
-                );
+                return <FileDiff key={e.id} path={ev.path} before={ev.before} after={ev.after} />;
               }
               return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
             })}
           </div>
         </details>
 
-        <ReactionBar slug={slug} />
+        <div className="mt-10 space-y-6">
+          <ReactionBar slug={slug} authorHandle={userRow.handle} />
+          <CommentThread
+            slug={slug}
+            authorHandle={userRow.handle}
+            ownerId={userRow.id}
+            initialComments={comments}
+            viewer={viewerRow ?? null}
+            signInHref={signInHref(`/u/${user}/${slug}#conversation`)}
+          />
+        </div>
       </main>
     </div>
   );

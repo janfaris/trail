@@ -1,12 +1,9 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
-import { eq, and, sql } from "drizzle-orm";
-import { headers } from "next/headers";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Phase 1.6 — session reactions ("worked" / "needs-tweak" / "broken").
 // GET   → public counts per kind + (if logged in) which kinds the viewer set.
@@ -15,15 +12,44 @@ import { revalidatePath } from "next/cache";
 
 const KIND_RE = /^(worked|needs-tweak|broken)$/;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+function requestedAuthorHandle(req: NextRequest) {
+  const authorHandle = req.nextUrl.searchParams.get("user")?.trim();
+  return authorHandle && authorHandle.length > 0 ? authorHandle : null;
+}
+
+async function loadReceipt(req: NextRequest, slug: string) {
+  const authorHandle = requestedAuthorHandle(req);
+  const { db, schema } = await import("@/db/client");
+
+  if (!authorHandle) {
+    return { db, schema, receipt: null, error: "Receipt owner is required." };
+  }
+
+  const rows = await db
+    .select({
+      id: schema.trailSession.id,
+      userId: schema.trailSession.userId,
+      authorHandle: schema.user.handle,
+    })
+    .from(schema.trailSession)
+    .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
+    .where(
+      and(
+        eq(schema.trailSession.slug, slug),
+        eq(schema.user.handle, authorHandle),
+        eq(schema.trailSession.visibility, "public"),
+      ),
+    )
+    .limit(1);
+
+  return { db, schema, receipt: rows[0] ?? null, error: null };
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const row = await db.query.trailSession.findFirst({
-    where: eq(schema.trailSession.slug, slug),
-  });
-  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+  if (error) return NextResponse.json({ error }, { status: 400 });
+  if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const counts = (await db
     .select({
@@ -31,9 +57,10 @@ export async function GET(
       count: sql<number>`count(*)::int`,
     })
     .from(schema.sessionReaction)
-    .where(eq(schema.sessionReaction.sessionId, row.id))
+    .where(eq(schema.sessionReaction.sessionId, receipt.id))
     .groupBy(schema.sessionReaction.kind)) as { kind: string; count: number }[];
 
+  const { auth } = await import("@/lib/auth");
   const sess = await auth.api.getSession({ headers: req.headers });
   let mine: string[] = [];
   if (sess?.user) {
@@ -42,7 +69,7 @@ export async function GET(
       .from(schema.sessionReaction)
       .where(
         and(
-          eq(schema.sessionReaction.sessionId, row.id),
+          eq(schema.sessionReaction.sessionId, receipt.id),
           eq(schema.sessionReaction.userId, sess.user.id),
         ),
       );
@@ -51,15 +78,14 @@ export async function GET(
   return NextResponse.json({ counts, mine });
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const sess = await auth.api.getSession({ headers: await headers() });
-  if (!sess?.user) {
+  const { auth } = await import("@/lib/auth");
+  const sess = await auth.api.getSession({ headers: req.headers });
+  if (!sess?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const actorId = sess.user.id;
   let body: { kind?: string; note?: string };
   try {
     body = (await req.json()) as { kind?: string; note?: string };
@@ -73,10 +99,9 @@ export async function POST(
     );
   }
 
-  const row = await db.query.trailSession.findFirst({
-    where: eq(schema.trailSession.slug, slug),
-  });
-  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+  if (error) return NextResponse.json({ error }, { status: 400 });
+  if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Toggle: if (session, user, kind) row exists, delete it; else insert.
   const existing = await db
@@ -84,33 +109,52 @@ export async function POST(
     .from(schema.sessionReaction)
     .where(
       and(
-        eq(schema.sessionReaction.sessionId, row.id),
-        eq(schema.sessionReaction.userId, sess.user.id),
+        eq(schema.sessionReaction.sessionId, receipt.id),
+        eq(schema.sessionReaction.userId, actorId),
         eq(schema.sessionReaction.kind, body.kind),
       ),
     )
     .limit(1);
 
   let action: "added" | "removed";
-  if (existing.length > 0) {
+  const existingReaction = existing[0];
+  if (existingReaction) {
     await db
       .delete(schema.sessionReaction)
-      .where(eq(schema.sessionReaction.id, existing[0]!.id));
+      .where(eq(schema.sessionReaction.id, existingReaction.id));
     action = "removed";
   } else {
-    await db.insert(schema.sessionReaction).values({
-      id: crypto.randomUUID(),
-      sessionId: row.id,
-      userId: sess.user.id,
-      kind: body.kind,
-      note: body.note?.slice(0, 200) ?? null,
-    });
+    await db
+      .insert(schema.sessionReaction)
+      .values({
+        id: crypto.randomUUID(),
+        sessionId: receipt.id,
+        userId: actorId,
+        kind: body.kind,
+        note: body.note?.slice(0, 200) ?? null,
+      })
+      .onConflictDoNothing({
+        target: [
+          schema.sessionReaction.sessionId,
+          schema.sessionReaction.userId,
+          schema.sessionReaction.kind,
+        ],
+      });
+    if (receipt.userId !== actorId) {
+      await db
+        .insert(schema.notification)
+        .values({
+          id: crypto.randomUUID(),
+          userId: receipt.userId,
+          actorId,
+          type: "session_reaction",
+          sessionId: receipt.id,
+        })
+        .onConflictDoNothing();
+    }
     action = "added";
   }
 
-  const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.id, row.userId),
-  });
-  if (userRow?.handle) revalidatePath(`/u/${userRow.handle}/${slug}`);
+  if (receipt.authorHandle) revalidatePath(`/u/${receipt.authorHandle}/${slug}`);
   return NextResponse.json({ ok: true, action });
 }

@@ -1,15 +1,16 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
-  integer,
-  boolean,
-  jsonb,
-  numeric,
   uniqueIndex,
-  index,
-  check,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -132,13 +133,13 @@ export const trailSession = pgTable(
     // Phase 1 taxonomy — LLM-extracted facets surfaced at /learn.
     toolsUsed: jsonb("tools_used").$type<string[]>(),
     frameworks: jsonb("frameworks").$type<string[]>(),
-    taskType: text("task_type"),       // "onboarding"|"debugging"|"migration"|"spike"|"shipped"|"refactor"|"research"|"other"
+    taskType: text("task_type"), // "onboarding"|"debugging"|"migration"|"spike"|"shipped"|"refactor"|"research"|"other"
     models: jsonb("models").$type<string[]>(),
-    outcome: text("outcome"),          // "shipped"|"abandoned"|"rabbithole"|"unknown"
+    outcome: text("outcome"), // "shipped"|"abandoned"|"rabbithole"|"unknown"
     // Phase 2 — GitHub linkage (autodetected at record-time from git remote).
-    linkedPrUrl: text("linked_pr_url"),       // https://github.com/<owner>/<repo>/pull/<n>
+    linkedPrUrl: text("linked_pr_url"), // https://github.com/<owner>/<repo>/pull/<n>
     linkedCommitSha: text("linked_commit_sha"),
-    linkedRepo: text("linked_repo"),          // <owner>/<repo>
+    linkedRepo: text("linked_repo"), // <owner>/<repo>
     // Phase 2 receipts — set when verifyShipped() confirms linkedCommitSha
     // is reachable from the default branch of linkedRepo.
     receiptVerifiedAt: timestamp("receipt_verified_at"),
@@ -220,9 +221,7 @@ export const discoverFeed = pgTable(
       .references(() => trailSession.slug, { onDelete: "cascade" }),
     rank: integer("rank").notNull(),
     score: numeric("score", { precision: 10, scale: 4 }).notNull(),
-    refreshedAt: timestamp("refreshed_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     rankIdx: index("discover_feed_rank_idx").on(t.rank),
@@ -245,12 +244,75 @@ export const sessionReaction = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(), // 'worked' | 'needs-tweak' | 'broken' | 'worked-verified'
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     sessionIdx: index("session_reaction_session_idx").on(t.sessionId, t.kind),
+    userKindIdx: uniqueIndex("session_reaction_user_kind_idx").on(t.sessionId, t.userId, t.kind),
+  }),
+);
+
+// Phase 2 — public receipt conversation. Root comments may have one level of
+// replies; deletes are soft so reply context stays readable.
+export const sessionComment = pgTable(
+  "session_comment",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    parentId: text("parent_id").references((): AnyPgColumn => sessionComment.id, {
+      onDelete: "cascade",
+    }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedById: text("deleted_by_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    sessionCreatedIdx: index("session_comment_session_created_idx").on(t.sessionId, t.createdAt),
+    parentIdx: index("session_comment_parent_idx").on(t.parentId, t.createdAt),
+    userIdx: index("session_comment_user_idx").on(t.userId, t.createdAt),
+  }),
+);
+
+// Phase 2 — notification hooks for social activity. The first producer is
+// comments/replies; read surfaces can evolve without rewriting activity rows.
+export const notification = pgTable(
+  "notification",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    type: text("type").notNull(),
+    sessionId: text("session_id").references(() => trailSession.id, {
+      onDelete: "cascade",
+    }),
+    commentId: text("comment_id").references(() => sessionComment.id, {
+      onDelete: "set null",
+    }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userReadCreatedIdx: index("notification_user_read_created_idx").on(
+      t.userId,
+      t.readAt,
+      t.createdAt,
+    ),
+    sessionIdx: index("notification_session_idx").on(t.sessionId, t.createdAt),
+    reactionActivityUniq: uniqueIndex("notification_reaction_activity_uniq")
+      .on(t.userId, t.actorId, t.sessionId, t.type)
+      .where(sql`${t.type} = 'session_reaction'`),
+    followActivityUniq: uniqueIndex("notification_follow_activity_uniq")
+      .on(t.userId, t.actorId, t.type)
+      .where(sql`${t.type} = 'follow'`),
   }),
 );
 
@@ -339,9 +401,7 @@ export const cliToken = pgTable("cli_token", {
   cookieValue: text("cookie_value"),
   userHandle: text("user_handle"),
   status: text("status").notNull().default("pending"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });
 
@@ -367,11 +427,7 @@ export const modelPrice = pgTable(
   },
   (t) => ({
     vendorModelIdx: index("model_price_vendor_model_idx").on(t.vendor, t.modelId),
-    effectiveIdx: index("model_price_effective_idx").on(
-      t.vendor,
-      t.modelId,
-      t.effectiveFrom,
-    ),
+    effectiveIdx: index("model_price_effective_idx").on(t.vendor, t.modelId, t.effectiveFrom),
     // Enforce "only one active row per (vendor, model_id)" where active means
     // effective_to IS NULL. Without this, lookupModelPrice would pick one of
     // multiple active rows nondeterministically and silently misprice receipts.
@@ -399,18 +455,11 @@ export const vendorConnection = pgTable(
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     syncStatus: text("sync_status").notNull().default("pending"),
     syncErrorMessage: text("sync_error_message"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    userVendorIdx: uniqueIndex("vendor_connection_user_vendor_idx").on(
-      t.userId,
-      t.vendor,
-    ),
+    userVendorIdx: uniqueIndex("vendor_connection_user_vendor_idx").on(t.userId, t.vendor),
   }),
 );
 
@@ -446,9 +495,7 @@ export const vendorUsageBucket = pgTable(
     serviceTier: text("service_tier"),
     contextWindow: text("context_window"),
     uncachedInputTokens: integer("uncached_input_tokens").notNull().default(0),
-    cacheCreationInputTokens: integer("cache_creation_input_tokens")
-      .notNull()
-      .default(0),
+    cacheCreationInputTokens: integer("cache_creation_input_tokens").notNull().default(0),
     cacheReadInputTokens: integer("cache_read_input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     estimatedCostUsd: numeric("estimated_cost_usd", { precision: 12, scale: 6 }),
@@ -460,9 +507,7 @@ export const vendorUsageBucket = pgTable(
       cachedCreationUsdPerMtok: number | null;
       capturedAt: string;
     }>(),
-    syncedAt: timestamp("synced_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
     rawPayload: jsonb("raw_payload"), // full API row for debugging — null OK
   },
   (t) => ({
@@ -516,18 +561,15 @@ export const sessionCostAttribution = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     source: text("source").notNull(), // 'native' | 'fanout_anthropic' | 'fanout_openai'
-    vendorBucketId: text("vendor_bucket_id").references(
-      () => vendorUsageBucket.id,
-      { onDelete: "set null" },
-    ), // null for 'native'
+    vendorBucketId: text("vendor_bucket_id").references(() => vendorUsageBucket.id, {
+      onDelete: "set null",
+    }), // null for 'native'
     attributedCostUsd: numeric("attributed_cost_usd", {
       precision: 12,
       scale: 6,
     }).notNull(),
     attributionMethod: text("attribution_method").notNull(), // 'session_native' | 'fanout_by_duration' | 'fanout_evenly'
-    attributedAt: timestamp("attributed_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    attributedAt: timestamp("attributed_at", { withTimezone: true }).notNull().defaultNow(),
     notes: text("notes"),
   },
   (t) => ({
@@ -559,9 +601,7 @@ export const spendAudit = pgTable(
     // was bucketed (UTC day). Two runs on the same calendar day for the
     // same window share a bucket.
     windowBucket: text("window_bucket").notNull(),
-    generatedAt: timestamp("generated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
     model: text("model").notNull(),
     // Top-level summary: $-savings the model thinks the user could capture
     // by applying every finding.
@@ -570,13 +610,15 @@ export const spendAudit = pgTable(
     auditCostUsd: numeric("audit_cost_usd", { precision: 10, scale: 4 }),
     // [{title, severity:'low'|'medium'|'high', recommendation,
     //   estimated_monthly_savings_usd, evidence_event_ids?:string[]}]
-    findings: jsonb("findings").notNull().$type<Array<{
-      title: string;
-      severity: "low" | "medium" | "high";
-      recommendation: string;
-      estimatedMonthlySavingsUsd: number;
-      evidenceEventIds?: string[];
-    }>>(),
+    findings: jsonb("findings").notNull().$type<
+      Array<{
+        title: string;
+        severity: "low" | "medium" | "high";
+        recommendation: string;
+        estimatedMonthlySavingsUsd: number;
+        evidenceEventIds?: string[];
+      }>
+    >(),
     // Anonymize report kept for transparency / debugging.
     redactionReport: jsonb("redaction_report").$type<{
       total: number;
@@ -586,7 +628,11 @@ export const spendAudit = pgTable(
   },
   (t) => ({
     userIdx: index("spend_audit_user_idx").on(t.userId, t.generatedAt),
-    bucketIdx: uniqueIndex("spend_audit_user_window_bucket_idx").on(t.userId, t.windowDays, t.windowBucket),
+    bucketIdx: uniqueIndex("spend_audit_user_window_bucket_idx").on(
+      t.userId,
+      t.windowDays,
+      t.windowBucket,
+    ),
   }),
 );
 

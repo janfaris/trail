@@ -1,12 +1,12 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
+import { auth } from "@/lib/auth";
 import { canFollow, toggleDecision } from "@/lib/follow";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 const MAX_FEATURED = 3;
 
@@ -85,7 +85,7 @@ export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
   if (me?.handle) {
     revalidatePath(`/u/${me.handle}`);
     revalidatePath(`/u/${me.handle}/interview`);
-    revalidatePath(`/dashboard`);
+    revalidatePath("/dashboard");
   }
   return { ok: true, updated: owned.length };
 }
@@ -104,7 +104,7 @@ export async function bulkSetOutcome(ids: string[], outcome: Outcome) {
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
   if (me?.handle) {
     revalidatePath(`/u/${me.handle}/interview`);
-    revalidatePath(`/dashboard`);
+    revalidatePath("/dashboard");
   }
   return { ok: true, updated: owned.length };
 }
@@ -116,14 +116,12 @@ export async function bulkDeleteSessions(ids: string[]) {
   // Drizzle schema declares ON DELETE CASCADE for event/reaction/etc. → the
   // session delete sweeps children. We assert ownership above so a malicious
   // caller can't nuke another user's rows via inArray.
-  await db
-    .delete(schema.trailSession)
-    .where(inArray(schema.trailSession.id, owned));
+  await db.delete(schema.trailSession).where(inArray(schema.trailSession.id, owned));
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
   if (me?.handle) {
     revalidatePath(`/u/${me.handle}`);
     revalidatePath(`/u/${me.handle}/interview`);
-    revalidatePath(`/dashboard`);
+    revalidatePath("/dashboard");
   }
   return { ok: true, deleted: owned.length };
 }
@@ -131,12 +129,18 @@ export async function bulkDeleteSessions(ids: string[]) {
 export async function saveProfile(formData: FormData) {
   const u = await requireUser();
   const bio = (formData.get("bio") ?? "").toString().slice(0, 160) || null;
-  const xHandle = ((formData.get("xHandle") ?? "").toString().trim().replace(/^@/, "")) || null;
-  const githubHandle = ((formData.get("githubHandle") ?? "").toString().trim().replace(/^@/, "")) || null;
+  const xHandle = (formData.get("xHandle") ?? "").toString().trim().replace(/^@/, "") || null;
+  const githubHandle =
+    (formData.get("githubHandle") ?? "").toString().trim().replace(/^@/, "") || null;
   let linkedinHandle = (formData.get("linkedinHandle") ?? "").toString().trim();
-  linkedinHandle = linkedinHandle.replace(/^@/, "").replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "").replace(/\/+$/, "");
+  linkedinHandle = linkedinHandle
+    .replace(/^@/, "")
+    .replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, "")
+    .replace(/\/+$/, "");
   if (linkedinHandle && !/^[a-zA-Z0-9_-]{3,100}$/.test(linkedinHandle)) {
-    throw new Error("LinkedIn handle must be 3-100 chars, alphanumeric + hyphens/underscores only.");
+    throw new Error(
+      "LinkedIn handle must be 3-100 chars, alphanumeric + hyphens/underscores only.",
+    );
   }
   const linkedinHandleValue = linkedinHandle || null;
   let website = (formData.get("website") ?? "").toString().trim() || null;
@@ -146,7 +150,14 @@ export async function saveProfile(formData: FormData) {
 
   await db
     .update(schema.user)
-    .set({ bio, xHandle, githubHandle, linkedinHandle: linkedinHandleValue, website, spendAuditOptIn })
+    .set({
+      bio,
+      xHandle,
+      githubHandle,
+      linkedinHandle: linkedinHandleValue,
+      website,
+      spendAuditOptIn,
+    })
     .where(eq(schema.user.id, u.id));
 
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
@@ -185,22 +196,14 @@ export async function toggleFollow(followingId: string) {
   if (!target.handle) return { ok: false as const, error: "user not followable" };
 
   const existing = await db.query.follow.findFirst({
-    where: and(
-      eq(schema.follow.followerId, me.id),
-      eq(schema.follow.followingId, followingId),
-    ),
+    where: and(eq(schema.follow.followerId, me.id), eq(schema.follow.followingId, followingId)),
   });
 
   const decision = toggleDecision(Boolean(existing));
   if (decision === "removed") {
     await db
       .delete(schema.follow)
-      .where(
-        and(
-          eq(schema.follow.followerId, me.id),
-          eq(schema.follow.followingId, followingId),
-        ),
-      );
+      .where(and(eq(schema.follow.followerId, me.id), eq(schema.follow.followingId, followingId)));
   } else {
     await db
       .insert(schema.follow)
@@ -212,6 +215,15 @@ export async function toggleFollow(followingId: string) {
       .onConflictDoNothing({
         target: [schema.follow.followerId, schema.follow.followingId],
       });
+    await db
+      .insert(schema.notification)
+      .values({
+        id: crypto.randomUUID(),
+        userId: followingId,
+        actorId: me.id,
+        type: "follow",
+      })
+      .onConflictDoNothing();
   }
 
   if (target.handle) revalidatePath(`/u/${target.handle}`);

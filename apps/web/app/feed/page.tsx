@@ -1,12 +1,14 @@
+import { CopyButton } from "@/components/copy-button";
 import { FollowButton } from "@/components/follow-button";
+import { ReactionBar, type ReactionKind } from "@/components/reaction-bar";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
 import { formatDuration } from "@/lib/session-metrics";
-import { githubAvatar } from "@/lib/share";
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,6 +18,10 @@ export const dynamic = "force-dynamic";
 
 const FEED_LIMIT = 80;
 const FOLLOWING_SIGN_IN_HREF = signInHref("/feed?view=following");
+const PUBLIC_APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app").replace(
+  /\/$/,
+  "",
+);
 
 const discoveryLinks = [
   {
@@ -104,6 +110,10 @@ function receiptHref(row: BaseFeedRow): string {
   return `${profileHref(row)}/${row.slug}`;
 }
 
+function publicReceiptUrl(row: BaseFeedRow): string {
+  return shareUrl(row.handle ?? "anon", row.slug, PUBLIC_APP_URL);
+}
+
 function avatarSrc(row: BaseFeedRow): string | null {
   return row.image ?? (row.handle ? githubAvatar(row.handle) : null);
 }
@@ -143,6 +153,23 @@ function timelineMetrics(row: BaseFeedRow): Array<{ label: string; value: string
   return metrics.slice(0, 5);
 }
 
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function reactionSummary(row: BaseFeedRow): string {
+  if (row.positiveReactions === 0 && row.negativeReactions === 0) {
+    return "Be first to react";
+  }
+  if (row.negativeReactions === 0) {
+    return `${pluralize(row.positiveReactions, "builder")} says it worked`;
+  }
+  if (row.positiveReactions === 0) {
+    return `${pluralize(row.negativeReactions, "tweak")} requested`;
+  }
+  return `${row.positiveReactions} worked / ${row.negativeReactions} needs tweak`;
+}
+
 function receiptBadge(row: BaseFeedRow): string | null {
   if (row.receiptStatus === "shipped") return "Shipped";
   if (row.receiptStatus === "draft") return "Draft";
@@ -179,15 +206,132 @@ interface BaseFeedRow extends RankableSession {
   receiptStatus: string | null;
   taskType: string | null;
   outcome: string | null;
+  positiveReactions: number;
+  negativeReactions: number;
+  workedReactions: number;
+  verifiedReactions: number;
+  tweakReactions: number;
+  brokenReactions: number;
+  viewerReactions: ReactionKind[];
+  commentCount: number;
 }
 
 interface FeedRow extends BaseFeedRow {
   isFollowing: boolean;
 }
 
+type FeedRowWithoutStats = Omit<
+  BaseFeedRow,
+  | "positiveReactions"
+  | "negativeReactions"
+  | "workedReactions"
+  | "verifiedReactions"
+  | "tweakReactions"
+  | "brokenReactions"
+  | "viewerReactions"
+  | "commentCount"
+>;
+
+interface FeedStats {
+  receipts: number;
+  builders: number;
+  shipped: number;
+  reactions: number;
+  comments: number;
+}
+
+interface BuilderRecommendation {
+  id: string;
+  handle: string;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  receiptCount: number;
+  shippedCount: number;
+  reactionCount: number;
+  followerCount: number;
+  latestAt: Date | string | null;
+  topTools: string[];
+  isFollowing: boolean;
+}
+
+interface TrendingStack {
+  kind: string;
+  tag: string;
+  label: string;
+  receiptCount: number;
+  builderCount: number;
+}
+
+interface FeedDiscovery {
+  stats: FeedStats;
+  builders: BuilderRecommendation[];
+  stacks: TrendingStack[];
+}
+
+interface FeedStatsRaw {
+  [key: string]: unknown;
+  receipts: unknown;
+  builders: unknown;
+  shipped: unknown;
+  reactions: unknown;
+  comments: unknown;
+}
+
+interface BuilderRecommendationRaw {
+  [key: string]: unknown;
+  id: string;
+  handle: string;
+  name: string;
+  image: string | null;
+  bio: string | null;
+  receiptCount: unknown;
+  shippedCount: unknown;
+  reactionCount: unknown;
+  followerCount: unknown;
+  latestAt: Date | string | null;
+  topTools: string[] | null;
+  isFollowing: boolean | null;
+}
+
+interface TrendingStackRaw {
+  [key: string]: unknown;
+  kind: string;
+  tag: string;
+  label: string | null;
+  receiptCount: unknown;
+  builderCount: unknown;
+}
+
 type FeedSearchParams = {
   view?: string | string[];
 };
+
+function rowsOf<T>(res: unknown): T[] {
+  if (Array.isArray(res)) return res as T[];
+  if (res && typeof res === "object" && "rows" in res) {
+    const rows = (res as { rows?: unknown }).rows;
+    if (Array.isArray(rows)) return rows as T[];
+  }
+  return [];
+}
+
+function toCount(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatCount(value: number): string {
+  return new Intl.NumberFormat("en", { notation: value >= 1000 ? "compact" : "standard" }).format(
+    value,
+  );
+}
+
+function stackHref(stack: TrendingStack): string {
+  if (stack.kind === "framework") return `/frameworks/${stack.tag}`;
+  if (stack.kind === "tool") return `/tools/${stack.tag}`;
+  return "/tools";
+}
 
 async function loadViewerId(): Promise<string | null> {
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) return null;
@@ -242,7 +386,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     )
     .limit(FEED_LIMIT);
 
-  const ranked = rankFeed(rows);
+  const ranked = await attachEngagementStats(rankFeed(rows), viewerId);
   if (!viewerId || ranked.length === 0) {
     return ranked.map((row) => ({ ...row, isFollowing: false }));
   }
@@ -317,7 +461,374 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
   // runs in prod and the page stays correct even if the query drifts.
-  return rankFeed(rows).map((row) => ({ ...row, isFollowing: row.authorId !== viewerId }));
+  return (await attachEngagementStats(rankFeed(rows), viewerId)).map((row) => ({
+    ...row,
+    isFollowing: row.authorId !== viewerId,
+  }));
+}
+
+function toReactionKind(kind: string): ReactionKind | null {
+  if (kind === "worked") return "worked";
+  if (kind === "needs-tweak") return "needs-tweak";
+  if (kind === "broken") return "broken";
+  return null;
+}
+
+async function attachEngagementStats(
+  rows: FeedRowWithoutStats[],
+  viewerId: string | null,
+): Promise<BaseFeedRow[]> {
+  if (rows.length === 0) return [];
+
+  const { db, schema } = await import("@/db/client");
+  const sessionIds = rows.map((row) => row.id);
+  const [statsRows, commentRows] = await Promise.all([
+    db
+      .select({
+        sessionId: schema.sessionReaction.sessionId,
+        kind: schema.sessionReaction.kind,
+        reactionCount: sql<number>`count(*)::int`,
+        viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
+      })
+      .from(schema.sessionReaction)
+      .where(inArray(schema.sessionReaction.sessionId, sessionIds))
+      .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind),
+    db
+      .select({
+        sessionId: schema.sessionComment.sessionId,
+        commentCount: sql<number>`count(*)::int`,
+      })
+      .from(schema.sessionComment)
+      .where(
+        and(
+          inArray(schema.sessionComment.sessionId, sessionIds),
+          isNull(schema.sessionComment.deletedAt),
+        ),
+      )
+      .groupBy(schema.sessionComment.sessionId),
+  ]);
+
+  const statsBySession = new Map<
+    string,
+    {
+      workedReactions: number;
+      verifiedReactions: number;
+      tweakReactions: number;
+      brokenReactions: number;
+      viewerReactions: Set<ReactionKind>;
+    }
+  >();
+
+  for (const stat of statsRows) {
+    const sessionStats = statsBySession.get(stat.sessionId) ?? {
+      workedReactions: 0,
+      verifiedReactions: 0,
+      tweakReactions: 0,
+      brokenReactions: 0,
+      viewerReactions: new Set<ReactionKind>(),
+    };
+    const count = Number(stat.reactionCount) || 0;
+
+    if (stat.kind === "worked") sessionStats.workedReactions += count;
+    if (stat.kind === "worked-verified") sessionStats.verifiedReactions += count;
+    if (stat.kind === "needs-tweak") sessionStats.tweakReactions += count;
+    if (stat.kind === "broken") sessionStats.brokenReactions += count;
+
+    const viewerReaction = toReactionKind(stat.kind);
+    if (stat.viewerReacted && viewerReaction) sessionStats.viewerReactions.add(viewerReaction);
+    statsBySession.set(stat.sessionId, sessionStats);
+  }
+
+  const commentsBySession = new Map(
+    commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    positiveReactions:
+      (statsBySession.get(row.id)?.workedReactions ?? 0) +
+      (statsBySession.get(row.id)?.verifiedReactions ?? 0),
+    negativeReactions:
+      (statsBySession.get(row.id)?.tweakReactions ?? 0) +
+      (statsBySession.get(row.id)?.brokenReactions ?? 0),
+    workedReactions: statsBySession.get(row.id)?.workedReactions ?? 0,
+    verifiedReactions: statsBySession.get(row.id)?.verifiedReactions ?? 0,
+    tweakReactions: statsBySession.get(row.id)?.tweakReactions ?? 0,
+    brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
+    viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
+    commentCount: commentsBySession.get(row.id) ?? 0,
+  }));
+}
+
+async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery> {
+  const { db } = await import("@/db/client");
+
+  const [statsRes, buildersRes, stacksRes] = await Promise.all([
+    db.execute<FeedStatsRaw>(sql`
+      SELECT
+        count(DISTINCT ts.id) AS receipts,
+        count(DISTINCT ts.user_id) AS builders,
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) AS shipped,
+        count(DISTINCT sr.id) AS reactions,
+        count(DISTINCT sc.id) FILTER (WHERE sc.deleted_at IS NULL) AS comments
+      FROM trail_session ts
+      INNER JOIN "user" u ON u.id = ts.user_id
+      LEFT JOIN session_reaction sr ON sr.session_id = ts.id
+      LEFT JOIN session_comment sc ON sc.session_id = ts.id
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+    `),
+    db.execute<BuilderRecommendationRaw>(sql`
+      SELECT
+        u.id,
+        u.handle,
+        coalesce(u.name, u.handle) AS name,
+        u.image,
+        u.bio,
+        count(DISTINCT ts.id) AS "receiptCount",
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) AS "shippedCount",
+        count(DISTINCT sr.id) AS "reactionCount",
+        count(DISTINCT follower.follower_id) AS "followerCount",
+        max(coalesce(ts.shared_at, ts.started_at)) AS "latestAt",
+        array_remove(array_agg(DISTINCT ts.tool), NULL) AS "topTools",
+        coalesce(bool_or(viewer_follow.follower_id IS NOT NULL), false) AS "isFollowing"
+      FROM "user" u
+      INNER JOIN trail_session ts ON ts.user_id = u.id
+      LEFT JOIN session_reaction sr ON sr.session_id = ts.id
+      LEFT JOIN "follow" follower ON follower.following_id = u.id
+      LEFT JOIN "follow" viewer_follow
+        ON viewer_follow.following_id = u.id
+       AND viewer_follow.follower_id = ${viewerId}
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+        AND (${viewerId}::text IS NULL OR u.id <> ${viewerId})
+      GROUP BY u.id
+      ORDER BY
+        count(DISTINCT ts.id) FILTER (
+          WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
+        ) DESC,
+        count(DISTINCT sr.id) DESC,
+        max(coalesce(ts.shared_at, ts.started_at)) DESC
+      LIMIT 5
+    `),
+    db.execute<TrendingStackRaw>(sql`
+      SELECT
+        st.kind,
+        st.tag,
+        max(st.label) AS label,
+        count(DISTINCT ts.id) AS "receiptCount",
+        count(DISTINCT ts.user_id) AS "builderCount"
+      FROM session_tag st
+      INNER JOIN trail_session ts ON ts.id = st.session_id
+      INNER JOIN "user" u ON u.id = ts.user_id
+      WHERE ts.visibility = 'public'
+        AND u.handle IS NOT NULL
+        AND st.kind IN ('tool', 'framework', 'model')
+      GROUP BY st.kind, st.tag
+      ORDER BY
+        count(DISTINCT ts.id) DESC,
+        count(DISTINCT ts.user_id) DESC,
+        max(coalesce(ts.shared_at, ts.started_at)) DESC
+      LIMIT 8
+    `),
+  ]);
+
+  const statsRow = rowsOf<FeedStatsRaw>(statsRes)[0];
+  const stats: FeedStats = {
+    receipts: toCount(statsRow?.receipts),
+    builders: toCount(statsRow?.builders),
+    shipped: toCount(statsRow?.shipped),
+    reactions: toCount(statsRow?.reactions),
+    comments: toCount(statsRow?.comments),
+  };
+
+  const builders = rowsOf<BuilderRecommendationRaw>(buildersRes).map((builder) => ({
+    id: builder.id,
+    handle: builder.handle,
+    name: builder.name,
+    image: builder.image,
+    bio: builder.bio,
+    receiptCount: toCount(builder.receiptCount),
+    shippedCount: toCount(builder.shippedCount),
+    reactionCount: toCount(builder.reactionCount),
+    followerCount: toCount(builder.followerCount),
+    latestAt: builder.latestAt,
+    topTools: Array.isArray(builder.topTools) ? builder.topTools.filter(Boolean).slice(0, 3) : [],
+    isFollowing: builder.isFollowing === true,
+  }));
+
+  const stacks = rowsOf<TrendingStackRaw>(stacksRes).map((stack) => ({
+    kind: stack.kind,
+    tag: stack.tag,
+    label: stack.label ?? formatToolName(stack.tag),
+    receiptCount: toCount(stack.receiptCount),
+    builderCount: toCount(stack.builderCount),
+  }));
+
+  return { stats, builders, stacks };
+}
+
+function FeedDiscoveryPanel({
+  discovery,
+  viewerId,
+}: {
+  discovery: FeedDiscovery;
+  viewerId: string | null;
+}) {
+  return (
+    <>
+      <section className="rounded-[26px] bg-[#101012] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_20px_70px_rgba(0,0,0,0.35)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+              Builder radar
+            </div>
+            <h3 className="mt-2 text-[20px] font-medium tracking-[-0.03em] text-zinc-50">
+              People shipping now
+            </h3>
+          </div>
+          <span className="rounded-full bg-black px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+            Follow graph
+          </span>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {discovery.builders.length === 0 ? (
+            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
+              Fresh builder recommendations appear here as more public receipts are published.
+            </p>
+          ) : (
+            discovery.builders.map((builder, index) => (
+              <div
+                key={builder.id}
+                className="group relative overflow-hidden rounded-[20px] bg-black/55 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black/80 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+              >
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#a7f300] opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="flex items-start gap-3">
+                  <Link href={`/u/${builder.handle}`} className="shrink-0">
+                    <Avatar
+                      src={builder.image ?? githubAvatar(builder.handle)}
+                      alt={builder.name}
+                      fallback={builder.handle}
+                      className="h-11 w-11 rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                    />
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <Link href={`/u/${builder.handle}`} className="min-w-0">
+                        <div className="truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-100">
+                          {builder.name}
+                        </div>
+                        <div className="truncate font-mono text-[11px] text-zinc-600">
+                          @{builder.handle}
+                        </div>
+                      </Link>
+                      <span className="rounded-full bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-500 tabular-nums">
+                        #{index + 1}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-500">
+                      {builder.bio ||
+                        `${formatCount(builder.shippedCount)} shipped receipts in public.`}
+                    </p>
+                    {builder.topTools.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {builder.topTools.map((tool) => (
+                          <span
+                            key={tool}
+                            className="rounded-full bg-zinc-900 px-2 py-1 font-mono text-[10px] text-zinc-400"
+                          >
+                            {formatToolName(tool)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.11em] text-zinc-600">
+                      <span>{formatCount(builder.receiptCount)} receipts</span>
+                      <span>{formatCount(builder.reactionCount)} reactions</span>
+                      <span>{formatCount(builder.followerCount)} followers</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="font-mono text-[10px] text-zinc-600">
+                        Latest{" "}
+                        {builder.latestAt ? <RelativeTime date={builder.latestAt} /> : "recently"}
+                      </span>
+                      {viewerId ? (
+                        <FollowButton
+                          targetUserId={builder.id}
+                          initialFollowing={builder.isFollowing}
+                          className="h-8 px-3 text-[10px]"
+                        />
+                      ) : (
+                        <TrailLink
+                          href={signInHref(`/u/${builder.handle}`)}
+                          className="inline-flex h-8 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+                        >
+                          Follow
+                        </TrailLink>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+              Trending stacks
+            </div>
+            <h3 className="mt-2 text-[18px] font-medium tracking-[-0.03em] text-zinc-100">
+              What the network is using
+            </h3>
+          </div>
+          <Link
+            href="/tools"
+            className="rounded-full bg-black px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-colors hover:text-white"
+          >
+            Explore
+          </Link>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          {discovery.stacks.length === 0 ? (
+            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
+              Stack trends will fill in as published receipts are tagged.
+            </p>
+          ) : (
+            discovery.stacks.map((stack) => (
+              <Link
+                key={`${stack.kind}:${stack.tag}`}
+                href={stackHref(stack)}
+                className="group flex items-center justify-between gap-4 rounded-[18px] bg-black/55 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium tracking-[-0.02em] text-zinc-200">
+                    {stack.label}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                    {stack.kind}
+                  </div>
+                </div>
+                <div className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 tabular-nums">
+                  <div className="text-[#a7f300]">{formatCount(stack.receiptCount)} receipts</div>
+                  <div>{formatCount(stack.builderCount)} builders</div>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
+    </>
+  );
 }
 
 export default async function FeedPage({
@@ -330,14 +841,17 @@ export default async function FeedPage({
 
   let viewerId: string | null;
   let rows: FeedRow[];
+  let discovery: FeedDiscovery;
 
+  viewerId = await loadViewerId();
   if (view === "following") {
-    viewerId = await loadViewerId();
     if (!viewerId) redirect(FOLLOWING_SIGN_IN_HREF);
-    rows = await loadFollowingFeed(viewerId);
+    [rows, discovery] = await Promise.all([
+      loadFollowingFeed(viewerId),
+      loadFeedDiscovery(viewerId),
+    ]);
   } else {
-    viewerId = await loadViewerId();
-    rows = await loadPublicFeed(viewerId);
+    [rows, discovery] = await Promise.all([loadPublicFeed(viewerId), loadFeedDiscovery(viewerId)]);
   }
 
   const isFollowingView = view === "following";
@@ -347,7 +861,6 @@ export default async function FeedPage({
     : "Public AI-building sessions stay open. Sign in only when you want to follow, react, and build a personal timeline.";
   const feedTitle = isFollowingView ? "Your builder radar." : "Watch AI builders ship in public.";
   const feedCountLabel = `${rows.length} ${rows.length === 1 ? "receipt" : "receipts"}`;
-  const identityLabel = viewerId ? "Signed in" : "Anonymous mode";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -384,11 +897,13 @@ export default async function FeedPage({
                   </Link>
                 </div>
 
-                <dl className="mt-8 grid max-w-2xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-3">
+                <dl className="mt-8 grid max-w-3xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-5">
                   {[
-                    ["Mode", identityLabel],
-                    ["Current view", isFollowingView ? "Following" : "Everyone"],
-                    ["Loaded", feedCountLabel],
+                    ["Builders", formatCount(discovery.stats.builders)],
+                    ["Receipts", formatCount(discovery.stats.receipts)],
+                    ["Shipped", formatCount(discovery.stats.shipped)],
+                    ["Reactions", formatCount(discovery.stats.reactions)],
+                    ["Comments", formatCount(discovery.stats.comments)],
                   ].map(([label, value]) => (
                     <div key={label} className="bg-black/70 px-4 py-3">
                       <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
@@ -563,6 +1078,11 @@ export default async function FeedPage({
                   const badge = receiptBadge(r);
                   const chips = stackChips(r);
                   const metrics = timelineMetrics(r);
+                  const currentPublicReceiptUrl = publicReceiptUrl(r);
+                  const tweetHref = tweetIntent(
+                    `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
+                    currentPublicReceiptUrl,
+                  );
 
                   return (
                     <li key={r.id}>
@@ -674,12 +1194,52 @@ export default async function FeedPage({
                                 </span>
                               )}
                             </div>
-                            <Link
-                              href={currentReceiptHref}
-                              className="inline-flex min-h-10 items-center rounded-full px-0 font-mono text-[11px] uppercase tracking-[0.14em] text-[#a7f300] transition-[color,transform] hover:text-[#c8ff5e] active:scale-[0.96]"
-                            >
-                              Open receipt →
-                            </Link>
+                          </div>
+
+                          <div className="mt-4 flex flex-col gap-3 rounded-[18px] bg-zinc-950/70 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between">
+                            <ReactionBar
+                              slug={r.slug}
+                              authorHandle={r.handle}
+                              variant="inline"
+                              summary={reactionSummary(r)}
+                              initialCounts={{
+                                worked: r.workedReactions + r.verifiedReactions,
+                                "needs-tweak": r.tweakReactions,
+                                broken: r.brokenReactions,
+                              }}
+                              initialMine={r.viewerReactions}
+                              className="flex-1"
+                            />
+
+                            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                              <Link
+                                href={`${currentReceiptHref}#conversation`}
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-amber-200 hover:text-amber-100 active:scale-[0.96] sm:flex-none"
+                              >
+                                {formatCount(r.commentCount)}{" "}
+                                {r.commentCount === 1 ? "comment" : "comments"}
+                              </Link>
+                              <CopyButton
+                                value={currentPublicReceiptUrl}
+                                label="Copy link"
+                                copiedLabel="Copied"
+                                className="min-h-9 flex-1 justify-center rounded-full border-zinc-800 bg-black px-3 text-[11px] text-zinc-400 sm:flex-none"
+                              />
+                              <a
+                                href={tweetHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96] sm:flex-none"
+                              >
+                                Share on X
+                              </a>
+                              <Link
+                                href={currentReceiptHref}
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full bg-[#a7f300] px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96] sm:flex-none"
+                              >
+                                Open →
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       </article>
@@ -690,8 +1250,14 @@ export default async function FeedPage({
             )}
           </section>
 
+          <div className="space-y-4 lg:hidden">
+            <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+          </div>
+
           <aside className="hidden lg:block">
             <div className="sticky top-24 space-y-4">
+              <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+
               <section className="rounded-[26px] bg-zinc-950 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.26)]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
                   How to read it
