@@ -3,37 +3,37 @@ import { SiteNav } from "@/components/site-nav";
 import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-/* Hallmark · macrostructure: 05-proof-led · genre: technical · theme: trail-dark-lime
+/* Hallmark · macrostructure: 06-feed-led · genre: technical · theme: trail-dark-lime
  * paper: oklch(15% 0.01 280) #09090b · accent: oklch(94% 0.27 130) #a7f300 (lime · cool axis)
  * display: Fraunces (italic-serif) · body: Geist · outlier: Geist Mono (chips/labels only)
- * sections: hero-proof · breakdown · how-it-works · what-trail-captures · install · footer
+ * sections: hero-feed · breakdown · how-it-works · what-trail-captures · install · footer
  * motion: none — typography only · contrast: pass · slop test: 69/69 ✓
- * A public profile is the design. Cost is evidence, not the headline.
+ * The feed is the product loop. Receipts are the trust layer underneath it.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Trail — verified AI work history",
+  title: "Trail — follow builders shipping with AI",
   description:
-    "Trail turns AI coding sessions into GitHub-linked receipts that compound into a public, recruiter-ready proof-of-work profile.",
+    "Trail is a public feed of GitHub-linked AI coding receipts: follow builders, browse shipped work, and turn sessions into proof.",
   openGraph: {
-    title: "Trail — verified AI work history",
+    title: "Trail — follow builders shipping with AI",
     description:
-      "GitHub-linked receipts for the AI work you actually ship — cost, model, transcript, and merged PR in one public profile.",
+      "A social feed for shipped AI work, where every post can carry the model, cost, transcript, and merged GitHub PR behind it.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trail — verified AI work history",
+    title: "Trail — follow builders shipping with AI",
     description:
-      "GitHub-linked receipts for the AI work you actually ship — cost, model, transcript, and merged PR in one public profile.",
+      "A social feed for shipped AI work, where every post can carry the model, cost, transcript, and merged GitHub PR behind it.",
   },
 };
 
 // Real session 161blsz1 — every number below is from production, not a mockup.
 const INSTALL = "npm install -g @gettrail/cli";
-const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/dashboard/cost";
+const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
 // The merged PR is public on GitHub — anyone can verify the ship third-party.
 const PR_HREF = "https://github.com/janfaris/trail/pull/23";
 // A real, public builder profile — receipts compound here.
@@ -50,10 +50,28 @@ const HERO_STAT = {
   duration: "8h 27m",
 };
 
-const heroProofs = [
-  { label: "public receipts", value: "GitHub-linked", tone: "text-zinc-50" },
-  { label: "recruiter view", value: "shipped work only", tone: "text-[#a7f300]" },
-  { label: "sample receipt", value: "$3.77 · #23", tone: "text-zinc-50" },
+const feedPreview = [
+  {
+    handle: "@jankarlo.faris",
+    action: "shipped janfaris/trail#23",
+    detail: "Codex · gpt-5.5 · $3.77 receipt",
+    href: PR_HREF,
+    tag: "merged PR",
+  },
+  {
+    handle: "Discover",
+    action: "browse shipped AI work",
+    detail: "Public receipts across tools and frameworks",
+    href: "/discover",
+    tag: "public feed",
+  },
+  {
+    handle: "Recruiter view",
+    action: "share only the work that looks shipped",
+    detail: "Public receipts filtered for portfolio review",
+    href: `${PROFILE_HREF}/interview`,
+    tag: "profile proof",
+  },
 ];
 
 // Anatomy of the same receipt — only fields that are independently true today.
@@ -119,35 +137,34 @@ export default async function Home() {
   } catch {
     sess = null;
   }
-  if (sess?.user) redirect("/dashboard/cost");
+  if (sess?.user) redirect("/feed");
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-50">
       <SiteNav currentPath="/" />
 
       <main className="flex-1">
-        {/* HERO — Proof-led. The public work history is above the fold; cost is evidence. */}
+        {/* HERO — Feed-led. The social discovery loop is above the fold; receipts are evidence. */}
         <section className="mx-auto max-w-6xl px-6 lg:px-10 pt-20 md:pt-28 pb-20 md:pb-24">
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
-                <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;GitHub-linked receipts
-                &nbsp;·&nbsp; public profiles &nbsp;·&nbsp; recruiter-ready
+                <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Social feed &nbsp;·&nbsp;
+                shipped AI work &nbsp;·&nbsp; GitHub-linked proof
               </div>
 
               <h1 className="font-display text-[58px] md:text-[96px] leading-[0.92] tracking-[-0.045em] text-zinc-50 max-w-[11ch] mb-8">
-                Prove the AI work you actually ship.
+                Follow builders shipping with AI.
               </h1>
 
               <p className="italic text-zinc-300 text-[18px] md:text-[23px] leading-[1.45] max-w-[52ch] mb-5">
-                Trail turns coding-agent sessions into public receipts tied to merged GitHub PRs —
-                the work, the model, the cost, and the proof in one profile.
+                Trail is a public feed for AI-coded work: every post can show the session, model,
+                cost, transcript, and GitHub PR behind what shipped.
               </p>
 
               <p className="text-[12px] font-mono text-zinc-500 mb-12 max-w-[72ch] leading-[1.7]">
-                Cost is not the product. It is the audit trail. The product is a verified work
-                history you can send to recruiters, customers, collaborators, or anyone asking what
-                you have shipped with AI.
+                The feed makes discovery the loop. Receipts keep it honest. Profiles and recruiter
+                views are what your trail becomes after enough public work stacks up.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -155,13 +172,13 @@ export default async function Home() {
                   href={SIGNIN_HREF}
                   className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/50 bg-[#a7f300] text-black text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#c8ff5e] transition-colors"
                 >
-                  Start your proof profile →
+                  Join the feed →
                 </Link>
                 <Link
-                  href={PROFILE_HREF}
+                  href="/discover"
                   className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-700 hover:text-zinc-50 transition-colors"
                 >
-                  View live profile
+                  Browse shipped work
                 </Link>
               </div>
 
@@ -178,54 +195,68 @@ export default async function Home() {
               <div className="border-b border-zinc-900 px-5 py-4 flex items-center justify-between">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                    Public profile
+                    Feed preview
                   </div>
-                  <div className="font-display text-[24px] text-zinc-50 mt-1">@jankarlo.faris</div>
+                  <div className="font-display text-[24px] text-zinc-50 mt-1">Shipped with AI</div>
                 </div>
-                <span className="rounded-full border border-dashed border-zinc-700 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                  Badge locked
+                <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
+                  Social proof
                 </span>
               </div>
 
               <div className="divide-y divide-zinc-900">
-                {heroProofs.map((proof) => (
-                  <div key={proof.label} className="px-5 py-4 grid grid-cols-[1fr_auto] gap-5">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                      {proof.label}
+                {feedPreview.map((item) => (
+                  <Link
+                    key={item.action}
+                    href={item.href}
+                    className="group block px-5 py-4 hover:bg-zinc-950 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="font-mono text-[11px] text-[#a7f300]">{item.handle}</div>
+                      <div className="rounded-full border border-zinc-800 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500 group-hover:border-[#a7f300]/30 group-hover:text-[#a7f300]">
+                        {item.tag}
+                      </div>
                     </div>
-                    <div
-                      className={`font-mono text-[12px] uppercase tracking-[0.08em] ${proof.tone}`}
-                    >
-                      {proof.value}
+                    <div className="font-display text-[19px] leading-tight text-zinc-50 mb-1.5">
+                      {item.action}
                     </div>
-                  </div>
+                    <div className="font-mono text-[11px] leading-[1.5] text-zinc-500">
+                      {item.detail}
+                    </div>
+                  </Link>
                 ))}
               </div>
 
               <div className="p-5">
-                <a
-                  href={PR_HREF}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block rounded-lg border border-zinc-900 bg-zinc-950/70 p-4 hover:border-[#a7f300]/40 transition-colors"
-                >
+                <div className="rounded-lg border border-zinc-900 bg-zinc-950/70 p-4">
                   <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-5">
-                    Sample shipped receipt
+                    Trust layer
                   </div>
                   <div className="flex items-baseline justify-between gap-6 mb-3">
                     <div className="font-display text-[34px] leading-none text-zinc-50 tabular-nums">
                       ${HERO_STAT.cost}
                     </div>
-                    <div className="font-mono text-[11px] text-[#a7f300] uppercase tracking-[0.12em]">
+                    <a
+                      href={PR_HREF}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[11px] text-[#a7f300] uppercase tracking-[0.12em] hover:text-[#c8ff5e]"
+                    >
                       PR #23 ↗
-                    </div>
+                    </a>
                   </div>
-                  <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                  <p className="text-zinc-500 text-[13px] leading-[1.55] mb-4">
                     {HERO_STAT.model} session linked to{" "}
-                    <span className="text-zinc-300 group-hover:text-[#a7f300]">{HERO_STAT.pr}</span>
-                    . The cost is Trail's measurement; the merge is GitHub's public record.
+                    <span className="text-zinc-300">{HERO_STAT.pr}</span>. The cost is Trail's
+                    measurement; the merge is GitHub's public record.
                   </p>
-                </a>
+                  <Link
+                    href={PROFILE_HREF}
+                    className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 hover:text-[#a7f300]"
+                  >
+                    Open builder profile →
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -409,12 +440,9 @@ export default async function Home() {
                 </div>
                 <p className="text-zinc-500 text-[13px] leading-[1.55]">
                   Real sessions from real merges. Follow builders and watch the{" "}
-                  <Link
-                    href="/feed"
-                    className="text-zinc-400 group-hover:text-[#a7f300] underline decoration-zinc-700 underline-offset-2"
-                  >
+                  <span className="text-zinc-400 group-hover:text-[#a7f300] underline decoration-zinc-700 underline-offset-2">
                     feed
-                  </Link>{" "}
+                  </span>{" "}
                   fill with receipts.
                 </p>
               </Link>

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { ProfileMenu } from "@/components/profile-menu";
 import { SignOutButton } from "@/components/sign-out-button";
+import Link from "next/link";
 
 type NavLink = { href: string; label: string; external?: boolean };
 
@@ -59,7 +59,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
                     key={l.href}
                     href={l.href}
                     target="_blank"
-                    rel="noopener"
+                    rel="noreferrer noopener"
                     className={linkClass(l.href, currentPath)}
                   >
                     {l.label}
@@ -74,10 +74,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           )}
           {handle ? (
             <div className="flex items-center gap-3 sm:gap-5">
-              <Link
-                href="/feed"
-                className={`hidden md:inline ${linkClass("/feed", currentPath)}`}
-              >
+              <Link href="/feed" className={`hidden md:inline ${linkClass("/feed", currentPath)}`}>
                 Feed
               </Link>
               <Link
@@ -86,16 +83,11 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
               >
                 Dashboard
               </Link>
-              <ProfileMenu
-                handle={handle}
-                name={name}
-                image={image}
-                signOut={<SignOutButton />}
-              />
+              <ProfileMenu handle={handle} name={name} image={image} signOut={<SignOutButton />} />
             </div>
           ) : (
             <a
-              href="/api/auth/sign-in/github?callbackURL=/dashboard/cost"
+              href="/api/auth/sign-in/github?callbackURL=/feed"
               className="inline-flex items-center h-8 px-3 rounded-md text-[12.5px] font-medium bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] transition-colors"
             >
               Sign in
