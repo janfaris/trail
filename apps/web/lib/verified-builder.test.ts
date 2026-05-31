@@ -18,7 +18,7 @@ function session(over: Partial<VerifiableSession> = {}): VerifiableSession {
 }
 
 describe("isVerifiedShippedSession", () => {
-  it("counts a receipt-verified shipped session (future ideal)", () => {
+  it("counts a receipt-verified shipped session", () => {
     expect(
       isVerifiedShippedSession(
         session({ receiptStatus: "shipped", receiptVerifiedAt: new Date() }),
@@ -26,39 +26,26 @@ describe("isVerifiedShippedSession", () => {
     ).toBe(true);
   });
 
-  it("counts a shipped outcome backed by a real commit (populated proxy)", () => {
-    expect(
-      isVerifiedShippedSession(session({ outcome: "shipped", linkedCommitSha: "a1b2c3d4" })),
-    ).toBe(true);
-  });
-
-  it("rejects a shipped outcome with no commit attached", () => {
-    expect(isVerifiedShippedSession(session({ outcome: "shipped" }))).toBe(false);
-  });
-
-  it("rejects a shipped outcome with a blank commit sha", () => {
-    expect(isVerifiedShippedSession(session({ outcome: "shipped", linkedCommitSha: "   " }))).toBe(
-      false,
-    );
-  });
-
   it("rejects receiptStatus=shipped when receiptVerifiedAt is missing", () => {
     expect(isVerifiedShippedSession(session({ receiptStatus: "shipped" }))).toBe(false);
   });
 
-  it("rejects a non-shipped outcome even with a commit", () => {
+  it("ignores outcome+linkedCommitSha — that pair is forgeable and not sufficient", () => {
     expect(
-      isVerifiedShippedSession(session({ outcome: "abandoned", linkedCommitSha: "a1b2c3d4" })),
+      isVerifiedShippedSession(session({ outcome: "shipped", linkedCommitSha: "a1b2c3d4" })),
     ).toBe(false);
   });
 
-  it("never counts a non-public session, even if shipped + committed", () => {
+  it("ignores a non-shipped receiptStatus even with a commit", () => {
+    expect(
+      isVerifiedShippedSession(
+        session({ receiptStatus: "draft", outcome: "shipped", linkedCommitSha: "a1b2c3d4" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("never counts a non-public session, even if receipt-verified", () => {
     for (const visibility of ["private", "pending", "redacted"]) {
-      expect(
-        isVerifiedShippedSession(
-          session({ visibility, outcome: "shipped", linkedCommitSha: "a1b2c3d4" }),
-        ),
-      ).toBe(false);
       expect(
         isVerifiedShippedSession(
           session({
@@ -76,7 +63,11 @@ describe("computeVerifiedBuilder", () => {
   it("is unverified with zero qualifying sessions", () => {
     const status = computeVerifiedBuilder([
       session({ outcome: "unknown" }),
-      session({ visibility: "private", outcome: "shipped", linkedCommitSha: "x1" }),
+      session({
+        visibility: "private",
+        receiptStatus: "shipped",
+        receiptVerifiedAt: new Date(),
+      }),
     ]);
     expect(status).toEqual({
       verified: false,
@@ -85,9 +76,9 @@ describe("computeVerifiedBuilder", () => {
     });
   });
 
-  it("verifies at the default threshold of one commit-backed shipped session", () => {
+  it("verifies at the default threshold of one receipt-verified session", () => {
     const status = computeVerifiedBuilder([
-      session({ outcome: "shipped", linkedCommitSha: "a1b2c3d4" }),
+      session({ receiptStatus: "shipped", receiptVerifiedAt: new Date() }),
       session({ outcome: "rabbithole" }),
     ]);
     expect(status.verified).toBe(true);
@@ -95,11 +86,18 @@ describe("computeVerifiedBuilder", () => {
     expect(status.threshold).toBe(1);
   });
 
-  it("counts both rule branches and ignores private sessions in the total", () => {
+  it("counts only receipt-verified public sessions in the total", () => {
     const status = computeVerifiedBuilder([
-      session({ outcome: "shipped", linkedCommitSha: "a1" }),
       session({ receiptStatus: "shipped", receiptVerifiedAt: new Date() }),
-      session({ visibility: "private", outcome: "shipped", linkedCommitSha: "b2" }),
+      session({ receiptStatus: "shipped", receiptVerifiedAt: new Date() }),
+      // forgeable proxy — ignored
+      session({ outcome: "shipped", linkedCommitSha: "a1" }),
+      // private — ignored
+      session({
+        visibility: "private",
+        receiptStatus: "shipped",
+        receiptVerifiedAt: new Date(),
+      }),
     ]);
     expect(status.verifiedShippedCount).toBe(2);
     expect(status.verified).toBe(true);
@@ -107,7 +105,7 @@ describe("computeVerifiedBuilder", () => {
 
   it("honours a custom higher threshold", () => {
     const status = computeVerifiedBuilder(
-      [session({ outcome: "shipped", linkedCommitSha: "a1" })],
+      [session({ receiptStatus: "shipped", receiptVerifiedAt: new Date() })],
       3,
     );
     expect(status.verified).toBe(false);
