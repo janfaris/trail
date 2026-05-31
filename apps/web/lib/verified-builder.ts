@@ -21,6 +21,7 @@
 
 export interface VerifiableSession {
   visibility: string;
+  sharedAt: Date | string | null;
   receiptStatus: string | null;
   receiptVerifiedAt: Date | string | null;
   /** Ignored — see module note. Optional so callers can pass full rows. */
@@ -41,13 +42,14 @@ export interface VerifiedBuilderStatus {
 export const VERIFIED_BUILDER_THRESHOLD = 1;
 
 /**
- * True when a single public session qualifies as verified-shipped. Non-public
- * sessions never qualify, keeping the badge a strictly public claim. The only
- * path is GitHub-confirmed verification (receiptStatus 'shipped' +
- * receiptVerifiedAt set).
+ * True when a single explicitly shared public session qualifies as verified-
+ * shipped. Non-public or unshared sessions never qualify, keeping the badge a
+ * strictly public claim. The only path is GitHub-confirmed verification
+ * (receiptStatus 'shipped' + receiptVerifiedAt set).
  */
 export function isVerifiedShippedSession(s: VerifiableSession): boolean {
   if (s.visibility !== "public") return false;
+  if (s.sharedAt == null) return false;
   return s.receiptStatus === "shipped" && s.receiptVerifiedAt != null;
 }
 

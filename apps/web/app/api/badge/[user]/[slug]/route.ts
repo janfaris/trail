@@ -1,9 +1,9 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest } from "next/server";
-import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/db/client";
+import { and, eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 
 // /api/badge/[user]/[slug].svg → shields.io-style flat SVG badge.
 // Embed in a README:
@@ -75,22 +75,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     where: eq(schema.user.handle, user),
   });
   if (!userRow) {
-    return new Response(
-      makeBadge("Trail", "unknown user", "#71717a"),
-      { headers, status: 200 },
-    );
+    return new Response(makeBadge("Trail", "unknown user", "#71717a"), { headers, status: 200 });
   }
   const sessionRow = await db.query.trailSession.findFirst({
-    where: and(
-      eq(schema.trailSession.userId, userRow.id),
-      eq(schema.trailSession.slug, cleanSlug),
-    ),
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, cleanSlug)),
   });
-  if (!sessionRow || sessionRow.visibility !== "public") {
-    return new Response(
-      makeBadge("Trail", "not found", "#71717a"),
-      { headers, status: 200 },
-    );
+  if (!sessionRow || sessionRow.visibility !== "public" || !sessionRow.sharedAt) {
+    return new Response(makeBadge("Trail", "not found", "#71717a"), { headers, status: 200 });
   }
 
   let left = "Born on Trail";

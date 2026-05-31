@@ -1,5 +1,5 @@
 import { COLORS, Footer, OG_CONTENT_TYPE, OG_SIZE, ToolSvg, Wordmark, loadOgFonts } from "@/lib/og";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 
 export const size = OG_SIZE;
@@ -28,6 +28,7 @@ export default async function Image({
         eq(schema.trailSession.slug, slug),
         eq(schema.user.handle, user),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
       ),
     )
     .limit(1);

@@ -9,6 +9,7 @@ import {
 function session(over: Partial<VerifiableSession> = {}): VerifiableSession {
   return {
     visibility: "public",
+    sharedAt: new Date("2024-01-01T00:00:00Z"),
     outcome: null,
     linkedCommitSha: null,
     receiptStatus: null,
@@ -56,6 +57,18 @@ describe("isVerifiedShippedSession", () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it("never counts an unshared public-default session, even if receipt-verified", () => {
+    expect(
+      isVerifiedShippedSession(
+        session({
+          sharedAt: null,
+          receiptStatus: "shipped",
+          receiptVerifiedAt: new Date(),
+        }),
+      ),
+    ).toBe(false);
   });
 });
 

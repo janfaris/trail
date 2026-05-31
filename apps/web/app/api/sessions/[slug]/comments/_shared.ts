@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 
 export const COMMENT_LIMIT = 200;
@@ -110,6 +110,7 @@ export async function loadReceipt(req: NextRequest, slug: string) {
         eq(schema.trailSession.slug, slug),
         eq(schema.user.handle, authorHandle),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
       ),
     )
     .limit(1);

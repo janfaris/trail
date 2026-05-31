@@ -1,9 +1,9 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/db/client";
+import { and, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // oEmbed provider (https://oembed.com/).
 // Discovery: session pages emit
@@ -21,7 +21,7 @@ const URL_RE = /\/u\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\/?$/;
 
 function clampDim(raw: string | null, fallback: number, min: number, max: number): number {
   if (!raw) return fallback;
-  const n = parseInt(raw, 10);
+  const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, n));
 }
@@ -43,22 +43,23 @@ export async function GET(req: NextRequest) {
   if (!match) {
     return NextResponse.json({ error: "url does not match a trail session" }, { status: 404 });
   }
-  const [, handle, slug] = match;
+  const handle = match[1];
+  const slug = match[2];
+  if (!handle || !slug) {
+    return NextResponse.json({ error: "url does not match a trail session" }, { status: 404 });
+  }
 
   // Resolve user + session and confirm visibility.
   const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.handle, handle!),
+    where: eq(schema.user.handle, handle),
   });
   if (!userRow) {
     return NextResponse.json({ error: "user not found" }, { status: 404 });
   }
   const sessionRow = await db.query.trailSession.findFirst({
-    where: and(
-      eq(schema.trailSession.userId, userRow.id),
-      eq(schema.trailSession.slug, slug!),
-    ),
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
   });
-  if (!sessionRow || sessionRow.visibility !== "public") {
+  if (!sessionRow || sessionRow.visibility !== "public" || !sessionRow.sharedAt) {
     return NextResponse.json({ error: "session not found or not public" }, { status: 404 });
   }
 

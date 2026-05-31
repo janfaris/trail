@@ -37,6 +37,11 @@ type CommentThreadProps = {
 };
 
 const MAX_COMMENT_LENGTH = 1600;
+const THREAD_STARTERS = [
+  "What tradeoff made this work?",
+  "Where would you fork this next?",
+  "What broke before the final fix?",
+];
 
 function sortComments(comments: ReceiptComment[]) {
   return [...comments].sort((a, b) => {
@@ -124,6 +129,19 @@ export function CommentThread({
 
   const roots = comments.filter((comment) => !comment.parentId);
   const visibleCount = comments.filter((comment) => !comment.deletedAt).length;
+  const visibleReplies = comments.filter(
+    (comment) => comment.parentId && !comment.deletedAt,
+  ).length;
+
+  function useThreadStarter(prompt: string) {
+    if (!viewer) {
+      window.location.assign(signInHref);
+      return;
+    }
+
+    setDraft(prompt);
+    setError(null);
+  }
 
   async function submitComment(event: FormEvent<HTMLFormElement>, parentId: string | null) {
     event.preventDefault();
@@ -329,14 +347,19 @@ export function CommentThread({
       <div className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">
-            Receipt conversation
+            Receipt thread
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-            Notes from the builders reading this trail
+            Turn this proof into a builder conversation
           </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">
+            Ask what changed, leave a proof check, or suggest the next fork so the receipt keeps
+            moving through the network.
+          </p>
         </div>
         <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-neutral-300">
-          {visibleCount} {visibleCount === 1 ? "comment" : "comments"}
+          {visibleCount} {visibleCount === 1 ? "comment" : "comments"} · {visibleReplies}{" "}
+          {visibleReplies === 1 ? "reply" : "replies"}
         </div>
       </div>
 
@@ -352,6 +375,18 @@ export function CommentThread({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500">
               <span>{MAX_COMMENT_LENGTH - draft.length} characters left</span>
               <SubmitButton pending={pendingTarget === "root"}>Post comment</SubmitButton>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {THREAD_STARTERS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => useThreadStarter(prompt)}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-left text-[11px] font-semibold text-neutral-400 transition hover:border-amber-200/40 hover:text-amber-100"
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
           </form>
         ) : (
@@ -380,7 +415,23 @@ export function CommentThread({
             roots.map((comment) => renderComment(comment, "root"))
           ) : (
             <div className="rounded-[24px] border border-dashed border-white/10 bg-black/20 p-5 text-sm text-neutral-400">
-              No comments yet. Be the first builder to leave a proof check.
+              <p className="font-semibold text-neutral-200">No thread yet.</p>
+              <p className="mt-1">
+                Be the first builder to ask for context, leave a proof check, or suggest the next
+                fork.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {THREAD_STARTERS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => useThreadStarter(prompt)}
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-left text-[11px] font-semibold text-neutral-400 transition hover:border-amber-200/40 hover:text-amber-100"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -176,6 +176,8 @@ function reactionSummary(row: BaseFeedRow): string {
 }
 
 function feedReason(row: BaseFeedRow): string {
+  if ("isFollowing" in row && row.isFollowing && row.handle)
+    return `Because you follow @${row.handle}`;
   if (row.commentCount > 0 && row.positiveReactions + row.negativeReactions > 0) {
     return `${pluralize(row.commentCount, "reply", "replies")} and ${reactionSummary(row).toLowerCase()}`;
   }
@@ -198,7 +200,7 @@ function receiptBadge(row: BaseFeedRow): string | null {
 // /feed — open discovery by default. Everyone can browse public sessions; the
 // following timeline is personalized and therefore remains signed-in only.
 // Joins always key on trail_session.id / userId (slugs are unique only per-user,
-// never globally) and filter visibility = 'public' in SQL.
+// never globally) and filter to explicitly shared public receipts in SQL.
 
 interface BaseFeedRow extends RankableSession {
   slug: string;
@@ -491,11 +493,14 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     })
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
-    .where(and(eq(schema.trailSession.visibility, "public"), isNotNull(schema.user.handle)))
-    .orderBy(
-      desc(sql`coalesce(${schema.trailSession.sharedAt}, ${schema.trailSession.startedAt})`),
-      desc(schema.trailSession.id),
+    .where(
+      and(
+        eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
+        isNotNull(schema.user.handle),
+      ),
     )
+    .orderBy(desc(schema.trailSession.sharedAt), desc(schema.trailSession.id))
     .limit(FEED_LIMIT);
 
   const ranked = await attachEngagementStats(rankFeed(rows), viewerId);
@@ -562,13 +567,11 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
       and(
         eq(schema.follow.followerId, viewerId),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
         isNotNull(schema.user.handle),
       ),
     )
-    .orderBy(
-      desc(sql`coalesce(${schema.trailSession.sharedAt}, ${schema.trailSession.startedAt})`),
-      desc(schema.trailSession.id),
-    )
+    .orderBy(desc(schema.trailSession.sharedAt), desc(schema.trailSession.id))
     .limit(FEED_LIMIT);
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
@@ -725,6 +728,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
       LEFT JOIN session_reaction sr ON sr.session_id = ts.id
       LEFT JOIN session_comment sc ON sc.session_id = ts.id
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
     `),
     db.execute<BuilderRecommendationRaw>(sql`
@@ -751,6 +755,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
         ON viewer_follow.following_id = u.id
        AND viewer_follow.follower_id = ${viewerId}
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
         AND (${viewerId}::text IS NULL OR u.id <> ${viewerId})
       GROUP BY u.id
@@ -773,6 +778,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
       INNER JOIN trail_session ts ON ts.id = st.session_id
       INNER JOIN "user" u ON u.id = ts.user_id
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
         AND st.kind IN ('tool', 'framework', 'model')
       GROUP BY st.kind, st.tag
@@ -978,6 +984,7 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
 function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | null }) {
   const authorHref = profileHref(r);
   const currentReceiptHref = receiptHref(r);
+  const forkHref = `${currentReceiptHref}/fork`;
   const displayName = r.name || r.handle || "Trail builder";
   const handleLabel = r.handle ? `@${r.handle}` : "anonymous";
   const repoLabel = r.linkedRepo ?? r.repo;
@@ -1134,7 +1141,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             className="mt-3 block overflow-hidden rounded-[22px] border border-zinc-900 bg-zinc-950/55 transition-[border-color,background-color] hover:border-zinc-800 hover:bg-zinc-950"
           >
             <div className="border-b border-zinc-900 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
-              Conversation preview
+              Thread preview
             </div>
             <div className="divide-y divide-zinc-900/80">
               {r.commentPreviews
@@ -1169,8 +1176,28 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
                   </div>
                 ))}
             </div>
+            <div className="border-t border-zinc-900 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
+              Join the thread →
+            </div>
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            href={`${currentReceiptHref}#conversation`}
+            className="mt-3 flex items-center justify-between gap-4 rounded-[22px] border border-dashed border-zinc-900 bg-zinc-950/35 px-4 py-3 transition-[border-color,background-color] hover:border-zinc-800 hover:bg-zinc-950"
+          >
+            <span className="min-w-0">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+                Open thread
+              </span>
+              <span className="mt-1 block text-[13px] leading-5 text-zinc-500">
+                Ask a proof check, suggest a fork, or start the builder conversation.
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
+              Reply
+            </span>
+          </Link>
+        )}
 
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <ReactionBar
@@ -1191,7 +1218,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               href={`${currentReceiptHref}#conversation`}
               className="inline-flex min-h-9 items-center rounded-full border border-transparent px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
             >
-              Comment {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
+              Reply {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
             </Link>
             <CopyButton
               value={currentPublicReceiptUrl}
@@ -1199,6 +1226,12 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               copiedLabel="Copied"
               className="min-h-9 rounded-full border-transparent bg-transparent px-3 text-[11px] text-zinc-500 hover:bg-zinc-900 hover:text-zinc-100"
             />
+            <Link
+              href={forkHref}
+              className="inline-flex min-h-9 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
+            >
+              Fork
+            </Link>
             <a
               href={tweetHref}
               target="_blank"

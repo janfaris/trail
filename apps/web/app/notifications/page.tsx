@@ -91,7 +91,7 @@ function activityCopy(row: ActivityRow) {
     return {
       eyebrow: "New follower",
       title: `${actor} started following you`,
-      body: "Your builder graph just got a little denser.",
+      body: "Open their profile, follow back, and turn this into a builder graph.",
     };
   }
 
@@ -99,7 +99,7 @@ function activityCopy(row: ActivityRow) {
     return {
       eyebrow: "Receipt reaction",
       title: `${actor} reacted to your receipt`,
-      body: receiptTitle(row),
+      body: `${receiptTitle(row)} is getting a signal. Open it while the thread is warm.`,
     };
   }
 
@@ -109,7 +109,7 @@ function activityCopy(row: ActivityRow) {
       title: `${actor} replied in a receipt thread`,
       body: row.commentDeletedAt
         ? "The comment was removed."
-        : (row.commentBody ?? receiptTitle(row)),
+        : (row.commentBody ?? `Jump back into ${receiptTitle(row)}.`),
     };
   }
 
@@ -119,7 +119,7 @@ function activityCopy(row: ActivityRow) {
       title: `${actor} commented on your receipt`,
       body: row.commentDeletedAt
         ? "The comment was removed."
-        : (row.commentBody ?? receiptTitle(row)),
+        : (row.commentBody ?? `Keep the conversation moving on ${receiptTitle(row)}.`),
     };
   }
 
@@ -128,6 +128,14 @@ function activityCopy(row: ActivityRow) {
     title: `${actor} created new Trail activity`,
     body: receiptTitle(row),
   };
+}
+
+function activityAction(row: ActivityRow) {
+  if (row.type === "follow") return "View profile";
+  if (row.type === "comment_reply") return "Reply";
+  if (row.type === "session_comment") return "Open thread";
+  if (row.type === "session_reaction") return "View receipt";
+  return "Open";
 }
 
 function activityHref(row: ActivityRow) {
@@ -148,6 +156,7 @@ function ActivityItem({ row }: { row: ActivityRow }) {
   const copy = activityCopy(row);
   const unread = !row.readAt;
   const href = activityHref(row);
+  const action = activityAction(row);
 
   return (
     <Link
@@ -184,7 +193,7 @@ function ActivityItem({ row }: { row: ActivityRow }) {
       <span className="flex items-start justify-between gap-3 sm:block sm:text-right">
         <RelativeTime date={row.createdAt} className="text-[12px] text-zinc-500" />
         <span className="mt-2 hidden font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600 transition group-hover:text-zinc-300 sm:block">
-          Open
+          {action}
         </span>
       </span>
     </Link>
@@ -223,7 +232,10 @@ export default async function NotificationsPage() {
           OR (
             s.id IS NOT NULL
             AND owner.handle IS NOT NULL
-            AND (s.visibility = 'public' OR s.user_id = ${viewerId})
+            AND (
+              (s.visibility = 'public' AND s.shared_at IS NOT NULL)
+              OR s.user_id = ${viewerId}
+            )
           )
         )
         AND (
@@ -258,11 +270,11 @@ export default async function NotificationsPage() {
               Trail relay
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-zinc-50 sm:text-5xl">
-              Your social signal, not a generic inbox.
+              Your loop back into the network.
             </h1>
             <p className="mt-4 max-w-sm text-[14px] leading-6 text-zinc-400">
-              Follows, reactions, comments, and replies collect here so every receipt can turn into
-              a conversation.
+              Follows, reactions, comments, and replies should pull you back to the exact builder,
+              receipt, or thread that needs a response.
             </p>
             <div className="mt-8 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-zinc-850 bg-zinc-950/70 p-4">

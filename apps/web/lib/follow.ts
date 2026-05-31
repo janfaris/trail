@@ -1,7 +1,7 @@
 // Pure helpers for the follow graph + feed. Kept free of DB/Next imports so
 // they are trivially unit-testable and reusable by both the server action and
 // the /feed loader. The ordering logic here MUST mirror the SQL query in
-// app/feed/page.tsx exactly (coalesce(sharedAt, startedAt) desc, id desc tie-break).
+// app/feed/page.tsx exactly (sharedAt desc, id desc tie-break).
 
 export type ToggleDecision = "added" | "removed";
 export type FeedView = "everyone" | "following";
@@ -45,20 +45,17 @@ function toTime(value: Date | string | null | undefined): number {
   return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms;
 }
 
-/** Effective ranking timestamp: shared time if present, else session start. */
+/** Effective ranking timestamp: explicit public share time only. */
 function rankTime(row: RankableSession): number {
-  const shared = toTime(row.sharedAt);
-  if (shared !== Number.NEGATIVE_INFINITY) return shared;
-  return toTime(row.startedAt);
+  return toTime(row.sharedAt);
 }
 
 /**
  * Defensively filter + order feed rows. Mirrors the SQL ordering so the page
  * stays consistent even if the query and this helper drift:
- *   - keep only public sessions
+ *   - keep only explicitly shared public sessions
  *   - dedupe by id (keeps the first occurrence)
- *   - sort by coalesce(sharedAt, startedAt) desc, then id desc as a stable,
- *     deterministic tie-break
+ *   - sort by sharedAt desc, then id desc as a stable deterministic tie-break
  * Never mutates the input array.
  */
 export function rankFeed<T extends RankableSession>(rows: readonly T[]): T[] {
@@ -66,6 +63,7 @@ export function rankFeed<T extends RankableSession>(rows: readonly T[]): T[] {
   const deduped: T[] = [];
   for (const row of rows) {
     if (row.visibility !== "public") continue;
+    if (rankTime(row) === Number.NEGATIVE_INFINITY) continue;
     if (seen.has(row.id)) continue;
     seen.add(row.id);
     deduped.push(row);

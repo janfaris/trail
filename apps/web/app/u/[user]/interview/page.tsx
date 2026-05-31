@@ -1,9 +1,9 @@
+import { RelativeTime } from "@/components/relative-time";
+import { ToolIcon } from "@/components/tool-icon";
+import { db, schema } from "@/db/client";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, desc, and, sql } from "drizzle-orm";
-import { db, schema } from "@/db/client";
-import { ToolIcon } from "@/components/tool-icon";
-import { RelativeTime } from "@/components/relative-time";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +59,11 @@ export default async function InterviewView({ params }: Props) {
       and(
         eq(schema.trailSession.userId, userRow.id),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
         sql`(${schema.trailSession.outcome} = 'shipped' OR ${schema.trailSession.linkedCommitSha} IS NOT NULL OR ${schema.trailSession.eventCount} >= 20)`,
       ),
     )
-    .orderBy(desc(schema.trailSession.startedAt))
+    .orderBy(desc(schema.trailSession.sharedAt))
     .limit(30);
 
   // Top skill chips — count occurrences across shown sessions.
@@ -76,12 +77,8 @@ export default async function InterviewView({ params }: Props) {
       fwCounts.set(f, (fwCounts.get(f) ?? 0) + 1);
     }
   }
-  const topTools = [...toolCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-  const topFw = [...fwCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
+  const topTools = [...toolCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const topFw = [...fwCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
 
   const totalShipped = shipped.length;
   const withGh = shipped.filter((s) => s.linkedCommitSha).length;
@@ -99,10 +96,7 @@ export default async function InterviewView({ params }: Props) {
               <span className="text-zinc-500 font-normal ml-2">@{user}</span>
             </h1>
           </div>
-          <Link
-            href={`/u/${user}`}
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-100"
-          >
+          <Link href={`/u/${user}`} className="text-xs font-mono text-zinc-500 hover:text-zinc-100">
             full profile →
           </Link>
         </div>
@@ -116,11 +110,7 @@ export default async function InterviewView({ params }: Props) {
             <Stat label="GitHub-verified" value={withGh} />
             <Stat
               label="Verified rate"
-              value={
-                totalShipped > 0
-                  ? `${Math.round((withGh / totalShipped) * 100)}%`
-                  : "—"
-              }
+              value={totalShipped > 0 ? `${Math.round((withGh / totalShipped) * 100)}%` : "—"}
             />
           </div>
 
@@ -131,9 +121,7 @@ export default async function InterviewView({ params }: Props) {
               </div>
               {topTools.length > 0 && (
                 <div className="mb-3">
-                  <div className="text-[11px] font-mono text-zinc-500 mb-1.5">
-                    Tools
-                  </div>
+                  <div className="text-[11px] font-mono text-zinc-500 mb-1.5">Tools</div>
                   <div className="flex flex-wrap gap-1.5">
                     {topTools.map(([t, n]) => (
                       <span
@@ -175,17 +163,14 @@ export default async function InterviewView({ params }: Props) {
           </h2>
           {shipped.length === 0 ? (
             <div className="text-zinc-500 text-sm font-mono">
-              No shipped trails yet for @{user}. (Sessions get listed here when
-              outcome=shipped or when uploaded from inside a git repo.)
+              No shipped trails yet for @{user}. (Sessions get listed here when outcome=shipped or
+              when uploaded from inside a git repo.)
             </div>
           ) : (
             <ol className="space-y-6">
               {shipped.map((s) => (
                 <li key={s.slug} className="border-b border-zinc-900 pb-6">
-                  <Link
-                    href={`/u/${user}/${s.slug}`}
-                    className="block group"
-                  >
+                  <Link href={`/u/${user}/${s.slug}`} className="block group">
                     <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
                       <ToolIcon name={s.tool} size={11} />
                       <span>{s.tool}</span>
@@ -210,23 +195,19 @@ export default async function InterviewView({ params }: Props) {
                       {s.title ?? s.slug}
                     </h3>
                     {s.summary && (
-                      <p className="text-sm text-zinc-300 mt-1 leading-relaxed">
-                        {s.summary}
-                      </p>
+                      <p className="text-sm text-zinc-300 mt-1 leading-relaxed">{s.summary}</p>
                     )}
                   </Link>
-                  {(s.toolsUsed?.length || s.frameworks?.length) ? (
+                  {s.toolsUsed?.length || s.frameworks?.length ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {[...(s.toolsUsed ?? []), ...(s.frameworks ?? [])]
-                        .slice(0, 8)
-                        .map((t) => (
-                          <span
-                            key={t}
-                            className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded"
-                          >
-                            {t}
-                          </span>
-                        ))}
+                      {[...(s.toolsUsed ?? []), ...(s.frameworks ?? [])].slice(0, 8).map((t) => (
+                        <span
+                          key={t}
+                          className="text-[10px] font-mono text-zinc-500 bg-zinc-900 px-1.5 py-0.5 rounded"
+                        >
+                          {t}
+                        </span>
+                      ))}
                     </div>
                   ) : null}
                 </li>
@@ -236,8 +217,7 @@ export default async function InterviewView({ params }: Props) {
         </section>
 
         <footer className="mt-12 pt-6 border-t border-zinc-900 text-[11px] font-mono text-zinc-600">
-          This is a recruiter-mode view filtered to provably-shipped work. See
-          the{" "}
+          This is a recruiter-mode view filtered to provably-shipped work. See the{" "}
           <Link href={`/u/${user}`} className="text-zinc-300 hover:text-[#a7f300]">
             full profile
           </Link>{" "}
@@ -254,9 +234,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
       <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">
         {label}
       </div>
-      <div className="text-2xl font-semibold text-zinc-50 tabular-nums">
-        {value}
-      </div>
+      <div className="text-2xl font-semibold text-zinc-50 tabular-nums">{value}</div>
     </div>
   );
 }

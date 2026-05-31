@@ -1,19 +1,23 @@
+import { db, schema } from "@/db/client";
 // Task 7 — Stripe paywall enforcement.
 //
 // Rules:
 //   - free plan: at most 3 PUBLIC receipts. private is pro-only.
 //   - pro plan:  unlimited public + private.
 //
-// "Public receipt" = a trail_session with visibility='public' AND a
-// receipt_generated_at set (it has actual receipt copy, not just a raw
-// trail). We count only public rows for the limit because the whole point
-// of the paywall is to gate sharing publicly under your handle.
+// "Public receipt" = a trail_session with visibility='public', a generated
+// receipt, and shared_at set. Visibility alone is not enough because legacy and
+// staged rows can be default-public before the owner intentionally shares them.
 import { and, count, eq, isNotNull } from "drizzle-orm";
-import { db, schema } from "@/db/client";
 
 export type PaywallCheck =
   | { allowed: true }
-  | { allowed: false; reason: "paywall_public_limit" | "paywall_private_pro_only"; publicCount: number; limit: number };
+  | {
+      allowed: false;
+      reason: "paywall_public_limit" | "paywall_private_pro_only";
+      publicCount: number;
+      limit: number;
+    };
 
 export const FREE_PUBLIC_RECEIPT_LIMIT = 3;
 
@@ -48,6 +52,7 @@ export async function checkPaywall(
       and(
         eq(schema.trailSession.userId, userId),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
         isNotNull(schema.trailSession.receiptGeneratedAt),
       ),
     );

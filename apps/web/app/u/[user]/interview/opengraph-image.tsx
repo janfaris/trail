@@ -1,5 +1,5 @@
 import { COLORS, Footer, OG_CONTENT_TYPE, OG_SIZE, Wordmark, loadOgFonts } from "@/lib/og";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 
 export const size = OG_SIZE;
@@ -33,10 +33,11 @@ export default async function Image({ params }: { params: Promise<{ user: string
         and(
           eq(schema.trailSession.userId, userRow.id),
           eq(schema.trailSession.visibility, "public"),
+          isNotNull(schema.trailSession.sharedAt),
           sql`(${schema.trailSession.outcome} = 'shipped' OR ${schema.trailSession.linkedCommitSha} IS NOT NULL OR ${schema.trailSession.eventCount} >= 20)`,
         ),
       )
-      .orderBy(desc(schema.trailSession.startedAt))
+      .orderBy(desc(schema.trailSession.sharedAt))
       .limit(30);
     totalShipped = shipped.length;
     withGh = shipped.filter((s) => s.linkedCommitSha).length;

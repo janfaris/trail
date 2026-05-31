@@ -1,10 +1,10 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { desc, eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
-import { SiteNav } from "@/components/site-nav";
 import { DashboardClient, type SessionRow } from "@/components/dashboard-client";
+import { SiteNav } from "@/components/site-nav";
+import { db, schema } from "@/db/client";
+import { auth } from "@/lib/auth";
+import { desc, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 // ─────────────────────────────────────────────────────────────────────────
 // /dashboard — owner-only session manager.
@@ -32,6 +32,7 @@ export default async function DashboardPage() {
       tool: schema.trailSession.tool,
       eventCount: schema.trailSession.eventCount,
       startedAt: schema.trailSession.startedAt,
+      sharedAt: schema.trailSession.sharedAt,
       visibility: schema.trailSession.visibility,
       outcome: schema.trailSession.outcome,
       linkedRepo: schema.trailSession.linkedRepo,
@@ -44,14 +45,14 @@ export default async function DashboardPage() {
     .orderBy(desc(schema.trailSession.startedAt))
     .limit(500);
 
-  const sessions: SessionRow[] = rows.map((r) => ({
+  const sessions: SessionRow[] = rows.map(({ sharedAt: _sharedAt, ...r }) => ({
     ...r,
     startedAt: r.startedAt.toISOString(),
   }));
 
   const totals = {
     all: sessions.length,
-    public: sessions.filter((r) => r.visibility === "public").length,
+    public: rows.filter((r) => r.visibility === "public" && r.sharedAt != null).length,
     private: sessions.filter((r) => r.visibility === "private").length,
     shipped: sessions.filter((r) => r.outcome === "shipped").length,
   };
@@ -65,13 +66,10 @@ export default async function DashboardPage() {
           <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">
             Trail · session manager
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
-            Your sessions
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">Your sessions</h1>
           <p className="text-sm text-zinc-500 max-w-xl">
-            Everything you've recorded with the Trail CLI. Select any number and
-            change visibility or outcome in one click — no more sharing one ID
-            at a time.
+            Everything you've recorded with the Trail CLI. Select any number and change visibility
+            or outcome in one click — no more sharing one ID at a time.
           </p>
 
           <div className="grid grid-cols-4 gap-3 mt-6 max-w-2xl">
@@ -84,15 +82,11 @@ export default async function DashboardPage() {
 
         {sessions.length === 0 ? (
           <div className="border border-dashed border-zinc-800 rounded-lg p-10 text-center">
-            <div className="font-mono text-sm text-zinc-400 mb-2">
-              No sessions yet.
-            </div>
+            <div className="font-mono text-sm text-zinc-400 mb-2">No sessions yet.</div>
             <div className="text-xs text-zinc-600">
               Record one with{" "}
-              <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-300">
-                trail record
-              </code>
-              , then refresh.
+              <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-300">trail record</code>,
+              then refresh.
             </div>
           </div>
         ) : (
@@ -114,9 +108,7 @@ function Stat({
 }) {
   return (
     <div className="border border-zinc-900 rounded-md px-3 py-2.5">
-      <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-zinc-500">
-        {label}
-      </div>
+      <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-zinc-500">{label}</div>
       <div
         className={`text-xl font-semibold tabular-nums mt-0.5 ${
           tone === "lime" ? "text-[#a7f300]" : "text-zinc-100"
