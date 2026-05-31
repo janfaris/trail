@@ -4,7 +4,7 @@ import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { canFollow, toggleDecision } from "@/lib/follow";
 import { promoteSessionToPublicReceipt } from "@/lib/public-receipt-publishing";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -32,6 +32,9 @@ export async function toggleFeatured(sessionId: string) {
     where: and(eq(schema.trailSession.id, sessionId), eq(schema.trailSession.userId, u.id)),
   });
   if (!row) throw new Error("not found");
+  if (row.visibility === "redacted" || row.redactedAt !== null) {
+    return { ok: false, error: "redacted sessions cannot be featured" };
+  }
 
   if (!row.isFeatured) {
     const [{ count }] = await db
@@ -71,12 +74,28 @@ async function ownedSessionIds(userId: string, ids: string[]): Promise<string[]>
   return rows.map((r) => r.id);
 }
 
+async function ownedMutableSessionIds(userId: string, ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ id: schema.trailSession.id })
+    .from(schema.trailSession)
+    .where(
+      and(
+        eq(schema.trailSession.userId, userId),
+        inArray(schema.trailSession.id, ids),
+        ne(schema.trailSession.visibility, "redacted"),
+        isNull(schema.trailSession.redactedAt),
+      ),
+    );
+  return rows.map((r) => r.id);
+}
+
 export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
   const u = await requireUser();
   if (!["public", "private", "pending"].includes(visibility)) {
     return { ok: false, error: "invalid visibility" };
   }
-  const owned = await ownedSessionIds(u.id, ids);
+  const owned = await ownedMutableSessionIds(u.id, ids);
   if (owned.length === 0) return { ok: true, updated: 0 };
 
   if (visibility === "public") {
@@ -142,7 +161,7 @@ export async function bulkSetOutcome(ids: string[], outcome: Outcome) {
   if (outcome !== null && !["shipped", "abandoned", "rabbithole", "unknown"].includes(outcome)) {
     return { ok: false, error: "invalid outcome" };
   }
-  const owned = await ownedSessionIds(u.id, ids);
+  const owned = await ownedMutableSessionIds(u.id, ids);
   if (owned.length === 0) return { ok: true, updated: 0 };
   await db
     .update(schema.trailSession)
