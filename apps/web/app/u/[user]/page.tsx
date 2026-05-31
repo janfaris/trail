@@ -1,32 +1,32 @@
-import Link from "next/link";
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { headers, cookies } from "next/headers";
-import { db, schema } from "@/db/client";
-import { eq, desc, and, sql } from "drizzle-orm";
-import { Avatar } from "@/components/ui/avatar";
-import { ToolIcon } from "@/components/tool-icon";
+import { CopyButton } from "@/components/copy-button";
+import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
+import { EmptyInstallCard } from "@/components/empty-install-card";
+import { FeatureToggle } from "@/components/feature-toggle";
+import { FeaturedSessionCard } from "@/components/featured-session-card";
+import { FollowButton } from "@/components/follow-button";
+import { LanguagesBar, topLanguages } from "@/components/languages-bar";
+import { ProfileIntroCard } from "@/components/profile-intro-card";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
-import { FeaturedSessionCard } from "@/components/featured-session-card";
-import { FeatureToggle } from "@/components/feature-toggle";
-import { FollowButton } from "@/components/follow-button";
-import { ProfileIntroCard } from "@/components/profile-intro-card";
-import { EmptyInstallCard } from "@/components/empty-install-card";
-import { githubAvatar } from "@/lib/share";
-import { formatRepoPath } from "@/lib/format";
-import { auth } from "@/lib/auth";
-import { formatDuration } from "@/lib/session-metrics";
-import { computeStreak } from "@/lib/streak";
-import { LanguagesBar, topLanguages } from "@/components/languages-bar";
+import { ToolIcon } from "@/components/tool-icon";
 import { ToolMixBar } from "@/components/tool-mix-bar";
-import { VelocitySparkline } from "@/components/velocity-sparkline";
 import { TopRepos } from "@/components/top-repos";
-import { computeUserStats } from "@/lib/aggregates";
-import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
+import { Avatar } from "@/components/ui/avatar";
+import { VelocitySparkline } from "@/components/velocity-sparkline";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { db, schema } from "@/db/client";
+import { computeUserStats } from "@/lib/aggregates";
+import { auth } from "@/lib/auth";
+import { formatRepoPath } from "@/lib/format";
+import { formatDuration } from "@/lib/session-metrics";
+import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
+import { computeStreak } from "@/lib/streak";
 import { computeVerifiedBuilder } from "@/lib/verified-builder";
-import { CopyButton } from "@/components/copy-button";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { cookies, headers } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 function parseUsd(raw: string | null | undefined): number {
   if (raw == null) return 0;
@@ -68,10 +68,90 @@ function XIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function ArrowUpRightIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+    >
+      <path d="M7 17 17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
+  );
+}
+
+type TrailSessionRow = typeof schema.trailSession.$inferSelect;
+
+interface ProfileEngagementRow {
+  sessionId: string;
+  reactions: number;
+  comments: number;
+}
+
+interface ProfileStackRow {
+  tag: string;
+  count: number;
+}
+
+function rowsOf<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (result && typeof result === "object" && "rows" in result) {
+    const rows = (result as { rows?: unknown }).rows;
+    return Array.isArray(rows) ? (rows as T[]) : [];
+  }
+  return [];
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  return String(n);
+}
+
+function sessionTitle(s: TrailSessionRow): string {
+  return s.title || s.receiptTldr || s.summary || "Untitled Trail";
+}
+
+function sessionOutcome(s: TrailSessionRow): string {
+  return (
+    s.receiptOutcome ||
+    s.receiptTldr ||
+    s.summary ||
+    "A public shipping receipt with the session log, proof metrics, and conversation context."
+  );
+}
+
+function sessionStatusLabel(s: TrailSessionRow): string {
+  if (s.receiptStatus === "shipped") return "Verified ship";
+  if (s.outcome === "shipped") return "Shipped";
+  if (s.receiptStatus === "draft") return "Draft receipt";
+  return s.visibility === "public" ? "Public proof" : "Private proof";
+}
+
+function stackHref(tag: string): string {
+  return `/learn?tag=${encodeURIComponent(tag)}`;
+}
+
+function githubRepoUrl(repo: string | null | undefined): string | null {
+  if (!repo) return null;
+  const normalized = repo.replace(/^https?:\/\/github\.com\//, "").replace(/^github\.com\//, "");
+  if (!/^[\w.-]+\/[\w.-]+$/.test(normalized)) return null;
+  return `https://github.com/${normalized}`;
+}
+
 export default async function UserProfile({ params }: { params: Promise<{ user: string }> }) {
   const { user } = await params;
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
+  const handle = userRow.handle ?? user;
 
   let sessionInfo: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
   try {
@@ -106,9 +186,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
 
   const totalEvents = all.reduce((n, s) => n + (s.eventCount ?? 0), 0);
   const tools = Array.from(new Set(all.map((s) => s.tool))).filter(Boolean);
-  const avatar = userRow.image ?? githubAvatar(userRow.handle ?? user);
+  const avatar = userRow.image ?? githubAvatar(handle);
 
-  const gh = userRow.githubHandle || userRow.handle;
+  const gh = userRow.githubHandle || handle;
   const x = userRow.xHandle;
   const li = userRow.linkedinHandle;
   const site = userRow.website;
@@ -129,10 +209,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   let isFollowing = false;
   if (viewerId && !isSelf) {
     const existing = await db.query.follow.findFirst({
-      where: and(
-        eq(schema.follow.followerId, viewerId),
-        eq(schema.follow.followingId, userRow.id),
-      ),
+      where: and(eq(schema.follow.followerId, viewerId), eq(schema.follow.followingId, userRow.id)),
     });
     isFollowing = Boolean(existing);
   }
@@ -152,9 +229,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
     .map((s) => s.durationSeconds)
     .filter((n): n is number => typeof n === "number" && n > 0)
     .sort((a, b) => a - b);
-  const median = durations.length
-    ? durations[Math.floor(durations.length / 2)]
-    : null;
+  const median = durations.length ? durations[Math.floor(durations.length / 2)] : null;
   const sharedDates = all
     .map((s) => s.sharedAt)
     .filter((d): d is Date => d instanceof Date)
@@ -167,371 +242,634 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   // Public proof-of-work credential — counts only public, commit-backed
   // shipped sessions, so it reads identically for owners and recruiters.
   const verifiedBuilder = computeVerifiedBuilder(all);
+  const publicSessions = all.filter((s) => s.visibility === "public");
+  const shippedPublicCount = publicSessions.filter(
+    (s) => s.receiptStatus === "shipped" || s.outcome === "shipped",
+  ).length;
+  const latestPublicSession = [...publicSessions].sort(
+    (a, b) => b.startedAt.getTime() - a.startedAt.getTime(),
+  )[0];
+  const heroSession = heroFeatured ?? latestPublicSession ?? all[0];
+  const profileUrl = `${base}/u/${handle}`;
+  const profileShareText = `${
+    userRow.name || `@${handle}`
+  } is shipping AI-built work on Trail: ${formatCount(publicSessions.length)} public receipts, ${formatCount(shippedPublicCount)} shipped.`;
+  const profileTweetUrl = tweetIntent(profileShareText, profileUrl);
+
+  const visibilityFilter = isSelf ? sql`` : sql`and ts.visibility = 'public'`;
+  const [engagementResult, stackResult] = await Promise.all([
+    db.execute(sql`
+      select
+        ts.id as "sessionId",
+        count(distinct sr.id)::int as reactions,
+        count(distinct sc.id)::int as comments
+      from ${schema.trailSession} ts
+      left join ${schema.sessionReaction} sr on sr.session_id = ts.id
+      left join ${schema.sessionComment} sc on sc.session_id = ts.id and sc.deleted_at is null
+      where ts.user_id = ${userRow.id}
+      ${visibilityFilter}
+      group by ts.id
+    `),
+    db.execute(sql`
+      select lower(st.tag) as tag, count(distinct ts.id)::int as count
+      from ${schema.sessionTag} st
+      join ${schema.trailSession} ts on ts.id = st.session_id
+      where ts.user_id = ${userRow.id}
+        and ts.visibility = 'public'
+      group by lower(st.tag)
+      order by count desc, tag asc
+      limit 8
+    `),
+  ]);
+  const engagementRows = rowsOf<ProfileEngagementRow>(engagementResult);
+  const engagementBySession = new Map(
+    engagementRows.map((row) => [
+      row.sessionId,
+      {
+        reactions: row.reactions ?? 0,
+        comments: row.comments ?? 0,
+      },
+    ]),
+  );
+  const reactionCount = engagementRows.reduce((n, row) => n + (row.reactions ?? 0), 0);
+  const commentCount = engagementRows.reduce((n, row) => n + (row.comments ?? 0), 0);
+  const stackRows = rowsOf<ProfileStackRow>(stackResult).filter((row) => row.tag);
+  const stackPills = stackRows.length
+    ? stackRows
+    : tools.slice(0, 8).map((tool) => ({
+        tag: tool,
+        count: all.filter((s) => s.tool === tool).length,
+      }));
+  const heroEngagement = heroSession
+    ? (engagementBySession.get(heroSession.id) ?? { reactions: 0, comments: 0 })
+    : null;
+  const heroReceiptUrl =
+    heroSession?.visibility === "public" ? shareUrl(handle, heroSession.slug, base) : null;
+  const heroTweetUrl =
+    heroSession && heroReceiptUrl
+      ? tweetIntent(
+          `${userRow.name || `@${handle}`} shipped: ${sessionTitle(heroSession)}`,
+          heroReceiptUrl,
+        )
+      : null;
+  const heroRepoUrl = heroSession
+    ? githubRepoUrl(heroSession.linkedRepo ?? heroSession.repo)
+    : null;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-hidden bg-[#060706] text-zinc-100">
       <SiteNav />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(167,243,0,0.16),transparent_34%),radial-gradient(circle_at_82%_0%,rgba(255,255,255,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_38%)]"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 opacity-[0.04] [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:44px_44px]"
+      />
 
-      <main className="max-w-4xl mx-auto px-6 pt-10 pb-24">
+      <main className="relative mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
         {showIntro && <ProfileIntroCard />}
 
         {isSelf && (
-          <Suspense fallback={<CostEfficiencyBandSkeleton />}>
-            <CostEfficiencyBand userId={userRow.id} />
-          </Suspense>
+          <div className="mb-6">
+            <Suspense fallback={<CostEfficiencyBandSkeleton />}>
+              <CostEfficiencyBand userId={userRow.id} />
+            </Suspense>
+          </div>
         )}
 
-        <div className="flex items-start gap-5 mb-10">
-          <Avatar src={avatar} alt={userRow.handle ?? user} size={64} fallback={userRow.handle ?? user} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight text-zinc-50 truncate">
-                  @{userRow.handle}
-                </h1>
-                <VerifiedBadge status={verifiedBuilder} />
-              </div>
-              {!isSelf &&
-                (viewerId ? (
-                  <FollowButton targetUserId={userRow.id} initialFollowing={isFollowing} />
-                ) : (
-                  <Link
-                    href={`/api/auth/sign-in/github?callbackURL=/u/${userRow.handle}`}
-                    className="px-3 py-1 rounded-md text-sm font-medium border border-[#a7f300] bg-[#a7f300] text-black hover:bg-[#b6ff14] transition-colors"
-                  >
-                    Sign in to follow
-                  </Link>
-                ))}
-            </div>
-            {userRow.name && userRow.name !== userRow.handle && (
-              <p className="text-sm text-zinc-400 mt-0.5">{userRow.name}</p>
-            )}
-            {userRow.bio ? (
-              <p className="text-[15px] text-zinc-300 mt-2 leading-snug max-w-2xl">{userRow.bio}</p>
-            ) : isSelf ? (
-              <Link
-                href="/settings"
-                className="inline-block text-sm text-zinc-500 hover:text-[#a7f300] mt-2 font-mono"
-              >
-                Add a bio →
-              </Link>
-            ) : null}
+        <section className="relative overflow-hidden rounded-[2rem] border border-zinc-800/80 bg-zinc-950/90 shadow-2xl shadow-black/40">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#a7f300] via-zinc-100 to-zinc-700"
+          />
+          <div
+            aria-hidden
+            className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[#a7f300]/20 bg-[#a7f300]/10 blur-3xl"
+          />
+          <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.75fr)] lg:p-10">
+            <div className="min-w-0">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 gap-4">
+                  <Avatar src={avatar} alt={handle} size={80} fallback={handle} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-[#a7f300]">
+                        Builder proof
+                      </span>
+                      <VerifiedBadge status={verifiedBuilder} />
+                    </div>
+                    <h1 className="mt-3 truncate text-4xl font-semibold tracking-[-0.04em] text-zinc-50 sm:text-5xl">
+                      @{handle}
+                    </h1>
+                    {userRow.name && userRow.name !== handle && (
+                      <p className="mt-1 text-base text-zinc-400">{userRow.name}</p>
+                    )}
+                  </div>
+                </div>
 
-            {hasSocials && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs font-mono text-zinc-400">
-                {gh && (
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {!isSelf &&
+                    (viewerId ? (
+                      <FollowButton targetUserId={userRow.id} initialFollowing={isFollowing} />
+                    ) : (
+                      <Link
+                        href={`/api/auth/sign-in/github?callbackURL=/u/${handle}`}
+                        className="rounded-full border border-[#a7f300] bg-[#a7f300] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#c8ff5e]"
+                      >
+                        Follow
+                      </Link>
+                    ))}
+                  <CopyButton value={profileUrl} label="Copy profile" copiedLabel="Copied" />
                   <a
-                    href={`https://github.com/${gh}`}
+                    href={profileTweetUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 hover:text-zinc-100"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-50"
                   >
-                    <GitHubIcon size={14} />
-                    GitHub
+                    <XIcon size={13} />
+                    Share
                   </a>
+                </div>
+              </div>
+
+              {userRow.bio ? (
+                <p className="mt-6 max-w-3xl text-xl leading-snug text-zinc-200 sm:text-2xl">
+                  {userRow.bio}
+                </p>
+              ) : isSelf ? (
+                <Link
+                  href="/settings"
+                  className="mt-6 inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-mono text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                >
+                  Add a bio so your proof has a voice →
+                </Link>
+              ) : (
+                <p className="mt-6 max-w-3xl text-xl leading-snug text-zinc-400 sm:text-2xl">
+                  AI-native builder publishing session receipts as proof of work.
+                </p>
+              )}
+
+              <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  ["Public receipts", publicSessions.length],
+                  ["Verified ships", shippedPublicCount],
+                  ["Followers", followerCount],
+                  ["Reactions", reactionCount],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-zinc-800/90 bg-black/30 p-4"
+                  >
+                    <p className="text-2xl font-semibold tracking-tight text-zinc-50">
+                      {formatCount(Number(value))}
+                    </p>
+                    <p className="mt-1 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                      {label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
+                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                  {formatCount(totalEvents)} agent events
+                </span>
+                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                  {hoursLabel} logged
+                </span>
+                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                  {streak.current}d streak
+                </span>
+                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                  {formatCount(commentCount)} comments
+                </span>
+                {isSelf && (
+                  <Link
+                    href={`/u/${handle}/spend`}
+                    className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                    title="Private — only you can see this"
+                  >
+                    Spend →
+                  </Link>
                 )}
-                {x && (
-                  <>
-                    <span className="text-zinc-700">·</span>
+              </div>
+
+              {hasSocials && (
+                <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
+                  {gh && (
+                    <a
+                      href={`https://github.com/${gh}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                    >
+                      <GitHubIcon size={14} />
+                      GitHub
+                    </a>
+                  )}
+                  {x && (
                     <a
                       href={`https://x.com/${x}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
                     >
-                      <XIcon size={13} />
-                      X
+                      <XIcon size={13} />X
                     </a>
-                  </>
-                )}
-                {li && (
-                  <>
-                    <span className="text-zinc-700">·</span>
+                  )}
+                  {li && (
                     <a
                       href={`https://linkedin.com/in/${li}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
                     >
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                        <path d="M2.5 2A1.5 1.5 0 0 0 1 3.5v9A1.5 1.5 0 0 0 2.5 14h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 2h-11zM4.7 5.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM3.8 6.6h1.8v5.7H3.8V6.6zm3 0h1.7v.8c.24-.37.78-.95 1.86-.95 1.32 0 2.04.87 2.04 2.5v3.36h-1.78V9.32c0-.78-.27-1.27-.95-1.27-.52 0-.83.36-.97.7-.05.13-.07.31-.07.5v3.04H6.8V6.6z" />
-                      </svg>
                       LinkedIn
                     </a>
-                  </>
-                )}
-                {site && (
-                  <>
-                    <span className="text-zinc-700">·</span>
+                  )}
+                  {site && (
                     <a
                       href={site}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-zinc-100 truncate max-w-[18rem]"
+                      className="inline-flex max-w-[18rem] items-center gap-1.5 truncate rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
                     >
                       {site.replace(/^https?:\/\//, "")}
                     </a>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            <div className="mt-4 text-xs font-mono text-zinc-500 space-y-2">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span>
-                  <span className="tabular-nums text-zinc-200">{all.length}</span>{" "}
-                  session{all.length === 1 ? "" : "s"}
-                </span>
-                <span className="text-zinc-700">·</span>
-                <span>
-                  <span className="tabular-nums text-zinc-200">{totalEvents}</span> events
-                </span>
-                <span className="text-zinc-700">·</span>
-                <span>
-                  <span className="tabular-nums text-zinc-200">{followerCount}</span>{" "}
-                  follower{followerCount === 1 ? "" : "s"}
-                </span>
-                <span className="text-zinc-700">·</span>
-                <span>
-                  <span className="tabular-nums text-zinc-200">{followingCount}</span> following
-                </span>
-                {isSelf && (
-                  <>
-                    <span className="text-zinc-700">·</span>
+              {stackPills.length > 0 && (
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  {stackPills.map((stack) => (
                     <Link
-                      href={`/u/${userRow.handle}/spend`}
-                      className="text-zinc-400 hover:text-[#a7f300] transition-colors"
-                      title="Private — only you can see this"
+                      key={stack.tag}
+                      href={stackHref(stack.tag)}
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs font-mono text-zinc-300 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
                     >
-                      Spend →
+                      <span>{stack.tag}</span>
+                      <span className="text-zinc-600">{stack.count}</span>
                     </Link>
-                  </>
-                )}
-              </div>
-              {tools.length > 0 && (
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-zinc-600">captures</span>
-                  {tools.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-1 rounded border border-zinc-800 bg-zinc-900/60 px-1.5 py-0.5 text-zinc-300"
-                    >
-                      <ToolIcon name={t} size={11} className="text-zinc-400" />
-                      {t}
-                    </span>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        </div>
 
-        <div className="mb-8">
-          {isSelf ? (
-            <div className="rounded-lg border border-zinc-900 bg-zinc-950/60 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-zinc-100">Share for hiring</p>
-                <p className="text-xs text-zinc-500 mt-0.5 leading-snug">
-                  A recruiter-ready view of your shipped, commit-backed work — paste the link
-                  into job applications and DMs.
+            <aside className="rounded-[1.5rem] border border-zinc-800 bg-black/40 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+                  Pinned proof
                 </p>
+                {heroSession && (
+                  <span className="rounded-full bg-[#a7f300] px-2 py-0.5 text-[10px] font-mono font-semibold text-black">
+                    {sessionStatusLabel(heroSession)}
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              {heroSession ? (
+                <div className="rounded-[1.25rem] border border-zinc-800 bg-zinc-950/80 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <ToolIcon name={heroSession.tool} className="mt-1 text-[#a7f300]" />
+                    {isSelf && (
+                      <FeatureToggle
+                        sessionId={heroSession.id}
+                        isFeatured={heroSession.isFeatured}
+                      />
+                    )}
+                  </div>
+                  <Link href={`/u/${handle}/${heroSession.slug}`} className="group mt-4 block">
+                    <h2 className="text-2xl font-semibold leading-tight tracking-[-0.03em] text-zinc-50 group-hover:text-[#a7f300]">
+                      {sessionTitle(heroSession)}
+                    </h2>
+                    <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-zinc-400">
+                      {sessionOutcome(heroSession)}
+                    </p>
+                  </Link>
+                  <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs font-mono text-zinc-500">
+                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                      <p className="text-zinc-100">{formatCount(heroSession.eventCount)}</p>
+                      <p>events</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                      <p className="text-zinc-100">{formatCount(heroEngagement?.reactions ?? 0)}</p>
+                      <p>react</p>
+                    </div>
+                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                      <p className="text-zinc-100">{formatCount(heroEngagement?.comments ?? 0)}</p>
+                      <p>talk</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      href={`/u/${handle}/${heroSession.slug}`}
+                      className="inline-flex flex-1 items-center justify-center rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 px-3 py-2 text-xs font-mono text-[#a7f300] transition-colors hover:bg-[#a7f300]/20"
+                    >
+                      Open receipt
+                    </Link>
+                    <Link
+                      href={`/u/${handle}/${heroSession.slug}#conversation`}
+                      className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                    >
+                      Comment
+                    </Link>
+                    {heroTweetUrl && (
+                      <a
+                        href={heroTweetUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                      >
+                        <XIcon size={13} />
+                      </a>
+                    )}
+                    {heroRepoUrl && (
+                      <a
+                        href={heroRepoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                      >
+                        Fork
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[1.25rem] border border-dashed border-zinc-800 bg-zinc-950/70 p-5">
+                  <p className="text-sm font-medium text-zinc-200">No public receipts yet.</p>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+                    The first published session will become this builder&apos;s proof card.
+                  </p>
+                </div>
+              )}
+            </aside>
+          </div>
+        </section>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="space-y-8">
+            {compactFeatured.length > 0 && (
+              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+                    Curated receipts
+                  </h3>
+                  <span className="text-xs font-mono text-zinc-600">
+                    {compactFeatured.length} pinned
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {compactFeatured.map((s) => (
+                    <FeaturedSessionCard key={s.id} session={s} handle={handle} variant="compact" />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {all.length === 0 ? (
+              isSelf ? (
+                <div className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70 p-5">
+                  <EmptyInstallCard />
+                </div>
+              ) : (
+                <div className="rounded-[1.5rem] border border-dashed border-zinc-800 bg-zinc-950/60 p-8 text-center">
+                  <p className="text-lg font-semibold text-zinc-200">
+                    @{handle} has not published a receipt yet.
+                  </p>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    Follow now and their first public ship will land in your feed.
+                  </p>
+                </div>
+              )
+            ) : recent.length > 0 ? (
+              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70">
+                <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-4 sm:px-5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-100">Shipping timeline</h3>
+                    <p className="mt-1 text-xs font-mono text-zinc-500">
+                      Receipts, proof metrics, and conversation entry points.
+                    </p>
+                  </div>
+                  <Link
+                    href="/feed"
+                    className="hidden rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-mono text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300] sm:inline-flex"
+                  >
+                    Open feed
+                  </Link>
+                </div>
+                <ul>
+                  {recent.map((s) => {
+                    const repoShort = formatRepoPath(s.linkedRepo ?? s.repo);
+                    const title = sessionTitle(s);
+                    const costUsd = parseUsd(s.estimatedCostUsd);
+                    const engagement = engagementBySession.get(s.id) ?? {
+                      reactions: 0,
+                      comments: 0,
+                    };
+                    const repoUrl = githubRepoUrl(s.linkedRepo ?? s.repo);
+                    const receiptUrl =
+                      s.visibility === "public" ? shareUrl(handle, s.slug, base) : null;
+                    return (
+                      <li key={s.id} className="border-b border-zinc-800 last:border-b-0">
+                        <article className="group grid gap-4 px-4 py-5 transition-colors hover:bg-zinc-900/45 sm:grid-cols-[3.5rem_1fr] sm:px-5">
+                          <div className="hidden sm:flex sm:flex-col sm:items-center">
+                            <span className="h-10 w-10 rounded-full border border-zinc-800 bg-black/40 p-2 text-[#a7f300]">
+                              <ToolIcon name={s.tool} />
+                            </span>
+                            <span className="mt-3 h-full w-px bg-zinc-800 group-last:hidden" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-500">
+                              <RelativeTime date={s.startedAt} className="tabular-nums" />
+                              <span className="text-zinc-700">/</span>
+                              <span>{sessionStatusLabel(s)}</span>
+                              {repoShort && (
+                                <>
+                                  <span className="text-zinc-700">/</span>
+                                  <span className="truncate">{repoShort}</span>
+                                </>
+                              )}
+                              {costUsd > 0 && (
+                                <>
+                                  <span className="text-zinc-700">/</span>
+                                  <span>{fmtUsd(costUsd)}</span>
+                                </>
+                              )}
+                            </div>
+                            <Link href={`/u/${handle}/${s.slug}`} className="mt-2 block">
+                              <h4 className="text-lg font-semibold tracking-tight text-zinc-100 transition-colors group-hover:text-[#a7f300]">
+                                {title}
+                              </h4>
+                              <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-500">
+                                {sessionOutcome(s)}
+                              </p>
+                            </Link>
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-mono">
+                              <span className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400">
+                                {formatCount(s.eventCount)} events
+                                {s.durationSeconds != null && (
+                                  <span className="text-zinc-600">
+                                    {" "}
+                                    / {formatDuration(s.durationSeconds)}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400">
+                                {formatCount(engagement.reactions)} reactions
+                              </span>
+                              <Link
+                                href={`/u/${handle}/${s.slug}#conversation`}
+                                className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                              >
+                                {formatCount(engagement.comments)} comments
+                              </Link>
+                              {receiptUrl && (
+                                <CopyButton value={receiptUrl} label="Copy" copiedLabel="Copied" />
+                              )}
+                              {repoUrl && (
+                                <a
+                                  href={repoUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                                >
+                                  Fork
+                                  <ArrowUpRightIcon size={12} />
+                                </a>
+                              )}
+                              {isSelf && (
+                                <span className="ml-auto">
+                                  <FeatureToggle sessionId={s.id} isFeatured={s.isFeatured} />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+                Builder status
+              </p>
+              <div className="mt-4 space-y-3 text-sm text-zinc-400">
+                <div className="flex items-center justify-between">
+                  <span>Verified builder</span>
+                  <span className={verifiedBuilder.verified ? "text-[#a7f300]" : "text-zinc-500"}>
+                    {verifiedBuilder.verified ? "Active" : "Pending"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Public shipped proof</span>
+                  <span className="font-mono text-zinc-200">{shippedPublicCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Followers / following</span>
+                  <span className="font-mono text-zinc-200">
+                    {followerCount} / {followingCount}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Repos touched</span>
+                  <span className="font-mono text-zinc-200">{distinctRepos}</span>
+                </div>
+              </div>
+            </section>
+
+            {all.length > 0 && (
+              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+                <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+                  Proof graph
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs font-mono text-zinc-500">
+                  <div>
+                    <div className="text-lg text-zinc-100">{hoursLabel}</div>
+                    <div>hours coded</div>
+                  </div>
+                  <div>
+                    <div className="text-lg text-zinc-100">{streak.current}</div>
+                    <div>day streak</div>
+                  </div>
+                  <div>
+                    <div className="text-lg text-zinc-100">
+                      {median ? formatDuration(median) : "—"}
+                    </div>
+                    <div>median session</div>
+                  </div>
+                  <div>
+                    <div className="text-lg text-zinc-100">{streak.longest}</div>
+                    <div>longest streak</div>
+                  </div>
+                </div>
+                {showTier2 && (
+                  <div className="mt-5">
+                    <VelocitySparkline weeks={tier2.velocityWeekly} />
+                    <p className="mt-1 text-xs font-mono text-zinc-500">last 12 weeks</p>
+                  </div>
+                )}
+                {langs.length > 0 && <LanguagesBar langs={langs} />}
+                {showTier2 && tier2.topToolCalls.length > 0 && (
+                  <div className="mt-5">
+                    <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                      Agent actions
+                    </h4>
+                    <ToolMixBar tools={tier2.topToolCalls} />
+                  </div>
+                )}
+                {showTier2 && tier2.topRepos.length > 0 && (
+                  <div className="mt-5">
+                    <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+                      Top repos
+                    </h4>
+                    <TopRepos items={tier2.topRepos} />
+                  </div>
+                )}
+                {showTier2 && tier2.peakWeekday && (
+                  <p className="mt-4 text-xs font-mono text-zinc-500">
+                    Most active on {tier2.peakWeekday}s<span className="text-zinc-700"> / </span>
+                    <span className="tabular-nums">{tier2.totalPrompts}</span> prompts
+                    <span className="text-zinc-700"> / </span>
+                    <span className="tabular-nums">{failurePct}%</span> tool-call errors
+                  </p>
+                )}
+              </section>
+            )}
+
+            <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
+                Shareable proof
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+                {isSelf
+                  ? "Use your profile or recruiter view as a proof-of-work link in DMs, applications, and launch posts."
+                  : "Open the recruiter view for a compact scan of shipped, commit-backed work."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Link
-                  href={`/u/${userRow.handle}/interview`}
-                  className="inline-flex items-center h-7 px-2.5 rounded-md border border-[#a7f300]/30 bg-[#a7f300]/10 text-xs font-mono text-[#a7f300] hover:bg-[#a7f300]/20 transition-colors"
+                  href={`/u/${handle}/interview`}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 px-3 py-2 text-xs font-mono text-[#a7f300] transition-colors hover:bg-[#a7f300]/20"
                 >
-                  Open recruiter view →
+                  Recruiter view
+                  <ArrowUpRightIcon size={12} />
                 </Link>
                 <CopyButton
-                  value={`${base}/u/${userRow.handle}/interview`}
+                  value={`${base}/u/${handle}/interview`}
                   label="Copy link"
                   copiedLabel="Copied"
                 />
               </div>
-            </div>
-          ) : (
-            <Link
-              href={`/u/${userRow.handle}/interview`}
-              className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a7f300] hover:text-[#c8ff5e] transition-colors"
-              title="Recruiter mode — shipped trails only"
-            >
-              Recruiter view →
-            </Link>
-          )}
+            </section>
+          </aside>
         </div>
-
-        {all.length > 0 && (
-          <section className="mb-8 border-t border-zinc-900 pt-4">
-            <h3 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
-              Stats
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-mono text-zinc-500">
-              <div>
-                <div className="text-zinc-200 tabular-nums text-lg">{hoursLabel}</div>
-                <div className="text-zinc-500">hours coded</div>
-              </div>
-              <div>
-                <div className="text-zinc-200 tabular-nums text-lg">
-                  {streak.current}
-                </div>
-                <div className="text-zinc-500">
-                  day streak{" "}
-                  <span className="text-zinc-600">(longest: {streak.longest})</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-zinc-200 tabular-nums text-lg">{distinctRepos}</div>
-                <div className="text-zinc-500">repos</div>
-              </div>
-              <div>
-                <div className="text-zinc-200 tabular-nums text-lg">
-                  {median ? formatDuration(median) : "—"}
-                </div>
-                <div className="text-zinc-500">median session</div>
-              </div>
-              {showTier2 && (
-                <div>
-                  <VelocitySparkline weeks={tier2.velocityWeekly} />
-                  <div className="text-zinc-500 mt-1">last 12 weeks</div>
-                </div>
-              )}
-            </div>
-            {langs.length > 0 && <LanguagesBar langs={langs} />}
-            {showTier2 && tier2.topToolCalls.length > 0 && (
-              <div className="mt-5">
-                <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
-                  Actions
-                </h4>
-                <ToolMixBar tools={tier2.topToolCalls} />
-              </div>
-            )}
-            {showTier2 && tier2.topRepos.length > 0 && (
-              <div className="mt-5">
-                <h4 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
-                  Top repos
-                </h4>
-                <TopRepos items={tier2.topRepos} />
-              </div>
-            )}
-            {showTier2 && tier2.peakWeekday && (
-              <p className="mt-4 text-xs font-mono text-zinc-500 italic">
-                Most active on {tier2.peakWeekday}s
-                <span className="text-zinc-700"> · </span>
-                <span className="tabular-nums">{tier2.totalPrompts}</span> prompts
-                <span className="text-zinc-700"> · </span>
-                <span className="tabular-nums">{failurePct}%</span> tool-call errors
-              </p>
-            )}
-          </section>
-        )}
-
-        {heroFeatured && (
-          <section className="mb-6">
-            <FeaturedSessionCard
-              session={heroFeatured}
-              handle={userRow.handle ?? user}
-              variant="hero"
-            />
-          </section>
-        )}
-
-        {compactFeatured.length > 0 && (
-          <section className="mb-10 space-y-2">
-            {compactFeatured.map((s) => (
-              <FeaturedSessionCard
-                key={s.id}
-                session={s}
-                handle={userRow.handle ?? user}
-                variant="compact"
-              />
-            ))}
-          </section>
-        )}
-
-        {all.length === 0 ? (
-          isSelf ? (
-            <div className="border-t border-zinc-900 pt-10">
-              <EmptyInstallCard />
-            </div>
-          ) : (
-            <div className="border-t border-zinc-900 pt-10">
-              <p className="text-sm text-zinc-500">
-                @{userRow.handle} hasn&apos;t shared any sessions yet.
-              </p>
-            </div>
-          )
-        ) : recent.length > 0 ? (
-          <div>
-            <div className="flex items-center justify-between px-2 mb-2 mt-4">
-              <h3 className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
-                Recent activity
-              </h3>
-            </div>
-            <div className="border-t border-zinc-900">
-              <div className="hidden md:grid grid-cols-[7rem_1.5rem_1fr_5rem_2rem] gap-3 px-2 py-2.5 text-[10px] font-mono uppercase tracking-[0.14em] text-zinc-600 border-b border-zinc-900">
-                <span>Date</span>
-                <span />
-                <span>Title</span>
-                <span className="text-right">Events</span>
-                <span />
-              </div>
-              <ul>
-                {recent.map((s) => {
-                  const repoShort = formatRepoPath(s.repo);
-                  const title = s.title || s.slug;
-                  const costUsd = parseUsd(s.estimatedCostUsd);
-                  return (
-                    <li key={s.id} className="border-b border-zinc-900 last:border-b-0">
-                      <Link
-                        href={`/u/${userRow.handle}/${s.slug}`}
-                        title={repoShort ? `${title} — ${repoShort}` : title}
-                        className="grid md:grid-cols-[7rem_1.5rem_1fr_5rem_2rem] grid-cols-[1fr_4rem] gap-3 items-center px-2 py-3 hover:bg-zinc-900/60 border-l-2 border-transparent hover:border-l-[#a7f300] transition-colors duration-150 group"
-                      >
-                        <RelativeTime
-                          date={s.startedAt}
-                          className="hidden md:block text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300"
-                        />
-                        <ToolIcon name={s.tool} className="hidden md:block text-zinc-500 group-hover:text-zinc-200" />
-                        <span className="min-w-0 flex items-center gap-2">
-                          <span
-                            className="text-sm text-zinc-200 truncate group-hover:text-zinc-50"
-                            title={title}
-                          >
-                            {title}
-                          </span>
-                          {costUsd > 0 && (
-                            <span
-                              title="estimated cost"
-                              className="shrink-0 inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-zinc-400 group-hover:text-zinc-200"
-                            >
-                              {fmtUsd(costUsd)}
-                            </span>
-                          )}
-                        </span>
-                        <span className="md:text-right text-xs font-mono text-zinc-500 tabular-nums group-hover:text-zinc-300">
-                          {s.eventCount}
-                          {s.durationSeconds != null && (
-                            <span className="ml-1 text-zinc-600">
-                              · {formatDuration(s.durationSeconds)}
-                            </span>
-                          )}
-                        </span>
-                        {isSelf ? (
-                          <span className="hidden md:flex justify-end">
-                            <FeatureToggle sessionId={s.id} isFeatured={s.isFeatured} />
-                          </span>
-                        ) : (
-                          <span className="hidden md:block" />
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        ) : null}
       </main>
     </div>
   );
