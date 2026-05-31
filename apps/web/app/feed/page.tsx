@@ -553,7 +553,7 @@ export default async function FeedPage({
                 )}
               </div>
             ) : (
-              <ul className="divide-y divide-zinc-900/90 border-t border-zinc-900/70 bg-black/20 pt-2">
+              <ul className="divide-y divide-zinc-900/90 border-t border-zinc-900/70 bg-black/20 pt-6">
                 {rows.map((r) => {
                   const authorHref = profileHref(r);
                   const currentReceiptHref = receiptHref(r);
