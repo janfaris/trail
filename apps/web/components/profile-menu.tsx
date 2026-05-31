@@ -7,6 +7,7 @@ type MenuLink = { href: string; label: string; mobileOnly?: boolean };
 
 const MENU_LINKS: MenuLink[] = [
   { href: "/feed", label: "Feed", mobileOnly: true },
+  { href: "/notifications", label: "Inbox", mobileOnly: true },
   { href: "/dashboard", label: "Dashboard", mobileOnly: true },
   { href: "/dashboard/cost", label: "Cost" },
 ];

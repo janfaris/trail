@@ -306,6 +306,12 @@ export const notification = pgTable(
       t.createdAt,
     ),
     sessionIdx: index("notification_session_idx").on(t.sessionId, t.createdAt),
+    reactionActivityUniq: uniqueIndex("notification_reaction_activity_uniq")
+      .on(t.userId, t.actorId, t.sessionId, t.type)
+      .where(sql`${t.type} = 'session_reaction'`),
+    followActivityUniq: uniqueIndex("notification_follow_activity_uniq")
+      .on(t.userId, t.actorId, t.type)
+      .where(sql`${t.type} = 'follow'`),
   }),
 );
 

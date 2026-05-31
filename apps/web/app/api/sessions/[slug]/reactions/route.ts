@@ -1,12 +1,12 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
-import { eq, and, sql } from "drizzle-orm";
-import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Phase 1.6 — session reactions ("worked" / "needs-tweak" / "broken").
 // GET   → public counts per kind + (if logged in) which kinds the viewer set.
@@ -15,10 +15,7 @@ import { revalidatePath } from "next/cache";
 
 const KIND_RE = /^(worked|needs-tweak|broken)$/;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const row = await db.query.trailSession.findFirst({
     where: eq(schema.trailSession.slug, slug),
@@ -51,15 +48,13 @@ export async function GET(
   return NextResponse.json({ counts, mine });
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const sess = await auth.api.getSession({ headers: await headers() });
-  if (!sess?.user) {
+  if (!sess?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const actorId = sess.user.id;
   let body: { kind?: string; note?: string };
   try {
     body = (await req.json()) as { kind?: string; note?: string };
@@ -85,26 +80,39 @@ export async function POST(
     .where(
       and(
         eq(schema.sessionReaction.sessionId, row.id),
-        eq(schema.sessionReaction.userId, sess.user.id),
+        eq(schema.sessionReaction.userId, actorId),
         eq(schema.sessionReaction.kind, body.kind),
       ),
     )
     .limit(1);
 
   let action: "added" | "removed";
-  if (existing.length > 0) {
+  const existingReaction = existing[0];
+  if (existingReaction) {
     await db
       .delete(schema.sessionReaction)
-      .where(eq(schema.sessionReaction.id, existing[0]!.id));
+      .where(eq(schema.sessionReaction.id, existingReaction.id));
     action = "removed";
   } else {
     await db.insert(schema.sessionReaction).values({
       id: crypto.randomUUID(),
       sessionId: row.id,
-      userId: sess.user.id,
+      userId: actorId,
       kind: body.kind,
       note: body.note?.slice(0, 200) ?? null,
     });
+    if (row.userId !== actorId) {
+      await db
+        .insert(schema.notification)
+        .values({
+          id: crypto.randomUUID(),
+          userId: row.userId,
+          actorId,
+          type: "session_reaction",
+          sessionId: row.id,
+        })
+        .onConflictDoNothing();
+    }
     action = "added";
   }
 
