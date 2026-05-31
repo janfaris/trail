@@ -13,6 +13,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { FeedComposer, type FeedComposerDraft, type FeedComposerViewer } from "./feed-composer";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,10 @@ function avatarSrc(row: BaseFeedRow): string | null {
   return row.image ?? (row.handle ? githubAvatar(row.handle) : null);
 }
 
+function commentAvatarSrc(comment: FeedCommentPreview): string | null {
+  return comment.authorImage ?? (comment.authorHandle ? githubAvatar(comment.authorHandle) : null);
+}
+
 function formatUsd(raw: string | null): string | null {
   if (!raw) return null;
   const value = Number(raw);
@@ -170,6 +175,18 @@ function reactionSummary(row: BaseFeedRow): string {
   return `${row.positiveReactions} worked / ${row.negativeReactions} needs tweak`;
 }
 
+function feedReason(row: BaseFeedRow): string {
+  if (row.commentCount > 0 && row.positiveReactions + row.negativeReactions > 0) {
+    return `${pluralize(row.commentCount, "reply", "replies")} and ${reactionSummary(row).toLowerCase()}`;
+  }
+  if (row.commentCount > 0)
+    return `${pluralize(row.commentCount, "reply", "replies")} in the thread`;
+  if (row.positiveReactions + row.negativeReactions > 0) return reactionSummary(row);
+  if (row.receiptStatus === "shipped" || row.outcome === "shipped") return "Fresh shipping proof";
+  if (row.linkedRepo ?? row.repo) return `Proof from ${row.linkedRepo ?? row.repo}`;
+  return "New builder receipt";
+}
+
 function receiptBadge(row: BaseFeedRow): string | null {
   if (row.receiptStatus === "shipped") return "Shipped";
   if (row.receiptStatus === "draft") return "Draft";
@@ -214,6 +231,7 @@ interface BaseFeedRow extends RankableSession {
   brokenReactions: number;
   viewerReactions: ReactionKind[];
   commentCount: number;
+  commentPreviews: FeedCommentPreview[];
 }
 
 interface FeedRow extends BaseFeedRow {
@@ -230,7 +248,17 @@ type FeedRowWithoutStats = Omit<
   | "brokenReactions"
   | "viewerReactions"
   | "commentCount"
+  | "commentPreviews"
 >;
+
+interface FeedCommentPreview {
+  id: string;
+  body: string;
+  createdAt: Date | string;
+  authorName: string;
+  authorHandle: string | null;
+  authorImage: string | null;
+}
 
 interface FeedStats {
   receipts: number;
@@ -333,17 +361,101 @@ function stackHref(stack: TrendingStack): string {
   return "/tools";
 }
 
-async function loadViewerId(): Promise<string | null> {
+async function loadViewer(): Promise<FeedComposerViewer | null> {
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) return null;
 
   try {
     const { auth } = await import("@/lib/auth");
     const sessionInfo = await auth.api.getSession({ headers: await headers() });
-    return sessionInfo?.user?.id ?? null;
+    if (!sessionInfo?.user?.id) return null;
+
+    const { db, schema } = await import("@/db/client");
+    const viewer = await db.query.user.findFirst({
+      where: eq(schema.user.id, sessionInfo.user.id),
+      columns: { id: true, name: true, handle: true, image: true },
+    });
+
+    return (
+      viewer ?? {
+        id: sessionInfo.user.id,
+        name: sessionInfo.user.name ?? "Trail builder",
+        handle: null,
+        image: sessionInfo.user.image ?? null,
+      }
+    );
   } catch {
     // Public discovery should still render when auth is unavailable.
     return null;
   }
+}
+
+function normalizeComposerOutcome(value: string | null): FeedComposerDraft["outcome"] {
+  if (
+    value === "shipped" ||
+    value === "abandoned" ||
+    value === "rabbithole" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+  return "shipped";
+}
+
+async function loadComposerDrafts(viewerId: string | null): Promise<FeedComposerDraft[]> {
+  if (!viewerId) return [];
+
+  const { db, schema } = await import("@/db/client");
+  const drafts = await db.query.trailSession.findMany({
+    where: and(
+      eq(schema.trailSession.userId, viewerId),
+      eq(schema.trailSession.visibility, "private"),
+      isNull(schema.trailSession.redactedAt),
+      isNotNull(schema.trailSession.receiptGeneratedAt),
+    ),
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      summary: true,
+      tool: true,
+      repo: true,
+      linkedRepo: true,
+      outcome: true,
+      receiptStatus: true,
+      eventCount: true,
+      startedAt: true,
+      endedAt: true,
+      frameworks: true,
+      toolsUsed: true,
+      pendingReviewReasons: true,
+    },
+    orderBy: [
+      desc(sql`coalesce(${schema.trailSession.endedAt}, ${schema.trailSession.startedAt})`),
+      desc(schema.trailSession.id),
+    ],
+    limit: 6,
+  });
+
+  return drafts
+    .filter((draft) => draft.endedAt && !draft.pendingReviewReasons?.length && draft.eventCount > 0)
+    .map((draft) => ({
+      id: draft.id,
+      slug: draft.slug,
+      title: draft.title,
+      summary: draft.summary,
+      tool: draft.tool,
+      repo: draft.repo,
+      linkedRepo: draft.linkedRepo,
+      outcome: normalizeComposerOutcome(draft.outcome),
+      receiptStatus: draft.receiptStatus,
+      eventCount: draft.eventCount,
+      startedAt: draft.startedAt.toISOString(),
+      endedAt: draft.endedAt?.toISOString() ?? null,
+      tags: Array.from(new Set([...(draft.frameworks ?? []), ...(draft.toolsUsed ?? [])])).slice(
+        0,
+        5,
+      ),
+    }));
 }
 
 async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
@@ -482,7 +594,7 @@ async function attachEngagementStats(
 
   const { db, schema } = await import("@/db/client");
   const sessionIds = rows.map((row) => row.id);
-  const [statsRows, commentRows] = await Promise.all([
+  const [statsRows, commentRows, commentPreviewRows] = await Promise.all([
     db
       .select({
         sessionId: schema.sessionReaction.sessionId,
@@ -506,6 +618,26 @@ async function attachEngagementStats(
         ),
       )
       .groupBy(schema.sessionComment.sessionId),
+    db
+      .select({
+        sessionId: schema.sessionComment.sessionId,
+        id: schema.sessionComment.id,
+        body: schema.sessionComment.body,
+        createdAt: schema.sessionComment.createdAt,
+        authorName: schema.user.name,
+        authorHandle: schema.user.handle,
+        authorImage: schema.user.image,
+      })
+      .from(schema.sessionComment)
+      .innerJoin(schema.user, eq(schema.sessionComment.userId, schema.user.id))
+      .where(
+        and(
+          inArray(schema.sessionComment.sessionId, sessionIds),
+          isNull(schema.sessionComment.deletedAt),
+        ),
+      )
+      .orderBy(desc(schema.sessionComment.createdAt))
+      .limit(sessionIds.length * 3),
   ]);
 
   const statsBySession = new Map<
@@ -542,6 +674,20 @@ async function attachEngagementStats(
   const commentsBySession = new Map(
     commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
   );
+  const commentPreviewsBySession = new Map<string, FeedCommentPreview[]>();
+  for (const comment of commentPreviewRows) {
+    const previews = commentPreviewsBySession.get(comment.sessionId) ?? [];
+    if (previews.length >= 2) continue;
+    previews.push({
+      id: comment.id,
+      body: comment.body,
+      createdAt: comment.createdAt,
+      authorName: comment.authorName,
+      authorHandle: comment.authorHandle,
+      authorImage: comment.authorImage,
+    });
+    commentPreviewsBySession.set(comment.sessionId, previews);
+  }
 
   return rows.map((row) => ({
     ...row,
@@ -557,6 +703,7 @@ async function attachEngagementStats(
     brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
     viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
     commentCount: commentsBySession.get(row.id) ?? 0,
+    commentPreviews: commentPreviewsBySession.get(row.id) ?? [],
   }));
 }
 
@@ -800,36 +947,6 @@ function FeedNavRail({
   );
 }
 
-function FeedComposerPrompt({ viewerId }: { viewerId: string | null }) {
-  const href = viewerId ? "/dashboard" : "/install";
-
-  return (
-    <div className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
-      <div className="grid grid-cols-[44px_minmax(0,1fr)] gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900 font-mono text-[11px] uppercase tracking-[-0.08em] text-[#a7f300] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-          tr
-        </div>
-        <TrailLink
-          href={href}
-          className="group block rounded-[24px] border border-zinc-900 bg-zinc-950/70 p-4 text-left transition-[border-color,background-color,transform] hover:border-zinc-800 hover:bg-zinc-950 active:scale-[0.99]"
-        >
-          <div className="text-[17px] leading-6 text-zinc-400">
-            What did you ship with AI today?
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 pt-3">
-            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600">
-              Attach a Trail receipt
-            </span>
-            <span className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-colors group-hover:bg-[#c8ff5e]">
-              {viewerId ? "Publish" : "Install"}
-            </span>
-          </div>
-        </TrailLink>
-      </div>
-    </div>
-  );
-}
-
 function NetworkPulse({ stats }: { stats: FeedStats }) {
   const items = [
     ["Builders", formatCount(stats.builders)],
@@ -872,6 +989,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
     `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
     currentPublicReceiptUrl,
   );
+  const reason = feedReason(r);
   const socialProof = [
     r.commentCount > 0 ? pluralize(r.commentCount, "comment") : null,
     r.positiveReactions + r.negativeReactions > 0 ? reactionSummary(r) : null,
@@ -1001,10 +1119,57 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           </div>
         </Link>
 
-        {socialProof.length > 0 ? (
-          <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-600">
-            {socialProof.join(" · ")}
-          </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em]">
+          <span className="rounded-full border border-[#a7f300]/20 bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">
+            {reason}
+          </span>
+          {socialProof.length > 0 ? (
+            <span className="text-zinc-600">{socialProof.join(" · ")}</span>
+          ) : null}
+        </div>
+
+        {r.commentPreviews.length > 0 ? (
+          <Link
+            href={`${currentReceiptHref}#conversation`}
+            className="mt-3 block overflow-hidden rounded-[22px] border border-zinc-900 bg-zinc-950/55 transition-[border-color,background-color] hover:border-zinc-800 hover:bg-zinc-950"
+          >
+            <div className="border-b border-zinc-900 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+              Conversation preview
+            </div>
+            <div className="divide-y divide-zinc-900/80">
+              {r.commentPreviews
+                .slice()
+                .reverse()
+                .map((comment) => (
+                  <div
+                    className="grid grid-cols-[28px_minmax(0,1fr)] gap-3 px-4 py-3"
+                    key={comment.id}
+                  >
+                    <Avatar
+                      src={commentAvatarSrc(comment)}
+                      alt={comment.authorName}
+                      size={28}
+                      fallback={comment.authorHandle ?? comment.authorName}
+                      className="border-zinc-800 bg-black"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-[12px] font-semibold text-zinc-200">
+                          {comment.authorName}
+                        </span>
+                        <RelativeTime
+                          date={comment.createdAt}
+                          className="font-mono text-[10px] text-zinc-600"
+                        />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-400">
+                        {comment.body}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </Link>
         ) : null}
 
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1055,21 +1220,68 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   );
 }
 
-function EmptyTimeline({ isFollowingView }: { isFollowingView: boolean }) {
+function EmptyTimeline({
+  isFollowingView,
+  recommendations,
+  viewerId,
+}: {
+  isFollowingView: boolean;
+  recommendations: BuilderRecommendation[];
+  viewerId: string | null;
+}) {
+  const builders = recommendations.filter((builder) => !builder.isFollowing).slice(0, 3);
+
   return (
     <div className="px-6 py-16 text-center">
       {isFollowingView ? (
-        <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
-          Your Following timeline is empty. Follow builders from{" "}
-          <Link href="/feed" className="text-[#a7f300] hover:underline">
-            For you
-          </Link>
-          , or browse{" "}
-          <Link href="/tools" className="text-[#a7f300] hover:underline">
-            AI tools
-          </Link>{" "}
-          to find people shipping in your stack.
-        </p>
+        <div className="mx-auto max-w-xl">
+          <p className="text-pretty text-sm leading-relaxed text-zinc-400">
+            Your Following timeline is empty. Follow a few builders and this becomes your live proof
+            stream instead of a blank tab.
+          </p>
+          {builders.length > 0 ? (
+            <div className="mt-6 grid gap-3 text-left">
+              {builders.map((builder) => (
+                <div
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-3"
+                  key={builder.id}
+                >
+                  <Link className="flex min-w-0 items-center gap-3" href={`/u/${builder.handle}`}>
+                    <Avatar
+                      src={builder.image ?? githubAvatar(builder.handle)}
+                      alt={builder.name}
+                      fallback={builder.handle}
+                      className="h-10 w-10 rounded-full"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-zinc-100">
+                        {builder.name}
+                      </span>
+                      <span className="block truncate font-mono text-[11px] text-zinc-600">
+                        {formatCount(builder.receiptCount)} receipts · @{builder.handle}
+                      </span>
+                    </span>
+                  </Link>
+                  {viewerId ? (
+                    <FollowButton
+                      targetUserId={builder.id}
+                      initialFollowing={builder.isFollowing}
+                      className="h-8 px-3 text-[10px]"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-relaxed text-zinc-500">
+              Browse{" "}
+              <Link href="/tools" className="text-[#a7f300] hover:underline">
+                AI tools
+              </Link>{" "}
+              to find people shipping in your stack.
+            </p>
+          )}
+        </div>
       ) : (
         <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
           No public sessions yet. Install Trail and share one with{" "}
@@ -1077,6 +1289,68 @@ function EmptyTimeline({ isFollowingView }: { isFollowingView: boolean }) {
         </p>
       )}
     </div>
+  );
+}
+
+function PersonalizationNudge({
+  builders,
+  viewerId,
+}: {
+  builders: BuilderRecommendation[];
+  viewerId: string | null;
+}) {
+  if (!viewerId) return null;
+  const recommendations = builders.filter((builder) => !builder.isFollowing).slice(0, 3);
+  if (recommendations.length === 0) return null;
+
+  return (
+    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
+      <div className="overflow-hidden rounded-[26px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b]">
+        <div className="border-b border-zinc-900 px-4 py-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+            Tune your feed
+          </div>
+          <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+            Follow builders so Following feels alive.
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">
+            Start with people already publishing receipts in public. Trail will use your graph to
+            make the feed feel more like your network.
+          </p>
+        </div>
+        <div className="grid divide-y divide-zinc-900 md:grid-cols-3 md:divide-x md:divide-y-0">
+          {recommendations.map((builder) => (
+            <div className="p-4" key={builder.id}>
+              <Link className="flex items-center gap-3" href={`/u/${builder.handle}`}>
+                <Avatar
+                  src={builder.image ?? githubAvatar(builder.handle)}
+                  alt={builder.name}
+                  fallback={builder.handle}
+                  className="h-10 w-10 rounded-full"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-zinc-100">
+                    {builder.name}
+                  </span>
+                  <span className="block truncate font-mono text-[11px] text-zinc-600">
+                    @{builder.handle}
+                  </span>
+                </span>
+              </Link>
+              <div className="mt-3 text-[12px] leading-5 text-zinc-500">
+                {formatCount(builder.shippedCount)} shipped receipts ·{" "}
+                {formatCount(builder.followerCount)} followers
+              </div>
+              <FollowButton
+                targetUserId={builder.id}
+                initialFollowing={builder.isFollowing}
+                className="mt-3 h-8 px-3 text-[10px]"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1267,19 +1541,25 @@ export default async function FeedPage({
   const sp = await searchParams;
   const view = normalizeFeedView(sp.view);
 
-  let viewerId: string | null;
   let rows: FeedRow[];
   let discovery: FeedDiscovery;
+  let composerDrafts: FeedComposerDraft[];
 
-  viewerId = await loadViewerId();
+  const viewer = await loadViewer();
+  const viewerId = viewer?.id ?? null;
   if (view === "following") {
     if (!viewerId) redirect(FOLLOWING_SIGN_IN_HREF);
-    [rows, discovery] = await Promise.all([
+    [rows, discovery, composerDrafts] = await Promise.all([
       loadFollowingFeed(viewerId),
       loadFeedDiscovery(viewerId),
+      loadComposerDrafts(viewerId),
     ]);
   } else {
-    [rows, discovery] = await Promise.all([loadPublicFeed(viewerId), loadFeedDiscovery(viewerId)]);
+    [rows, discovery, composerDrafts] = await Promise.all([
+      loadPublicFeed(viewerId),
+      loadFeedDiscovery(viewerId),
+      loadComposerDrafts(viewerId),
+    ]);
   }
 
   const isFollowingView = view === "following";
@@ -1325,7 +1605,13 @@ export default async function FeedPage({
               <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
             </div>
 
-            <FeedComposerPrompt viewerId={viewerId} />
+            <div className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
+              <FeedComposer viewer={viewer} drafts={composerDrafts} />
+            </div>
+
+            {!isFollowingView ? (
+              <PersonalizationNudge builders={discovery.builders} viewerId={viewerId} />
+            ) : null}
 
             {!viewerId && !isFollowingView ? (
               <div className="border-b border-zinc-900 px-4 py-4 sm:px-5">
@@ -1359,7 +1645,11 @@ export default async function FeedPage({
             ) : null}
 
             {rows.length === 0 ? (
-              <EmptyTimeline isFollowingView={isFollowingView} />
+              <EmptyTimeline
+                isFollowingView={isFollowingView}
+                recommendations={discovery.builders}
+                viewerId={viewerId}
+              />
             ) : (
               <div className="divide-y divide-zinc-900/90">
                 {rows.map((row) => (

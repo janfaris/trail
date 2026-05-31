@@ -4,6 +4,41 @@
 that ingests AI coding-agent session logs, parses them, and renders them. These notes
 capture conventions and recurring pitfalls so changes land correctly the first time.
 
+## Product direction: social network for AI builders
+
+Trail should feel like the proof-of-work social network for AI-native builders, not a
+marketing site or analytics dashboard. Product changes should reinforce this loop:
+
+1. Builder imports or creates an AI coding session.
+2. Trail turns it into a clear public shipping receipt.
+3. Other builders discover it in feed/discovery/profile surfaces.
+4. They follow, react, comment, save, fork, or share it.
+5. Notifications, recaps, reputation, and profile status pull the builder back to ship
+   again.
+
+When improving social surfaces:
+
+- Treat `/feed` as the primary product surface: timeline first, not hero first.
+- Use familiar social verbs: follow, react, comment, share, publish, save, fork, and
+  open receipt.
+- Make every public receipt read like a post plus proof artifact: builder identity,
+  outcome, tools/stack, proof metrics, social proof, and an obvious conversation entry.
+- Signed-in users should see personalization quickly: Following, recommendations,
+  notifications, and "people like me" builder discovery.
+- Anonymous users should immediately understand the network and be nudged to sign in,
+  follow builders, import their first session, or publish a receipt.
+- Empty states should never be dead ends; push toward following, importing, publishing,
+  or browsing trending builders/stacks.
+- Prefer social proof and creator identity over generic marketing claims. Avoid placing
+  large marketing hero sections above the timeline on social pages.
+- Mobile feed pages should not stack multiple sticky headers; keep the reading and
+  action flow simple.
+
+North star: weekly public shipping receipts created by active builders. Important input
+metrics include activation to first public receipt, follows per activated builder,
+reaction/comment rate per receipt, notification return rate, D7 retention, and shares
+that lead to new signups.
+
 ## Working agreements
 
 - **Stay on the current branch.** Do not switch branches or create new ones unless the

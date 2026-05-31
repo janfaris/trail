@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { bulkDeleteSessions, bulkSetOutcome, bulkSetVisibility } from "@/app/u/[user]/actions";
 import Link from "next/link";
-import { bulkSetVisibility, bulkSetOutcome, bulkDeleteSessions } from "@/app/u/[user]/actions";
+import { useState, useTransition } from "react";
 
 export type SessionRow = {
   id: string;
@@ -62,11 +62,9 @@ export function DashboardClient({
 
   const filtered = rows.filter((r) => {
     if (filter === "all") return true;
-    if (filter === "shipped")
-      return r.receiptStatus === "shipped" || r.receiptVerifiedSha !== null;
+    if (filter === "shipped") return r.receiptStatus === "shipped" || r.receiptVerifiedSha !== null;
     if (filter === "has-commit") return r.linkedCommitSha !== null;
-    if (filter === "needs-review")
-      return r.receiptStatus === "draft" || r.receiptStatus === null;
+    if (filter === "needs-review") return r.receiptStatus === "draft" || r.receiptStatus === null;
     if (filter === "private") return r.visibility === "private";
     return true;
   });
@@ -83,20 +81,32 @@ export function DashboardClient({
   function toggleAll() {
     if (allSelected) {
       const next = new Set(selected);
-      filtered.forEach((r) => next.delete(r.id));
+      for (const row of filtered) {
+        next.delete(row.id);
+      }
       setSelected(next);
     } else {
       const next = new Set(selected);
-      filtered.forEach((r) => next.add(r.id));
+      for (const row of filtered) {
+        next.add(row.id);
+      }
       setSelected(next);
     }
   }
 
-  function run(label: string, fn: () => Promise<{ ok: boolean; updated?: number; error?: string }>) {
+  function run(
+    label: string,
+    fn: () => Promise<{ ok: boolean; updated?: number; error?: string }>,
+  ) {
     startTransition(async () => {
       const result = await fn();
       if (result.ok) {
-        setFlash(`${label}: ${result.updated ?? 0} session(s) updated`);
+        const updated = result.updated ?? 0;
+        setFlash(
+          result.error
+            ? `${label}: ${updated} session(s) updated. ${result.error}`
+            : `${label}: ${updated} session(s) updated`,
+        );
         setSelected(new Set());
       } else {
         setFlash(`error: ${result.error}`);
@@ -137,12 +147,11 @@ export function DashboardClient({
         <div className="flex items-center gap-2 text-xs font-mono">
           {(["all", "shipped", "has-commit", "needs-review", "private"] as const).map((f) => (
             <button
+              type="button"
               key={f}
               onClick={() => setFilter(f)}
               className={`px-2 py-1 rounded ${
-                filter === f
-                  ? "bg-zinc-100 text-zinc-950"
-                  : "text-zinc-500 hover:text-zinc-200"
+                filter === f ? "bg-zinc-100 text-zinc-950" : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
               {FILTER_LABEL[f]}
@@ -156,6 +165,7 @@ export function DashboardClient({
 
         <div className="flex items-center gap-2 text-xs">
           <button
+            type="button"
             disabled={!hasSelection || pending}
             onClick={() => run("Made public", () => bulkSetVisibility(ids, "public"))}
             className="font-mono px-2.5 py-1 rounded bg-[#a7f300] text-zinc-950 font-semibold disabled:opacity-30 disabled:bg-zinc-800 disabled:text-zinc-500"
@@ -163,6 +173,7 @@ export function DashboardClient({
             Make public
           </button>
           <button
+            type="button"
             disabled={!hasSelection || pending}
             onClick={() => run("Made private", () => bulkSetVisibility(ids, "private"))}
             className="font-mono px-2.5 py-1 rounded border border-zinc-800 text-zinc-300 hover:border-zinc-600 disabled:opacity-30"
@@ -171,6 +182,7 @@ export function DashboardClient({
           </button>
           <span className="text-zinc-800">|</span>
           <button
+            type="button"
             disabled={!hasSelection || pending}
             onClick={() => run("Marked shipped", () => bulkSetOutcome(ids, "shipped"))}
             className="font-mono px-2.5 py-1 rounded border border-zinc-800 text-zinc-300 hover:border-zinc-600 disabled:opacity-30"
@@ -178,6 +190,7 @@ export function DashboardClient({
             Mark shipped
           </button>
           <button
+            type="button"
             disabled={!hasSelection || pending}
             onClick={() => run("Cleared outcome", () => bulkSetOutcome(ids, null))}
             className="font-mono px-2.5 py-1 rounded border border-zinc-800 text-zinc-500 hover:border-zinc-600 disabled:opacity-30"
@@ -186,6 +199,7 @@ export function DashboardClient({
           </button>
           <span className="text-zinc-800">|</span>
           <button
+            type="button"
             disabled={!hasSelection || pending}
             onClick={runDelete}
             className="font-mono px-2.5 py-1 rounded border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/70 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -271,8 +285,8 @@ export function DashboardClient({
                     s.outcome === "shipped"
                       ? "text-[#a7f300]"
                       : s.outcome
-                      ? "text-zinc-400"
-                      : "text-zinc-600"
+                        ? "text-zinc-400"
+                        : "text-zinc-600"
                   }`}
                 >
                   {s.outcome ?? "—"}

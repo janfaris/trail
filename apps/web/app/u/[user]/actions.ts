@@ -3,6 +3,7 @@
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { canFollow, toggleDecision } from "@/lib/follow";
+import { promoteSessionToPublicReceipt } from "@/lib/public-receipt-publishing";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
@@ -77,6 +78,45 @@ export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
   }
   const owned = await ownedSessionIds(u.id, ids);
   if (owned.length === 0) return { ok: true, updated: 0 };
+
+  if (visibility === "public") {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) return { ok: false, error: "database unavailable" };
+
+    const currentRows = await db
+      .select({ id: schema.trailSession.id, visibility: schema.trailSession.visibility })
+      .from(schema.trailSession)
+      .where(inArray(schema.trailSession.id, owned));
+    let updated = currentRows.filter((row) => row.visibility === "public").length;
+    for (const row of currentRows) {
+      if (row.visibility === "public") continue;
+      const result = await promoteSessionToPublicReceipt({
+        databaseUrl,
+        userId: u.id,
+        sessionId: row.id,
+      });
+      if (result.published) updated += 1;
+    }
+
+    const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
+    if (me?.handle) {
+      revalidatePath(`/u/${me.handle}`);
+      revalidatePath(`/u/${me.handle}/interview`);
+      revalidatePath("/dashboard");
+      revalidatePath("/feed");
+    }
+
+    if (updated < currentRows.length) {
+      return {
+        ok: true,
+        updated,
+        error:
+          "Some selected sessions could not be published because they need a generated receipt, review, or quota.",
+      };
+    }
+    return { ok: true, updated };
+  }
+
   await db
     .update(schema.trailSession)
     .set({ visibility })
@@ -86,6 +126,7 @@ export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
     revalidatePath(`/u/${me.handle}`);
     revalidatePath(`/u/${me.handle}/interview`);
     revalidatePath("/dashboard");
+    revalidatePath("/feed");
   }
   return { ok: true, updated: owned.length };
 }
