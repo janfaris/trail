@@ -42,7 +42,11 @@ export async function generateMetadata({
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return {};
   const sessionRow = await db.query.trailSession.findFirst({
-    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
+    where: and(
+      eq(schema.trailSession.userId, userRow.id),
+      eq(schema.trailSession.slug, slug),
+      eq(schema.trailSession.visibility, "public"),
+    ),
   });
   if (!sessionRow) return {};
   const firstPrompt = await db.query.event.findFirst({
@@ -100,17 +104,6 @@ export default async function SessionView({
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
 
-  const sessionRow = await db.query.trailSession.findFirst({
-    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
-  });
-  if (!sessionRow) return notFound();
-
-  const events = await db
-    .select()
-    .from(schema.event)
-    .where(eq(schema.event.sessionId, sessionRow.id))
-    .orderBy(asc(schema.event.idx));
-
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("host") ?? "localhost:3000";
@@ -121,8 +114,22 @@ export default async function SessionView({
   } catch {
     viewer = null;
   }
-  const canExplain = !!viewer?.user;
+
+  const sessionRow = await db.query.trailSession.findFirst({
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
+  });
+  if (!sessionRow) return notFound();
+
   const isOwner = viewer?.user?.id === userRow.id;
+  if (sessionRow.visibility !== "public" && !isOwner) return notFound();
+
+  const events = await db
+    .select()
+    .from(schema.event)
+    .where(eq(schema.event.sessionId, sessionRow.id))
+    .orderBy(asc(schema.event.idx));
+
+  const canExplain = !!viewer?.user;
 
   // Look up an existing Pulse Recap for this session — surfaced in the
   // header actions so owners see "Open" instead of "Generate" once made.
