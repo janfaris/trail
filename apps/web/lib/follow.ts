@@ -4,6 +4,12 @@
 // app/feed/page.tsx exactly (coalesce(sharedAt, startedAt) desc, id desc tie-break).
 
 export type ToggleDecision = "added" | "removed";
+export type FeedView = "everyone" | "following";
+
+export function normalizeFeedView(value: string | string[] | null | undefined): FeedView {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "following" ? "following" : "everyone";
+}
 
 /**
  * Whether `followerId` is allowed to follow `followingId`. Rejects empty ids

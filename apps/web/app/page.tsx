@@ -1,3 +1,7 @@
+import { CopyButton } from "@/components/copy-button";
+import { SiteNav } from "@/components/site-nav";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 /* Hallmark · macrostructure: 04-stat-led · genre: technical · theme: trail-dark-lime
  * paper: oklch(15% 0.01 280) #09090b · accent: oklch(94% 0.27 130) #a7f300 (lime · cool axis)
  * display: Fraunces (italic-serif) · body: Geist · outlier: Geist Mono (chips/labels only)
@@ -6,12 +10,7 @@
  * The single number $3.77 is the design. Everything else qualifies it.
  */
 import Link from "next/link";
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { CopyButton } from "@/components/copy-button";
-import { SiteNav } from "@/components/site-nav";
-import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Trail — what did that PR actually cost?",
@@ -31,10 +30,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 // Real verified session — the number is from production, not a mockup.
 const EXAMPLE_HREF = "/u/jankarlo.faris/161blsz1";
 const INSTALL = "npm install -g @gettrail/cli";
-const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/dashboard/cost";
+const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
 
 // Real numbers from session 161blsz1 — gpt-5.5, 8h27m. Used as hero proof.
 const HERO_STAT = {
@@ -75,21 +76,37 @@ const steps = [
 ];
 
 const captures = [
-  { tool: "Claude Code", tier: "Primary", note: "Per-turn input/output/cache tokens via JSONL session tail." },
-  { tool: "Codex", tier: "Primary", note: "Per-turn input/output/cached tokens. Model auto-detected (gpt-5.5, o1, etc)." },
+  {
+    tool: "Claude Code",
+    tier: "Primary",
+    note: "Per-turn input/output/cache tokens via JSONL session tail.",
+  },
+  {
+    tool: "Codex",
+    tier: "Primary",
+    note: "Per-turn input/output/cached tokens. Model auto-detected (gpt-5.5, o1, etc).",
+  },
   { tool: "Hermes", tier: "Primary", note: "Full local capture via session_*.json." },
   { tool: "Cursor", tier: "Partial", note: "Composer usage via SQLite (when permitted)." },
-  { tool: "Copilot CLI", tier: "Partial", note: "Engagement counts. Vendor exposes no per-user token API." },
+  {
+    tool: "Copilot CLI",
+    tier: "Partial",
+    note: "Engagement counts. Vendor exposes no per-user token API.",
+  },
 ];
 
 export default async function Home() {
-  let sess: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
-  try {
-    sess = await auth.api.getSession({ headers: await headers() });
-  } catch {
-    sess = null;
+  let signedIn = false;
+  if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
+    try {
+      const { auth } = await import("@/lib/auth");
+      const sess = await auth.api.getSession({ headers: await headers() });
+      signedIn = Boolean(sess?.user);
+    } catch {
+      signedIn = false;
+    }
   }
-  if (sess?.user) redirect("/dashboard/cost");
+  if (signedIn) redirect("/feed");
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-50">
@@ -99,12 +116,15 @@ export default async function Home() {
         {/* HERO — Stat-Led. The number IS the page above the fold. */}
         <section className="mx-auto max-w-5xl px-6 lg:px-10 pt-24 md:pt-32 pb-20 md:pb-24">
           <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-10">
-            <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Receipts &nbsp;·&nbsp; verified &nbsp;·&nbsp; one shipped PR
+            <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Receipts &nbsp;·&nbsp; verified
+            &nbsp;·&nbsp; one shipped PR
           </div>
 
           {/* The number. Tabular figures, Fraunces, optical-size large. */}
           <div className="flex items-baseline gap-3 mb-8">
-            <span className="font-display text-[28px] md:text-[40px] text-zinc-500 leading-none tabular-nums">$</span>
+            <span className="font-display text-[28px] md:text-[40px] text-zinc-500 leading-none tabular-nums">
+              $
+            </span>
             <span
               className="font-display text-[120px] md:text-[200px] leading-[0.86] tracking-[-0.04em] text-zinc-50 tabular-nums"
               style={{ fontFeatureSettings: '"tnum", "ss01"' }}
@@ -129,7 +149,8 @@ export default async function Home() {
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden">
               <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap">
-                <span className="text-zinc-600">$&nbsp;</span>{INSTALL}
+                <span className="text-zinc-600">$&nbsp;</span>
+                {INSTALL}
               </code>
               <CopyButton value={INSTALL} />
             </div>
@@ -137,7 +158,13 @@ export default async function Home() {
               href={SIGNIN_HREF}
               className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/40 bg-[#a7f300]/5 text-[#a7f300] text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#a7f300]/10 hover:border-[#a7f300]/60 transition-colors"
             >
-              Sign in with GitHub →
+              Sign in to follow →
+            </Link>
+            <Link
+              href="/feed"
+              className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-600 hover:text-zinc-50 transition-colors"
+            >
+              Browse feed
             </Link>
           </div>
 
@@ -186,8 +213,10 @@ export default async function Home() {
 
             <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[64ch] leading-[1.6]">
               Pricing reads from a versioned table —{" "}
-              <span className="text-zinc-300">openai gpt-5.5: $5 in / $30 out / $0.50 cached per million tokens</span>.
-              Multiplication, no model.
+              <span className="text-zinc-300">
+                openai gpt-5.5: $5 in / $30 out / $0.50 cached per million tokens
+              </span>
+              . Multiplication, no model.
             </p>
           </div>
         </section>
@@ -220,7 +249,8 @@ export default async function Home() {
                   <div className="col-span-12 sm:col-span-6">
                     <div className="flex items-center gap-0 border border-zinc-800 rounded-md overflow-hidden bg-black">
                       <code className="font-mono text-[12px] md:text-[13px] text-zinc-300 px-3 py-2.5 select-all whitespace-nowrap overflow-x-auto flex-1">
-                        <span className="text-zinc-600">$&nbsp;</span>{step.code}
+                        <span className="text-zinc-600">$&nbsp;</span>
+                        {step.code}
                       </code>
                       <CopyButton value={step.code} />
                     </div>
@@ -242,7 +272,8 @@ export default async function Home() {
               What Trail actually sees.
             </h2>
             <p className="italic text-zinc-400 text-[15px] mb-10 max-w-[60ch] leading-[1.55]">
-              Honest about what the vendors expose. Copilot's metrics API has no per-user tokens — we say so instead of inventing a number.
+              Honest about what the vendors expose. Copilot's metrics API has no per-user tokens —
+              we say so instead of inventing a number.
             </p>
 
             <div className="divide-y divide-zinc-900 border-y border-zinc-900">
@@ -270,7 +301,8 @@ export default async function Home() {
             </div>
 
             <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[62ch] leading-[1.55]">
-              Optional · BYOK admin keys (Anthropic, OpenAI) add cross-vendor reconciliation when you outgrow local capture. Encrypted with libsodium, revocable in one click.
+              Optional · BYOK admin keys (Anthropic, OpenAI) add cross-vendor reconciliation when
+              you outgrow local capture. Encrypted with libsodium, revocable in one click.
             </p>
           </div>
         </section>
@@ -283,7 +315,8 @@ export default async function Home() {
             </p>
             <div className="inline-flex items-center gap-0 border border-zinc-800 bg-black rounded-md overflow-hidden">
               <code className="font-mono text-[14px] text-zinc-200 px-5 py-3.5 select-all whitespace-nowrap">
-                <span className="text-zinc-600">$&nbsp;</span>{INSTALL}
+                <span className="text-zinc-600">$&nbsp;</span>
+                {INSTALL}
               </code>
               <CopyButton value={INSTALL} />
             </div>
@@ -301,14 +334,22 @@ export default async function Home() {
       <footer className="border-t border-zinc-900">
         <div className="mx-auto max-w-5xl px-6 lg:px-10 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="font-display text-[15px] text-zinc-400">
-            <Link href="/" className="text-zinc-200 hover:text-zinc-50">Trail</Link>
+            <Link href="/" className="text-zinc-200 hover:text-zinc-50">
+              Trail
+            </Link>
             <span className="text-zinc-700 mx-3">·</span>
             <span className="font-mono text-[12px] text-zinc-500">@gettrail/cli on npm</span>
           </div>
           <div className="flex items-center gap-5 text-[12px] font-mono text-zinc-500">
-            <a href="https://github.com/janfaris/trail" className="hover:text-zinc-200">github</a>
-            <a href="https://www.npmjs.com/package/@gettrail/cli" className="hover:text-zinc-200">npm</a>
-            <Link href="/pricing" className="hover:text-zinc-200">pricing</Link>
+            <a href="https://github.com/janfaris/trail" className="hover:text-zinc-200">
+              github
+            </a>
+            <a href="https://www.npmjs.com/package/@gettrail/cli" className="hover:text-zinc-200">
+              npm
+            </a>
+            <Link href="/pricing" className="hover:text-zinc-200">
+              pricing
+            </Link>
           </div>
         </div>
       </footer>
