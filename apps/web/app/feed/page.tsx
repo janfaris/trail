@@ -1,5 +1,6 @@
 import { CopyButton } from "@/components/copy-button";
 import { FollowButton } from "@/components/follow-button";
+import { ReactionBar, type ReactionKind } from "@/components/reaction-bar";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
@@ -207,13 +208,27 @@ interface BaseFeedRow extends RankableSession {
   outcome: string | null;
   positiveReactions: number;
   negativeReactions: number;
+  workedReactions: number;
+  verifiedReactions: number;
+  tweakReactions: number;
+  brokenReactions: number;
+  viewerReactions: ReactionKind[];
 }
 
 interface FeedRow extends BaseFeedRow {
   isFollowing: boolean;
 }
 
-type FeedRowWithoutStats = Omit<BaseFeedRow, "positiveReactions" | "negativeReactions">;
+type FeedRowWithoutStats = Omit<
+  BaseFeedRow,
+  | "positiveReactions"
+  | "negativeReactions"
+  | "workedReactions"
+  | "verifiedReactions"
+  | "tweakReactions"
+  | "brokenReactions"
+  | "viewerReactions"
+>;
 
 interface FeedStats {
   receipts: number;
@@ -367,7 +382,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     )
     .limit(FEED_LIMIT);
 
-  const ranked = await attachReactionStats(rankFeed(rows));
+  const ranked = await attachReactionStats(rankFeed(rows), viewerId);
   if (!viewerId || ranked.length === 0) {
     return ranked.map((row) => ({ ...row, isFollowing: false }));
   }
@@ -442,21 +457,32 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
   // runs in prod and the page stays correct even if the query drifts.
-  return (await attachReactionStats(rankFeed(rows))).map((row) => ({
+  return (await attachReactionStats(rankFeed(rows), viewerId)).map((row) => ({
     ...row,
     isFollowing: row.authorId !== viewerId,
   }));
 }
 
-async function attachReactionStats(rows: FeedRowWithoutStats[]): Promise<BaseFeedRow[]> {
+function toReactionKind(kind: string): ReactionKind | null {
+  if (kind === "worked") return "worked";
+  if (kind === "needs-tweak") return "needs-tweak";
+  if (kind === "broken") return "broken";
+  return null;
+}
+
+async function attachReactionStats(
+  rows: FeedRowWithoutStats[],
+  viewerId: string | null,
+): Promise<BaseFeedRow[]> {
   if (rows.length === 0) return [];
 
   const { db, schema } = await import("@/db/client");
   const statsRows = await db
     .select({
       sessionId: schema.sessionReaction.sessionId,
-      positiveReactions: sql<number>`count(*) filter (where ${schema.sessionReaction.kind} in ('worked', 'worked-verified'))::int`,
-      negativeReactions: sql<number>`count(*) filter (where ${schema.sessionReaction.kind} in ('needs-tweak', 'broken'))::int`,
+      kind: schema.sessionReaction.kind,
+      reactionCount: sql<number>`count(*)::int`,
+      viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
     })
     .from(schema.sessionReaction)
     .where(
@@ -465,22 +491,52 @@ async function attachReactionStats(rows: FeedRowWithoutStats[]): Promise<BaseFee
         rows.map((row) => row.id),
       ),
     )
-    .groupBy(schema.sessionReaction.sessionId);
+    .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind);
 
-  const statsBySession = new Map(
-    statsRows.map((row) => [
-      row.sessionId,
-      {
-        positiveReactions: Number(row.positiveReactions) || 0,
-        negativeReactions: Number(row.negativeReactions) || 0,
-      },
-    ]),
-  );
+  const statsBySession = new Map<
+    string,
+    {
+      workedReactions: number;
+      verifiedReactions: number;
+      tweakReactions: number;
+      brokenReactions: number;
+      viewerReactions: Set<ReactionKind>;
+    }
+  >();
+
+  for (const stat of statsRows) {
+    const sessionStats = statsBySession.get(stat.sessionId) ?? {
+      workedReactions: 0,
+      verifiedReactions: 0,
+      tweakReactions: 0,
+      brokenReactions: 0,
+      viewerReactions: new Set<ReactionKind>(),
+    };
+    const count = Number(stat.reactionCount) || 0;
+
+    if (stat.kind === "worked") sessionStats.workedReactions += count;
+    if (stat.kind === "worked-verified") sessionStats.verifiedReactions += count;
+    if (stat.kind === "needs-tweak") sessionStats.tweakReactions += count;
+    if (stat.kind === "broken") sessionStats.brokenReactions += count;
+
+    const viewerReaction = toReactionKind(stat.kind);
+    if (stat.viewerReacted && viewerReaction) sessionStats.viewerReactions.add(viewerReaction);
+    statsBySession.set(stat.sessionId, sessionStats);
+  }
 
   return rows.map((row) => ({
     ...row,
-    positiveReactions: statsBySession.get(row.id)?.positiveReactions ?? 0,
-    negativeReactions: statsBySession.get(row.id)?.negativeReactions ?? 0,
+    positiveReactions:
+      (statsBySession.get(row.id)?.workedReactions ?? 0) +
+      (statsBySession.get(row.id)?.verifiedReactions ?? 0),
+    negativeReactions:
+      (statsBySession.get(row.id)?.tweakReactions ?? 0) +
+      (statsBySession.get(row.id)?.brokenReactions ?? 0),
+    workedReactions: statsBySession.get(row.id)?.workedReactions ?? 0,
+    verifiedReactions: statsBySession.get(row.id)?.verifiedReactions ?? 0,
+    tweakReactions: statsBySession.get(row.id)?.tweakReactions ?? 0,
+    brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
+    viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
   }));
 }
 
@@ -1117,22 +1173,18 @@ export default async function FeedPage({
                           </div>
 
                           <div className="mt-4 flex flex-col gap-3 rounded-[18px] bg-zinc-950/70 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between">
-                            <Link
-                              href={currentReceiptHref}
-                              className="inline-flex min-h-9 items-center gap-2 rounded-full bg-black px-3 font-mono text-[11px] text-zinc-400 transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)] active:scale-[0.98]"
-                              aria-label={`Open reactions for ${r.title ?? r.slug}`}
-                            >
-                              <span className="text-[#a7f300] tabular-nums">
-                                {r.positiveReactions}
-                              </span>
-                              <span>worked</span>
-                              <span className="text-zinc-700">/</span>
-                              <span className="tabular-nums">{r.negativeReactions}</span>
-                              <span>tweaks</span>
-                              <span className="hidden text-zinc-600 sm:inline">
-                                {reactionSummary(r)}
-                              </span>
-                            </Link>
+                            <ReactionBar
+                              slug={r.slug}
+                              variant="inline"
+                              summary={reactionSummary(r)}
+                              initialCounts={{
+                                worked: r.workedReactions + r.verifiedReactions,
+                                "needs-tweak": r.tweakReactions,
+                                broken: r.brokenReactions,
+                              }}
+                              initialMine={r.viewerReactions}
+                              className="flex-1"
+                            />
 
                             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                               <CopyButton
