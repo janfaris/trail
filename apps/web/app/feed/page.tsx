@@ -971,7 +971,7 @@ export default async function FeedPage({
 
         <div className="mx-auto grid max-w-6xl gap-8 px-3 py-8 sm:px-4 md:px-6 md:py-10 lg:grid-cols-[minmax(0,720px)_320px]">
           <section className="min-w-0 overflow-hidden rounded-[22px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.38)] sm:rounded-[28px]">
-            <div className="sticky top-[105px] z-20 border-b border-zinc-900/90 bg-zinc-950 shadow-[0_16px_36px_rgba(0,0,0,0.38)] backdrop-blur-xl md:top-14">
+            <div className="border-b border-zinc-900/90 bg-zinc-950 shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
               <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5 md:px-6">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
