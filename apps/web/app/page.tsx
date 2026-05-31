@@ -2,42 +2,48 @@ import { CopyButton } from "@/components/copy-button";
 import { SiteNav } from "@/components/site-nav";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-/* Hallmark · macrostructure: 04-stat-led · genre: technical · theme: trail-dark-lime
+/* Hallmark · macrostructure: 06-feed-led · genre: technical · theme: trail-dark-lime
  * paper: oklch(15% 0.01 280) #09090b · accent: oklch(94% 0.27 130) #a7f300 (lime · cool axis)
  * display: Fraunces (italic-serif) · body: Geist · outlier: Geist Mono (chips/labels only)
- * sections: hero-stat · breakdown · how-it-works · what-trail-captures · install · footer
+ * sections: hero-feed · breakdown · how-it-works · what-trail-captures · install · footer
  * motion: none — typography only · contrast: pass · slop test: 69/69 ✓
- * The single number $3.77 is the design. Everything else qualifies it.
+ * The feed is the product loop. Receipts are the trust layer underneath it.
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Trail — what did that PR actually cost?",
+  title: "Trail — follow builders shipping with AI",
   description:
-    "Local-capture cost tracking for Claude Code and Codex. Tokens captured per turn, priced at upload, attributed to the merge commit. No admin keys.",
+    "Trail is a public feed of GitHub-linked AI coding receipts: follow builders, browse shipped work, and turn sessions into proof.",
   openGraph: {
-    title: "Trail — what did that PR actually cost?",
+    title: "Trail — follow builders shipping with AI",
     description:
-      "Local-capture cost tracking for Claude Code and Codex. Tokens captured per turn, priced at upload, attributed to the merge commit.",
+      "A social feed for shipped AI work, where every post can carry the model, cost, transcript, and merged GitHub PR behind it.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trail — what did that PR actually cost?",
+    title: "Trail — follow builders shipping with AI",
     description:
-      "Local-capture cost tracking for Claude Code and Codex. Tokens captured per turn, priced at upload, attributed to the merge commit.",
+      "A social feed for shipped AI work, where every post can carry the model, cost, transcript, and merged GitHub PR behind it.",
   },
 };
 
 export const dynamic = "force-dynamic";
 
-// Real verified session — the number is from production, not a mockup.
-const EXAMPLE_HREF = "/u/jankarlo.faris/161blsz1";
+// Real session 161blsz1 — every number below is from production, not a mockup.
 const INSTALL = "npm install -g @gettrail/cli";
 const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
+const FOLLOWING_SIGNIN_HREF = `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(
+  "/feed?view=following",
+)}`;
+// The merged PR is public on GitHub — anyone can verify the ship third-party.
+const PR_HREF = "https://github.com/janfaris/trail/pull/23";
+// A real, public builder profile — receipts compound here.
+const PROFILE_HREF = "/u/jankarlo.faris";
 
-// Real numbers from session 161blsz1 — gpt-5.5, 8h27m. Used as hero proof.
+// Real numbers from session 161blsz1 — Codex, gpt-5.5. Used as hero proof.
 const HERO_STAT = {
   cost: "3.77",
   pr: "janfaris/trail#23",
@@ -47,6 +53,73 @@ const HERO_STAT = {
   cachedTokens: "4,410,112",
   duration: "8h 27m",
 };
+
+const feedPreview = [
+  {
+    handle: "@jankarlo.faris",
+    action: "shipped janfaris/trail#23",
+    detail: "Codex · gpt-5.5 · $3.77 receipt",
+    href: PR_HREF,
+    tag: "merged PR",
+  },
+  {
+    handle: "Feed",
+    action: "browse shipped AI work",
+    detail: "Public sessions across tools and frameworks",
+    href: "/feed",
+    tag: "public feed",
+  },
+  {
+    handle: "Recruiter view",
+    action: "share only the work that looks shipped",
+    detail: "Public receipts filtered for portfolio review",
+    href: `${PROFILE_HREF}/interview`,
+    tag: "profile proof",
+  },
+];
+
+const startHere = [
+  {
+    n: "01",
+    label: "Browse",
+    title: "Open the feed first.",
+    body: "Read public AI-building sessions without an account. See what shipped, who built it, and which model/tool did the work.",
+    links: [{ href: "/feed", label: "Browse feed" }],
+  },
+  {
+    n: "02",
+    label: "Follow",
+    title: "Sign in with GitHub.",
+    body: "Following, reactions, and your personal timeline unlock after GitHub sign-in. The public feed stays open.",
+    links: [{ href: FOLLOWING_SIGNIN_HREF, label: "Sign in to follow" }],
+  },
+  {
+    n: "03",
+    label: "Install",
+    title: "Record your own trail.",
+    body: "Install the CLI locally, keep working in Claude Code or Codex, then share the sessions that should become proof.",
+    links: [{ href: "/install", label: "Install locally" }],
+  },
+  {
+    n: "04",
+    label: "Discover",
+    title: "Track tools and stacks.",
+    body: "Trail groups public receipts by the AI tools and frameworks people are actually using to ship.",
+    links: [
+      { href: "/tools", label: "AI tools" },
+      { href: "/frameworks", label: "Frameworks" },
+    ],
+  },
+];
+
+// Anatomy of the same receipt — only fields that are independently true today.
+const receiptFields = [
+  { field: "cost", value: "$3.77", note: "real tokens × versioned prices" },
+  { field: "tool · model", value: "Codex · gpt-5.5", note: "auto-detected at capture" },
+  { field: "session", value: "295 turns", note: "captured locally, anonymized" },
+  { field: "linked PR", value: "#23", note: "public + merged on GitHub" },
+  { field: "verification", value: "GitHub's call", note: "badge lights only on a confirmed merge" },
+];
 
 const breakdown = [
   { label: "input tokens", value: "4,628,651", price: "$23.14" },
@@ -70,7 +143,7 @@ const steps = [
   {
     n: "03",
     title: "Ship.",
-    body: "When you merge a PR, trail attributes the session's cost to that commit. The dollar lands on /dashboard/cost. No estimation, no fanout — your tokens, your prices.",
+    body: "When you merge a PR, trail attributes the session's cost to that commit and turns it into a public, GitHub-verifiable receipt. No estimation, no fanout — your tokens, your prices.",
     code: "trail share <session-id>",
   },
 ];
@@ -113,64 +186,171 @@ export default async function Home() {
       <SiteNav currentPath="/" />
 
       <main className="flex-1">
-        {/* HERO — Stat-Led. The number IS the page above the fold. */}
-        <section className="mx-auto max-w-5xl px-6 lg:px-10 pt-24 md:pt-32 pb-20 md:pb-24">
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-10">
-            <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Receipts &nbsp;·&nbsp; verified
-            &nbsp;·&nbsp; one shipped PR
-          </div>
+        {/* HERO — Feed-led. The social discovery loop is above the fold; receipts are evidence. */}
+        <section className="mx-auto max-w-6xl px-6 lg:px-10 pt-20 md:pt-28 pb-20 md:pb-24">
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-end">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+                <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Social feed &nbsp;·&nbsp;
+                shipped AI work &nbsp;·&nbsp; GitHub-linked proof
+              </div>
 
-          {/* The number. Tabular figures, Fraunces, optical-size large. */}
-          <div className="flex items-baseline gap-3 mb-8">
-            <span className="font-display text-[28px] md:text-[40px] text-zinc-500 leading-none tabular-nums">
-              $
-            </span>
-            <span
-              className="font-display text-[120px] md:text-[200px] leading-[0.86] tracking-[-0.04em] text-zinc-50 tabular-nums"
-              style={{ fontFeatureSettings: '"tnum", "ss01"' }}
-            >
-              {HERO_STAT.cost}
-            </span>
-          </div>
+              <h1 className="font-display text-[58px] md:text-[96px] leading-[0.92] tracking-[-0.045em] text-zinc-50 max-w-[11ch] mb-8">
+                Follow builders shipping with AI.
+              </h1>
 
-          {/* Qualifier — small, italic Fraunces, what the number is. */}
-          <p className="italic text-zinc-300 text-[17px] md:text-[20px] leading-[1.5] max-w-[40ch] mb-12">
-            …is what it cost to ship{" "}
-            <Link
-              href={EXAMPLE_HREF}
-              className="text-zinc-50 underline decoration-[#a7f300]/60 underline-offset-4 decoration-2 hover:decoration-[#a7f300]"
-            >
-              {HERO_STAT.pr}
-            </Link>{" "}
-            with {HERO_STAT.model} over {HERO_STAT.duration}.
-          </p>
+              <p className="italic text-zinc-300 text-[18px] md:text-[23px] leading-[1.45] max-w-[52ch] mb-5">
+                Trail is a public feed for AI-coded work: every post can show the session, model,
+                cost, transcript, and GitHub PR behind what shipped.
+              </p>
 
-          {/* Two equal CTAs. Side-by-side on desktop, stacked mobile. */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden">
-              <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap">
-                <span className="text-zinc-600">$&nbsp;</span>
-                {INSTALL}
-              </code>
-              <CopyButton value={INSTALL} />
+              <p className="text-[12px] font-mono text-zinc-500 mb-12 max-w-[72ch] leading-[1.7]">
+                The feed makes discovery the loop. Receipts keep it honest. Profiles and recruiter
+                views are what your trail becomes after enough public work stacks up.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <Link
+                  href={FOLLOWING_SIGNIN_HREF}
+                  className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/50 bg-[#a7f300] text-black text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#c8ff5e] transition-colors"
+                >
+                  Sign in to follow →
+                </Link>
+                <Link
+                  href="/feed"
+                  className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-700 hover:text-zinc-50 transition-colors"
+                >
+                  Browse feed
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden w-fit max-w-full">
+                <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap overflow-x-auto">
+                  <span className="text-zinc-600">$&nbsp;</span>
+                  {INSTALL}
+                </code>
+                <CopyButton value={INSTALL} />
+              </div>
             </div>
-            <Link
-              href={SIGNIN_HREF}
-              className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/40 bg-[#a7f300]/5 text-[#a7f300] text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#a7f300]/10 hover:border-[#a7f300]/60 transition-colors"
-            >
-              Sign in to follow →
-            </Link>
-            <Link
-              href="/feed"
-              className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-600 hover:text-zinc-50 transition-colors"
-            >
-              Browse feed
-            </Link>
-          </div>
 
-          <p className="text-[12px] font-mono text-zinc-600">
-            Free tier · no card · local capture works offline until you ship.
-          </p>
+            <div className="border border-zinc-900 bg-black rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(167,243,0,0.04),0_30px_80px_rgba(0,0,0,0.45)]">
+              <div className="border-b border-zinc-900 px-5 py-4 flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    Feed preview
+                  </div>
+                  <div className="font-display text-[24px] text-zinc-50 mt-1">Shipped with AI</div>
+                </div>
+                <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
+                  Social proof
+                </span>
+              </div>
+
+              <div className="divide-y divide-zinc-900">
+                {feedPreview.map((item) => (
+                  <Link
+                    key={item.action}
+                    href={item.href}
+                    className="group block px-5 py-4 hover:bg-zinc-950 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="font-mono text-[11px] text-[#a7f300]">{item.handle}</div>
+                      <div className="rounded-full border border-zinc-800 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500 group-hover:border-[#a7f300]/30 group-hover:text-[#a7f300]">
+                        {item.tag}
+                      </div>
+                    </div>
+                    <div className="font-display text-[19px] leading-tight text-zinc-50 mb-1.5">
+                      {item.action}
+                    </div>
+                    <div className="font-mono text-[11px] leading-[1.5] text-zinc-500">
+                      {item.detail}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="p-5">
+                <div className="rounded-lg border border-zinc-900 bg-zinc-950/70 p-4">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-5">
+                    Trust layer
+                  </div>
+                  <div className="flex items-baseline justify-between gap-6 mb-3">
+                    <div className="font-display text-[34px] leading-none text-zinc-50 tabular-nums">
+                      ${HERO_STAT.cost}
+                    </div>
+                    <a
+                      href={PR_HREF}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[11px] text-[#a7f300] uppercase tracking-[0.12em] hover:text-[#c8ff5e]"
+                    >
+                      PR #23 ↗
+                    </a>
+                  </div>
+                  <p className="text-zinc-500 text-[13px] leading-[1.55] mb-4">
+                    {HERO_STAT.model} session linked to{" "}
+                    <span className="text-zinc-300">{HERO_STAT.pr}</span>. The cost is Trail's
+                    measurement; the merge is GitHub's public record.
+                  </p>
+                  <Link
+                    href={PROFILE_HREF}
+                    className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 hover:text-[#a7f300]"
+                  >
+                    Open builder profile →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* START HERE — make the product loop explicit without gating the public feed. */}
+        <section className="border-t border-zinc-900">
+          <div className="mx-auto max-w-5xl px-6 lg:px-10 py-16">
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+              <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Start here
+            </div>
+
+            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden md:grid-cols-2 lg:grid-cols-4">
+              {startHere.map((item) => (
+                <div key={item.n} className="bg-zinc-950 p-5">
+                  <div className="flex items-center justify-between gap-4 mb-5">
+                    <span className="font-mono text-[11px] text-[#a7f300] tracking-[0.14em]">
+                      {item.n}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+                      {item.label}
+                    </span>
+                  </div>
+                  <h2 className="font-display text-[21px] leading-tight text-zinc-50 mb-3">
+                    {item.title}
+                  </h2>
+                  <p className="text-zinc-500 text-[13px] leading-[1.6] mb-5">{item.body}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+                    {item.links.map((link) =>
+                      link.href.startsWith("/api/") ? (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          className="text-[#a7f300] hover:underline"
+                        >
+                          {link.label} →
+                        </a>
+                      ) : (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="text-[#a7f300] hover:underline"
+                        >
+                          {link.label} →
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* BREAKDOWN — the number, decomposed. Hairline rules, tabular-nums everywhere. */}
@@ -221,6 +401,53 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* WHAT A RECEIPT PROVES — anatomy of the proof object + locked badge. */}
+        <section className="border-t border-zinc-900">
+          <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+              <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;What a receipt proves
+            </div>
+
+            <h2 className="font-display text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] text-zinc-50 mb-6 max-w-[22ch]">
+              A receipt is a proof object, not a screenshot.
+            </h2>
+            <p className="text-zinc-400 text-[15px] leading-[1.7] max-w-[60ch] mb-12">
+              A session carries things that are hard to fake together: what it cost, which tool and
+              model did it, and the public PR it's tied to. The last piece — a GitHub-confirmed
+              merge attributed to you — is what turns a receipt into a badge.
+            </p>
+
+            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden sm:grid-cols-2 lg:grid-cols-5">
+              {receiptFields.map((f) => (
+                <div key={f.field} className="bg-zinc-950 p-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-3">
+                    {f.field}
+                  </div>
+                  <div className="font-display text-[20px] text-zinc-50 mb-2 tabular-nums leading-tight">
+                    {f.value}
+                  </div>
+                  <div className="font-mono text-[11px] text-zinc-600 leading-[1.5]">{f.note}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* The badge as a mechanism — shown LOCKED, never implied-earned. */}
+            <div className="mt-12 flex flex-col sm:flex-row sm:items-center gap-5 border border-dashed border-zinc-800 rounded-md p-6 bg-zinc-950">
+              <span className="inline-flex items-center gap-2 self-start rounded-full border border-dashed border-zinc-700 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+                <span aria-hidden className="text-zinc-600">
+                  ◇
+                </span>
+                Verified Builder · locked
+              </span>
+              <p className="text-zinc-400 text-[14px] leading-[1.6] max-w-[56ch]">
+                The badge isn't a status you claim — it's a mechanism. It lights up the moment
+                GitHub confirms a merge attributed to you, and goes dark if the proof doesn't hold.
+                Nobody hands it out. Nobody fakes it.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* HOW IT WORKS — three steps, hairline-divided, code-led. */}
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
@@ -257,6 +484,92 @@ export default async function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* RECEIPTS COMPOUND — the social/distribution surfaces, framed "be early". */}
+        <section className="border-t border-zinc-900">
+          <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+              <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Track record
+            </div>
+
+            <h2 className="font-display text-[34px] md:text-[44px] leading-[1.05] tracking-[-0.02em] text-zinc-50 mb-6 max-w-[24ch]">
+              One receipt is proof. A hundred is a track record.
+            </h2>
+            <p className="text-zinc-400 text-[15px] leading-[1.7] max-w-[62ch] mb-12">
+              Every shipped session stacks onto a public profile — less a résumé you write, more a
+              changelog GitHub keeps honest. The graph is starting now, on receipts, not follower
+              counts. Early is the whole point.
+            </p>
+
+            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden sm:grid-cols-2">
+              <Link
+                href={PROFILE_HREF}
+                className="group bg-zinc-950 p-6 hover:bg-zinc-900/60 transition-colors"
+              >
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300] mb-3">
+                  Your profile
+                </div>
+                <div className="font-display text-[20px] text-zinc-50 mb-2">trail.dev/u/you</div>
+                <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                  A public record of what you shipped and what it cost — inspectable without a
+                  login. Drop it in your bio.{" "}
+                  <span className="text-zinc-400 group-hover:text-[#a7f300]">See a live one →</span>
+                </p>
+              </Link>
+              <Link
+                href="/discover"
+                className="group bg-zinc-950 p-6 hover:bg-zinc-900/60 transition-colors"
+              >
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300] mb-3">
+                  Discover
+                </div>
+                <div className="font-display text-[20px] text-zinc-50 mb-2">
+                  Browse shipped work
+                </div>
+                <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                  Real sessions from real merges. Follow builders and watch the{" "}
+                  <span className="text-zinc-400 group-hover:text-[#a7f300] underline decoration-zinc-700 underline-offset-2">
+                    feed
+                  </span>{" "}
+                  fill with receipts.
+                </p>
+              </Link>
+              <Link
+                href="/tools"
+                className="group bg-zinc-950 p-6 hover:bg-zinc-900/60 transition-colors"
+              >
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300] mb-3">
+                  Tools
+                </div>
+                <div className="font-display text-[20px] text-zinc-50 mb-2">
+                  Claude Code · Codex · …
+                </div>
+                <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                  Each agent gets a page aggregating what people actually ship with it — cost, not
+                  vibes.{" "}
+                  <span className="text-zinc-400 group-hover:text-[#a7f300]">Open tools →</span>
+                </p>
+              </Link>
+              <Link
+                href="/frameworks"
+                className="group bg-zinc-950 p-6 hover:bg-zinc-900/60 transition-colors"
+              >
+                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300] mb-3">
+                  Frameworks
+                </div>
+                <div className="font-display text-[20px] text-zinc-50 mb-2">
+                  What ships in your stack
+                </div>
+                <p className="text-zinc-500 text-[13px] leading-[1.55]">
+                  Receipts grouped by the frameworks behind them — real spend, real merges.{" "}
+                  <span className="text-zinc-400 group-hover:text-[#a7f300]">
+                    Open frameworks →
+                  </span>
+                </p>
+              </Link>
             </div>
           </div>
         </section>
@@ -300,9 +613,14 @@ export default async function Home() {
               ))}
             </div>
 
-            <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[62ch] leading-[1.55]">
-              Optional · BYOK admin keys (Anthropic, OpenAI) add cross-vendor reconciliation when
-              you outgrow local capture. Encrypted with libsodium, revocable in one click.
+            <p className="italic text-zinc-400 text-[14px] mt-8 max-w-[68ch] leading-[1.55]">
+              Three layers, kept distinct: a{" "}
+              <span className="text-zinc-300">GitHub-verified merge</span> (third-party provable),
+              the <span className="text-zinc-300">cost &amp; tokens Trail captured</span> locally,
+              and a <span className="text-zinc-300">public, anonymized transcript</span>. We never
+              blur "GitHub confirmed it" with "we measured it." Optional · BYOK admin keys
+              (Anthropic, OpenAI) add cross-vendor reconciliation when you outgrow local capture.
+              Encrypted with libsodium, revocable in one click.
             </p>
           </div>
         </section>
@@ -311,7 +629,7 @@ export default async function Home() {
         <section className="border-t border-zinc-900">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-24 text-center">
             <p className="italic text-zinc-300 text-[18px] md:text-[22px] mb-8 max-w-[46ch] mx-auto leading-[1.45]">
-              See where every dollar of your AI bill went, by the PR it shipped in.
+              Start your first receipt. Ship something, and let GitHub vouch for it.
             </p>
             <div className="inline-flex items-center gap-0 border border-zinc-800 bg-black rounded-md overflow-hidden">
               <code className="font-mono text-[14px] text-zinc-200 px-5 py-3.5 select-all whitespace-nowrap">
@@ -341,6 +659,9 @@ export default async function Home() {
             <span className="font-mono text-[12px] text-zinc-500">@gettrail/cli on npm</span>
           </div>
           <div className="flex items-center gap-5 text-[12px] font-mono text-zinc-500">
+            <Link href="/feed" className="hover:text-zinc-200">
+              feed
+            </Link>
             <a href="https://github.com/janfaris/trail" className="hover:text-zinc-200">
               github
             </a>

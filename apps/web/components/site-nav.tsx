@@ -6,8 +6,16 @@ type NavLink = { href: string; label: string; external?: boolean };
 
 const PRIMARY_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
+  { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
   { href: "https://github.com/janfaris/trail", label: "GitHub", external: true },
+];
+
+const SIGNED_IN_LINKS: NavLink[] = [
+  { href: "/feed", label: "Feed" },
+  { href: "/tools", label: "Tools" },
+  { href: "/install", label: "Install" },
+  { href: "/dashboard", label: "Dashboard" },
 ];
 
 function linkClass(href: string, currentPath?: string) {
@@ -74,15 +82,15 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           )}
           {handle ? (
             <div className="flex items-center gap-3 sm:gap-5">
-              <Link href="/feed" className={`hidden md:inline ${linkClass("/feed", currentPath)}`}>
-                Feed
-              </Link>
-              <Link
-                href="/dashboard"
-                className={`hidden md:inline ${linkClass("/dashboard", currentPath)}`}
-              >
-                Dashboard
-              </Link>
+              {SIGNED_IN_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`hidden md:inline ${linkClass(l.href, currentPath)}`}
+                >
+                  {l.label}
+                </Link>
+              ))}
               <ProfileMenu handle={handle} name={name} image={image} signOut={<SignOutButton />} />
             </div>
           ) : (

@@ -34,6 +34,35 @@ function classifyStatus(linkedCommitSha: string | null, shipped: boolean): Recei
   return shipped ? RECEIPT_STATUS.Shipped : RECEIPT_STATUS.Draft;
 }
 
+/**
+ * Resolve the session owner's GitHub identity for commit-ownership binding:
+ * their OAuth token (read scope), numeric GitHub id (`account.account_id`), and
+ * login (`user.handle`). Missing pieces degrade to null so verifyShipped fails
+ * closed rather than throwing.
+ */
+async function loadOwnerIdentity(userId: string): Promise<{
+  token: string | null;
+  githubId: number | null;
+  login: string | null;
+}> {
+  const [acct, usr] = await Promise.all([
+    db.query.account.findFirst({
+      where: (a, { and, eq: eqOp }) => and(eqOp(a.userId, userId), eqOp(a.providerId, "github")),
+      columns: { accessToken: true, accountId: true },
+    }),
+    db.query.user.findFirst({
+      where: (u, { eq: eqOp }) => eqOp(u.id, userId),
+      columns: { handle: true },
+    }),
+  ]);
+  const parsedId = acct?.accountId ? Number(acct.accountId) : Number.NaN;
+  return {
+    token: acct?.accessToken ?? null,
+    githubId: Number.isFinite(parsedId) ? parsedId : null,
+    login: usr?.handle ?? null,
+  };
+}
+
 export async function generateReceipt(sessionId: string): Promise<ReceiptGenerationResult> {
   try {
     const client = aiClient();
@@ -95,18 +124,36 @@ export async function generateReceipt(sessionId: string): Promise<ReceiptGenerat
       );
     }
 
-    // Verification gate: 'shipped' only when GitHub confirms merged.
+    // Verification gate: 'shipped' only when GitHub confirms the owner shipped
+    // this commit to a public default branch. We self-fetch the owner's GitHub
+    // identity + OAuth token so both the upload and regenerate paths verify
+    // identically with no caller plumbing.
     let shipped = false;
-    if (row.linkedRepo && row.linkedCommitSha) {
-      shipped = await verifyShipped(row.linkedRepo, row.linkedCommitSha);
-    }
-    const status = classifyStatus(row.linkedCommitSha, shipped);
-    const verification = {
-      shipped,
+    let verification: typeof schema.trailSession.$inferInsert.receiptVerification = {
+      shipped: false,
       sha: row.linkedCommitSha,
       repo: row.linkedRepo,
       checkedAt: new Date().toISOString(),
     };
+    if (row.linkedRepo && row.linkedCommitSha) {
+      const ownerIdentity = await loadOwnerIdentity(row.userId);
+      const result = await verifyShipped(row.linkedRepo, row.linkedCommitSha, {
+        userToken: ownerIdentity.token,
+        owner: { githubId: ownerIdentity.githubId, login: ownerIdentity.login },
+      });
+      shipped = result.shipped;
+      verification = {
+        shipped: result.shipped,
+        reason: result.reason,
+        matchedBy: result.matchedBy ?? null,
+        defaultBranch: result.defaultBranch ?? null,
+        private: result.private ?? null,
+        sha: row.linkedCommitSha,
+        repo: row.linkedRepo,
+        checkedAt: new Date().toISOString(),
+      };
+    }
+    const status = classifyStatus(row.linkedCommitSha, shipped);
 
     await db
       .update(schema.trailSession)

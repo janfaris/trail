@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const findFirst = vi.fn();
+  const accountFindFirst = vi.fn();
+  const userFindFirst = vi.fn();
   const orderBy = vi.fn();
   const selectChain = {
     from: vi.fn().mockReturnThis(),
@@ -13,12 +15,26 @@ const mocks = vi.hoisted(() => {
   const update = vi.fn().mockReturnValue({ set: updateSet });
   const create = vi.fn();
   const verifyShipped = vi.fn();
-  return { findFirst, orderBy, selectChain, update, updateSet, create, verifyShipped };
+  return {
+    findFirst,
+    accountFindFirst,
+    userFindFirst,
+    orderBy,
+    selectChain,
+    update,
+    updateSet,
+    create,
+    verifyShipped,
+  };
 });
 
 vi.mock("../db/client", () => ({
   db: {
-    query: { trailSession: { findFirst: mocks.findFirst } },
+    query: {
+      trailSession: { findFirst: mocks.findFirst },
+      account: { findFirst: mocks.accountFindFirst },
+      user: { findFirst: mocks.userFindFirst },
+    },
     select: vi.fn().mockReturnValue(mocks.selectChain),
     update: mocks.update,
   },
@@ -37,7 +53,17 @@ vi.mock("./github-verify", () => ({
   verifyShipped: (...args: unknown[]) => mocks.verifyShipped(...args),
 }));
 
-const { findFirst, orderBy, selectChain, update, updateSet, create, verifyShipped } = mocks;
+const {
+  findFirst,
+  accountFindFirst,
+  userFindFirst,
+  orderBy,
+  selectChain,
+  update,
+  updateSet,
+  create,
+  verifyShipped,
+} = mocks;
 
 // --- validator spy ----------------------------------------------------------
 import * as validatorModule from "./receipt-validator";
@@ -71,12 +97,17 @@ function llmJson(overrides: Record<string, unknown> = {}) {
 describe("generateReceipt", () => {
   beforeEach(() => {
     mocks.findFirst.mockReset();
+    mocks.accountFindFirst.mockReset();
+    mocks.userFindFirst.mockReset();
     mocks.selectChain.orderBy.mockReset();
     mocks.update.mockClear();
     mocks.updateSet.mockClear();
     mocks.create.mockReset();
     mocks.verifyShipped.mockReset();
     validateSpy.mockClear();
+    // Default owner identity for the commit-linked cases.
+    mocks.accountFindFirst.mockResolvedValue({ accessToken: "tok", accountId: "123" });
+    mocks.userFindFirst.mockResolvedValue({ handle: "octocat" });
   });
 
   it("runs the validator and persists 'shipped' when GitHub confirms merge", async () => {
@@ -85,6 +116,7 @@ describe("generateReceipt", () => {
       slug: "abc",
       title: "Checkout work",
       summary: "",
+      userId: "u1",
       linkedRepo: "owner/repo",
       linkedCommitSha: "deadbee",
     });
@@ -94,7 +126,7 @@ describe("generateReceipt", () => {
       { idx: 2, kind: "prompt", data: { text: "Wire webhook" } },
     ]);
     create.mockResolvedValue(llmJson());
-    verifyShipped.mockResolvedValue(true);
+    verifyShipped.mockResolvedValue({ shipped: true, reason: "merged-and-owned" });
 
     const result = await generateReceipt("s1");
 
@@ -107,6 +139,11 @@ describe("generateReceipt", () => {
     expect(persisted.receiptStatus).toBe("shipped");
     expect(persisted.receiptOutcome).toContain("Stripe");
     expect(persisted.receiptDecisionSummary).toHaveLength(3);
+    // The owner's token + identity must be threaded into verification.
+    expect(verifyShipped).toHaveBeenCalledWith("owner/repo", "deadbee", {
+      userToken: "tok",
+      owner: { githubId: 123, login: "octocat" },
+    });
   });
 
   it("returns 'draft' when commit linked but not merged", async () => {
@@ -115,14 +152,13 @@ describe("generateReceipt", () => {
       slug: "abc",
       title: "x",
       summary: "",
+      userId: "u1",
       linkedRepo: "owner/repo",
       linkedCommitSha: "deadbee",
     });
-    selectChain.orderBy.mockResolvedValue([
-      { idx: 0, kind: "prompt", data: { text: "go" } },
-    ]);
+    selectChain.orderBy.mockResolvedValue([{ idx: 0, kind: "prompt", data: { text: "go" } }]);
     create.mockResolvedValue(llmJson());
-    verifyShipped.mockResolvedValue(false);
+    verifyShipped.mockResolvedValue({ shipped: false, reason: "not-on-default" });
 
     const result = await generateReceipt("s2");
     expect(result.ok).toBe(true);
@@ -139,9 +175,7 @@ describe("generateReceipt", () => {
       linkedRepo: null,
       linkedCommitSha: null,
     });
-    selectChain.orderBy.mockResolvedValue([
-      { idx: 0, kind: "prompt", data: { text: "go" } },
-    ]);
+    selectChain.orderBy.mockResolvedValue([{ idx: 0, kind: "prompt", data: { text: "go" } }]);
     create.mockResolvedValue(llmJson());
 
     const result = await generateReceipt("s3");
@@ -160,9 +194,7 @@ describe("generateReceipt", () => {
       linkedRepo: null,
       linkedCommitSha: null,
     });
-    selectChain.orderBy.mockResolvedValue([
-      { idx: 0, kind: "prompt", data: { text: "go" } },
-    ]);
+    selectChain.orderBy.mockResolvedValue([{ idx: 0, kind: "prompt", data: { text: "go" } }]);
     create.mockResolvedValue(
       llmJson({
         outcome: "Leveraged Stripe for seamless checkout.",

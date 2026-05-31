@@ -154,6 +154,10 @@ export const trailSession = pgTable(
       sha: string | null;
       repo: string | null;
       checkedAt: string;
+      reason?: string;
+      matchedBy?: string | null;
+      defaultBranch?: string | null;
+      private?: boolean | null;
     }>(),
     receiptValidatorWarnings: jsonb("receipt_validator_warnings").$type<string[]>(),
     receiptGeneratedAt: timestamp("receipt_generated_at"),
