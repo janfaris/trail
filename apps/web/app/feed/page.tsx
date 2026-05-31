@@ -1,3 +1,4 @@
+import { CopyButton } from "@/components/copy-button";
 import { FollowButton } from "@/components/follow-button";
 import { RelativeTime } from "@/components/relative-time";
 import { SiteNav } from "@/components/site-nav";
@@ -5,7 +6,7 @@ import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
 import { formatDuration } from "@/lib/session-metrics";
-import { githubAvatar } from "@/lib/share";
+import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -16,6 +17,10 @@ export const dynamic = "force-dynamic";
 
 const FEED_LIMIT = 80;
 const FOLLOWING_SIGN_IN_HREF = signInHref("/feed?view=following");
+const PUBLIC_APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app").replace(
+  /\/$/,
+  "",
+);
 
 const discoveryLinks = [
   {
@@ -104,6 +109,10 @@ function receiptHref(row: BaseFeedRow): string {
   return `${profileHref(row)}/${row.slug}`;
 }
 
+function publicReceiptUrl(row: BaseFeedRow): string {
+  return shareUrl(row.handle ?? "anon", row.slug, PUBLIC_APP_URL);
+}
+
 function avatarSrc(row: BaseFeedRow): string | null {
   return row.image ?? (row.handle ? githubAvatar(row.handle) : null);
 }
@@ -143,6 +152,23 @@ function timelineMetrics(row: BaseFeedRow): Array<{ label: string; value: string
   return metrics.slice(0, 5);
 }
 
+function pluralize(value: number, singular: string, plural = `${singular}s`): string {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function reactionSummary(row: BaseFeedRow): string {
+  if (row.positiveReactions === 0 && row.negativeReactions === 0) {
+    return "Be first to react";
+  }
+  if (row.negativeReactions === 0) {
+    return `${pluralize(row.positiveReactions, "builder")} says it worked`;
+  }
+  if (row.positiveReactions === 0) {
+    return `${pluralize(row.negativeReactions, "tweak")} requested`;
+  }
+  return `${row.positiveReactions} worked / ${row.negativeReactions} needs tweak`;
+}
+
 function receiptBadge(row: BaseFeedRow): string | null {
   if (row.receiptStatus === "shipped") return "Shipped";
   if (row.receiptStatus === "draft") return "Draft";
@@ -179,11 +205,15 @@ interface BaseFeedRow extends RankableSession {
   receiptStatus: string | null;
   taskType: string | null;
   outcome: string | null;
+  positiveReactions: number;
+  negativeReactions: number;
 }
 
 interface FeedRow extends BaseFeedRow {
   isFollowing: boolean;
 }
+
+type FeedRowWithoutStats = Omit<BaseFeedRow, "positiveReactions" | "negativeReactions">;
 
 type FeedSearchParams = {
   view?: string | string[];
@@ -242,7 +272,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     )
     .limit(FEED_LIMIT);
 
-  const ranked = rankFeed(rows);
+  const ranked = await attachReactionStats(rankFeed(rows));
   if (!viewerId || ranked.length === 0) {
     return ranked.map((row) => ({ ...row, isFollowing: false }));
   }
@@ -317,7 +347,46 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
   // runs in prod and the page stays correct even if the query drifts.
-  return rankFeed(rows).map((row) => ({ ...row, isFollowing: row.authorId !== viewerId }));
+  return (await attachReactionStats(rankFeed(rows))).map((row) => ({
+    ...row,
+    isFollowing: row.authorId !== viewerId,
+  }));
+}
+
+async function attachReactionStats(rows: FeedRowWithoutStats[]): Promise<BaseFeedRow[]> {
+  if (rows.length === 0) return [];
+
+  const { db, schema } = await import("@/db/client");
+  const statsRows = await db
+    .select({
+      sessionId: schema.sessionReaction.sessionId,
+      positiveReactions: sql<number>`count(*) filter (where ${schema.sessionReaction.kind} in ('worked', 'worked-verified'))::int`,
+      negativeReactions: sql<number>`count(*) filter (where ${schema.sessionReaction.kind} in ('needs-tweak', 'broken'))::int`,
+    })
+    .from(schema.sessionReaction)
+    .where(
+      inArray(
+        schema.sessionReaction.sessionId,
+        rows.map((row) => row.id),
+      ),
+    )
+    .groupBy(schema.sessionReaction.sessionId);
+
+  const statsBySession = new Map(
+    statsRows.map((row) => [
+      row.sessionId,
+      {
+        positiveReactions: Number(row.positiveReactions) || 0,
+        negativeReactions: Number(row.negativeReactions) || 0,
+      },
+    ]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    positiveReactions: statsBySession.get(row.id)?.positiveReactions ?? 0,
+    negativeReactions: statsBySession.get(row.id)?.negativeReactions ?? 0,
+  }));
 }
 
 export default async function FeedPage({
@@ -563,6 +632,11 @@ export default async function FeedPage({
                   const badge = receiptBadge(r);
                   const chips = stackChips(r);
                   const metrics = timelineMetrics(r);
+                  const currentPublicReceiptUrl = publicReceiptUrl(r);
+                  const tweetHref = tweetIntent(
+                    `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
+                    currentPublicReceiptUrl,
+                  );
 
                   return (
                     <li key={r.id}>
@@ -674,12 +748,48 @@ export default async function FeedPage({
                                 </span>
                               )}
                             </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-col gap-3 rounded-[18px] bg-zinc-950/70 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between">
                             <Link
                               href={currentReceiptHref}
-                              className="inline-flex min-h-10 items-center rounded-full px-0 font-mono text-[11px] uppercase tracking-[0.14em] text-[#a7f300] transition-[color,transform] hover:text-[#c8ff5e] active:scale-[0.96]"
+                              className="inline-flex min-h-9 items-center gap-2 rounded-full bg-black px-3 font-mono text-[11px] text-zinc-400 transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)] active:scale-[0.98]"
+                              aria-label={`Open reactions for ${r.title ?? r.slug}`}
                             >
-                              Open receipt →
+                              <span className="text-[#a7f300] tabular-nums">
+                                {r.positiveReactions}
+                              </span>
+                              <span>worked</span>
+                              <span className="text-zinc-700">/</span>
+                              <span className="tabular-nums">{r.negativeReactions}</span>
+                              <span>tweaks</span>
+                              <span className="hidden text-zinc-600 sm:inline">
+                                {reactionSummary(r)}
+                              </span>
                             </Link>
+
+                            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                              <CopyButton
+                                value={currentPublicReceiptUrl}
+                                label="Copy link"
+                                copiedLabel="Copied"
+                                className="min-h-9 flex-1 justify-center rounded-full border-zinc-800 bg-black px-3 text-[11px] text-zinc-400 sm:flex-none"
+                              />
+                              <a
+                                href={tweetHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96] sm:flex-none"
+                              >
+                                Share on X
+                              </a>
+                              <Link
+                                href={currentReceiptHref}
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full bg-[#a7f300] px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96] sm:flex-none"
+                              >
+                                Open →
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       </article>
