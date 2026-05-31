@@ -672,6 +672,414 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
   return { stats, builders, stacks };
 }
 
+function FeedTabs({
+  followingHref,
+  isFollowingView,
+}: {
+  followingHref: string;
+  isFollowingView: boolean;
+}) {
+  const tabClass =
+    "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-3 text-sm font-medium transition-[background-color,color] hover:bg-zinc-950/80";
+
+  return (
+    <div className="grid grid-cols-2 border-t border-zinc-900/80">
+      <Link
+        href="/feed"
+        className={`${tabClass} ${
+          isFollowingView ? "text-zinc-500 hover:text-zinc-200" : "text-zinc-50"
+        }`}
+      >
+        <span>For you</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+          Everyone
+        </span>
+        {!isFollowingView ? (
+          <span className="absolute bottom-0 h-1 w-14 rounded-t-full bg-[#a7f300]" />
+        ) : null}
+      </Link>
+      <TrailLink
+        href={followingHref}
+        className={`${tabClass} ${
+          isFollowingView ? "text-zinc-50" : "text-zinc-500 hover:text-zinc-200"
+        }`}
+      >
+        <span>Following</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+          Your graph
+        </span>
+        {isFollowingView ? (
+          <span className="absolute bottom-0 h-1 w-14 rounded-t-full bg-[#a7f300]" />
+        ) : null}
+      </TrailLink>
+    </div>
+  );
+}
+
+function FeedNavRail({
+  followingHref,
+  isFollowingView,
+  viewerId,
+}: {
+  followingHref: string;
+  isFollowingView: boolean;
+  viewerId: string | null;
+}) {
+  const notificationsHref = viewerId ? "/notifications" : signInHref("/notifications");
+  const publishHref = viewerId ? "/dashboard" : "/install";
+  const navItems = [
+    {
+      href: "/feed",
+      label: "Home",
+      detail: "Public receipt timeline",
+      active: !isFollowingView,
+    },
+    {
+      href: followingHref,
+      label: "Following",
+      detail: "Builders you track",
+      active: isFollowingView,
+    },
+    {
+      href: notificationsHref,
+      label: "Notifications",
+      detail: "Replies and reactions",
+      active: false,
+    },
+    {
+      href: "/tools",
+      label: "Explore",
+      detail: "Tools, stacks, builders",
+      active: false,
+    },
+  ];
+
+  return (
+    <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6">
+      <div>
+        <Link href="/" className="inline-flex items-center gap-2 px-3 font-mono text-sm">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#a7f300] text-black shadow-[0_0_36px_rgba(167,243,0,0.24)]">
+            /
+          </span>
+          <span className="text-zinc-100">trail</span>
+        </Link>
+
+        <nav className="mt-8 space-y-2">
+          {navItems.map((item) => (
+            <TrailLink
+              key={item.label}
+              href={item.href}
+              className={`group block rounded-[22px] px-4 py-3 transition-[background-color,transform] active:scale-[0.98] ${
+                item.active ? "bg-zinc-100 text-zinc-950" : "text-zinc-300 hover:bg-zinc-950"
+              }`}
+            >
+              <span className="block text-[18px] font-medium tracking-[-0.03em]">{item.label}</span>
+              <span
+                className={`mt-1 block text-[12px] leading-4 ${
+                  item.active ? "text-zinc-600" : "text-zinc-600 group-hover:text-zinc-500"
+                }`}
+              >
+                {item.detail}
+              </span>
+            </TrailLink>
+          ))}
+        </nav>
+
+        <TrailLink
+          href={publishHref}
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[12px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+        >
+          Publish receipt
+        </TrailLink>
+      </div>
+
+      <div className="rounded-[24px] bg-zinc-950/80 p-4 text-sm leading-6 text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+        Trail is the public proof feed for AI builders: ship, publish the receipt, get feedback.
+      </div>
+    </div>
+  );
+}
+
+function FeedComposerPrompt({ viewerId }: { viewerId: string | null }) {
+  const href = viewerId ? "/dashboard" : "/install";
+
+  return (
+    <div className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)] gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900 font-mono text-[11px] uppercase tracking-[-0.08em] text-[#a7f300] shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+          tr
+        </div>
+        <TrailLink
+          href={href}
+          className="group block rounded-[24px] border border-zinc-900 bg-zinc-950/70 p-4 text-left transition-[border-color,background-color,transform] hover:border-zinc-800 hover:bg-zinc-950 active:scale-[0.99]"
+        >
+          <div className="text-[17px] leading-6 text-zinc-400">
+            What did you ship with AI today?
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 pt-3">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-600">
+              Attach a Trail receipt
+            </span>
+            <span className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-colors group-hover:bg-[#c8ff5e]">
+              {viewerId ? "Publish" : "Install"}
+            </span>
+          </div>
+        </TrailLink>
+      </div>
+    </div>
+  );
+}
+
+function NetworkPulse({ stats }: { stats: FeedStats }) {
+  const items = [
+    ["Builders", formatCount(stats.builders)],
+    ["Receipts", formatCount(stats.receipts)],
+    ["Shipped", formatCount(stats.shipped)],
+    ["Reactions", formatCount(stats.reactions)],
+    ["Comments", formatCount(stats.comments)],
+  ];
+
+  return (
+    <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+        Network pulse
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {items.map(([label, value]) => (
+          <div key={label} className="rounded-[18px] bg-black px-3 py-3">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+              {label}
+            </div>
+            <div className="mt-1 font-mono text-sm text-zinc-100 tabular-nums">{value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | null }) {
+  const authorHref = profileHref(r);
+  const currentReceiptHref = receiptHref(r);
+  const displayName = r.name || r.handle || "Trail builder";
+  const handleLabel = r.handle ? `@${r.handle}` : "anonymous";
+  const repoLabel = r.linkedRepo ?? r.repo;
+  const badge = receiptBadge(r);
+  const chips = stackChips(r);
+  const metrics = timelineMetrics(r);
+  const currentPublicReceiptUrl = publicReceiptUrl(r);
+  const tweetHref = tweetIntent(
+    `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
+    currentPublicReceiptUrl,
+  );
+  const socialProof = [
+    r.commentCount > 0 ? pluralize(r.commentCount, "comment") : null,
+    r.positiveReactions + r.negativeReactions > 0 ? reactionSummary(r) : null,
+  ].filter(Boolean);
+
+  return (
+    <article className="group grid grid-cols-[44px_minmax(0,1fr)] gap-3 px-4 py-4 transition-[background-color] hover:bg-zinc-950/70 sm:grid-cols-[52px_minmax(0,1fr)] sm:px-5">
+      <Link
+        href={authorHref}
+        className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-full transition-transform group-hover:scale-[1.03] active:scale-[0.96] sm:h-12 sm:w-12"
+        aria-label={`Open ${handleLabel}'s profile`}
+      >
+        <Avatar
+          src={avatarSrc(r)}
+          alt={displayName}
+          size={48}
+          fallback={r.handle ?? displayName}
+          className="border-zinc-700 bg-black shadow-[0_0_0_3px_rgba(255,255,255,0.03)]"
+        />
+      </Link>
+
+      <div className="min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link
+                href={authorHref}
+                className="max-w-[180px] truncate text-[15px] font-semibold tracking-[-0.02em] text-zinc-100 transition-colors hover:text-white sm:max-w-[240px]"
+              >
+                {displayName}
+              </Link>
+              <Link
+                href={authorHref}
+                className="font-mono text-[12px] text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                {handleLabel}
+              </Link>
+              <span className="text-zinc-700">·</span>
+              <RelativeTime
+                date={r.sharedAt ?? r.startedAt}
+                className="font-mono text-[12px] text-zinc-500 tabular-nums"
+              />
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-zinc-500">
+              <span>published a receipt</span>
+              <span className="text-zinc-700">·</span>
+              <span className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-500">
+                <ToolIcon name={r.tool} size={12} className="text-[#a7f300]" />
+                {formatToolName(r.tool)}
+              </span>
+              {badge ? (
+                <>
+                  <span className="text-zinc-700">·</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#a7f300]">
+                    {badge}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          {viewerId && viewerId !== r.authorId ? (
+            <FollowButton
+              targetUserId={r.authorId}
+              initialFollowing={r.isFollowing}
+              className="h-8 shrink-0 px-3 text-[10px]"
+            />
+          ) : !viewerId ? (
+            <TrailLink
+              href={signInHref(authorHref)}
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96]"
+            >
+              Follow
+            </TrailLink>
+          ) : null}
+        </div>
+
+        <Link href={currentReceiptHref} className="mt-3 block">
+          <h3 className="break-words text-pretty text-[17px] font-medium leading-6 tracking-[-0.02em] text-zinc-100 transition-colors group-hover:text-white">
+            {r.title ?? r.slug}
+          </h3>
+          {r.summary ? (
+            <p className="mt-2 line-clamp-4 break-words text-pretty text-[14px] leading-6 text-zinc-400">
+              {r.summary}
+            </p>
+          ) : null}
+
+          <div className="mt-4 overflow-hidden rounded-[22px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.06),transparent_42%),#09090b] transition-[border-color,background-color] group-hover:border-zinc-800">
+            <div className="border-b border-zinc-900/90 px-4 py-3">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+                Receipt proof
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="inline-flex min-h-7 items-center rounded-full bg-black px-2.5 font-mono text-[10px] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-px bg-zinc-900/80 sm:grid-cols-3">
+              {metrics.map((metric) => (
+                <div key={metric.label} className="bg-black/70 px-4 py-3">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">
+                    {metric.label}
+                  </div>
+                  <div className="mt-1 truncate font-mono text-[12px] text-zinc-200 tabular-nums">
+                    {metric.value}
+                  </div>
+                </div>
+              ))}
+              {repoLabel ? (
+                <div className="col-span-2 bg-black/70 px-4 py-3 sm:col-span-3">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">
+                    Repo
+                  </div>
+                  <div className="mt-1 truncate font-mono text-[12px] text-zinc-200">
+                    {repoLabel}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </Link>
+
+        {socialProof.length > 0 ? (
+          <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-600">
+            {socialProof.join(" · ")}
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <ReactionBar
+            slug={r.slug}
+            authorHandle={r.handle}
+            variant="inline"
+            initialCounts={{
+              worked: r.workedReactions + r.verifiedReactions,
+              "needs-tweak": r.tweakReactions,
+              broken: r.brokenReactions,
+            }}
+            initialMine={r.viewerReactions}
+            className="flex-1"
+          />
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <Link
+              href={`${currentReceiptHref}#conversation`}
+              className="inline-flex min-h-9 items-center rounded-full border border-transparent px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
+            >
+              Comment {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
+            </Link>
+            <CopyButton
+              value={currentPublicReceiptUrl}
+              label="Copy"
+              copiedLabel="Copied"
+              className="min-h-9 rounded-full border-transparent bg-transparent px-3 text-[11px] text-zinc-500 hover:bg-zinc-900 hover:text-zinc-100"
+            />
+            <a
+              href={tweetHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-9 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-[#a7f300] active:scale-[0.96]"
+            >
+              Share
+            </a>
+            <Link
+              href={currentReceiptHref}
+              className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+            >
+              Open
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptyTimeline({ isFollowingView }: { isFollowingView: boolean }) {
+  return (
+    <div className="px-6 py-16 text-center">
+      {isFollowingView ? (
+        <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
+          Your Following timeline is empty. Follow builders from{" "}
+          <Link href="/feed" className="text-[#a7f300] hover:underline">
+            For you
+          </Link>
+          , or browse{" "}
+          <Link href="/tools" className="text-[#a7f300] hover:underline">
+            AI tools
+          </Link>{" "}
+          to find people shipping in your stack.
+        </p>
+      ) : (
+        <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
+          No public sessions yet. Install Trail and share one with{" "}
+          <span className="font-mono text-zinc-200">trail share latest</span>.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function FeedDiscoveryPanel({
   discovery,
   viewerId,
@@ -680,41 +1088,43 @@ function FeedDiscoveryPanel({
   viewerId: string | null;
 }) {
   return (
-    <>
-      <section className="rounded-[26px] bg-[#101012] p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_20px_70px_rgba(0,0,0,0.35)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
-              Builder radar
-            </div>
-            <h3 className="mt-2 text-[20px] font-medium tracking-[-0.03em] text-zinc-50">
-              People shipping now
-            </h3>
-          </div>
-          <span className="rounded-full bg-black px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-            Follow graph
-          </span>
+    <div className="space-y-4">
+      <Link
+        href="/tools"
+        className="group block rounded-full bg-zinc-950 px-4 py-3 text-sm text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-zinc-200 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)]"
+      >
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em]">
+          Search builders, tools, receipts
+        </span>
+        <span className="float-right text-[#a7f300] transition-transform group-hover:translate-x-0.5">
+          →
+        </span>
+      </Link>
+
+      <NetworkPulse stats={discovery.stats} />
+
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="border-b border-zinc-900 px-4 py-4">
+          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+            Who to follow
+          </h3>
         </div>
 
-        <div className="mt-5 space-y-3">
-          {discovery.builders.length === 0 ? (
-            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
-              Fresh builder recommendations appear here as more public receipts are published.
-            </p>
-          ) : (
-            discovery.builders.map((builder, index) => (
-              <div
-                key={builder.id}
-                className="group relative overflow-hidden rounded-[20px] bg-black/55 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black/80 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
-              >
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#a7f300] opacity-0 transition-opacity group-hover:opacity-100" />
+        {discovery.builders.length === 0 ? (
+          <p className="px-4 py-5 text-sm leading-6 text-zinc-500">
+            Fresh builder recommendations appear here as more public receipts are published.
+          </p>
+        ) : (
+          <div className="divide-y divide-zinc-900">
+            {discovery.builders.map((builder) => (
+              <div key={builder.id} className="px-4 py-4 transition-colors hover:bg-black/45">
                 <div className="flex items-start gap-3">
                   <Link href={`/u/${builder.handle}`} className="shrink-0">
                     <Avatar
                       src={builder.image ?? githubAvatar(builder.handle)}
                       alt={builder.name}
                       fallback={builder.handle}
-                      className="h-11 w-11 rounded-2xl shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                      className="h-10 w-10 rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
                     />
                   </Link>
                   <div className="min-w-0 flex-1">
@@ -727,36 +1137,6 @@ function FeedDiscoveryPanel({
                           @{builder.handle}
                         </div>
                       </Link>
-                      <span className="rounded-full bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-500 tabular-nums">
-                        #{index + 1}
-                      </span>
-                    </div>
-                    <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-500">
-                      {builder.bio ||
-                        `${formatCount(builder.shippedCount)} shipped receipts in public.`}
-                    </p>
-                    {builder.topTools.length > 0 ? (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {builder.topTools.map((tool) => (
-                          <span
-                            key={tool}
-                            className="rounded-full bg-zinc-900 px-2 py-1 font-mono text-[10px] text-zinc-400"
-                          >
-                            {formatToolName(tool)}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.11em] text-zinc-600">
-                      <span>{formatCount(builder.receiptCount)} receipts</span>
-                      <span>{formatCount(builder.reactionCount)} reactions</span>
-                      <span>{formatCount(builder.followerCount)} followers</span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="font-mono text-[10px] text-zinc-600">
-                        Latest{" "}
-                        {builder.latestAt ? <RelativeTime date={builder.latestAt} /> : "recently"}
-                      </span>
                       {viewerId ? (
                         <FollowButton
                           targetUserId={builder.id}
@@ -772,62 +1152,110 @@ function FeedDiscoveryPanel({
                         </TrailLink>
                       )}
                     </div>
+                    <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-500">
+                      {builder.bio ||
+                        `${formatCount(builder.shippedCount)} shipped receipts in public.`}
+                    </p>
+                    <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.11em] text-zinc-600">
+                      {formatCount(builder.receiptCount)} receipts ·{" "}
+                      {builder.latestAt ? <RelativeTime date={builder.latestAt} /> : "recent"}
+                    </div>
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
-              Trending stacks
-            </div>
-            <h3 className="mt-2 text-[18px] font-medium tracking-[-0.03em] text-zinc-100">
-              What the network is using
-            </h3>
-          </div>
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="flex items-center justify-between gap-4 border-b border-zinc-900 px-4 py-4">
+          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+            Trending now
+          </h3>
           <Link
             href="/tools"
-            className="rounded-full bg-black px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-colors hover:text-white"
+            className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition-colors hover:text-[#c8ff5e]"
           >
             Explore
           </Link>
         </div>
 
-        <div className="mt-5 space-y-2">
-          {discovery.stacks.length === 0 ? (
-            <p className="rounded-[18px] bg-black/50 p-4 text-sm leading-6 text-zinc-500">
-              Stack trends will fill in as published receipts are tagged.
-            </p>
-          ) : (
-            discovery.stacks.map((stack) => (
+        {discovery.stacks.length === 0 ? (
+          <p className="px-4 py-5 text-sm leading-6 text-zinc-500">
+            Stack trends will fill in as published receipts are tagged.
+          </p>
+        ) : (
+          <div className="divide-y divide-zinc-900">
+            {discovery.stacks.map((stack) => (
               <Link
                 key={`${stack.kind}:${stack.tag}`}
                 href={stackHref(stack)}
-                className="group flex items-center justify-between gap-4 rounded-[18px] bg-black/55 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-black hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)]"
+                className="group block px-4 py-4 transition-colors hover:bg-black/45"
               >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium tracking-[-0.02em] text-zinc-200">
+                <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                  {stack.kind} · {formatCount(stack.builderCount)} builders
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-4">
+                  <div className="truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-200">
                     {stack.label}
                   </div>
-                  <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                    {stack.kind}
+                  <div className="font-mono text-[11px] text-zinc-600 tabular-nums group-hover:text-[#a7f300]">
+                    {formatCount(stack.receiptCount)}
                   </div>
                 </div>
-                <div className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 tabular-nums">
-                  <div className="text-[#a7f300]">{formatCount(stack.receiptCount)} receipts</div>
-                  <div>{formatCount(stack.builderCount)} builders</div>
-                </div>
               </Link>
-            ))
-          )}
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="border-b border-zinc-900 px-4 py-4">
+          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">Explore</h3>
+        </div>
+        <div className="divide-y divide-zinc-900">
+          {discoveryLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="group block px-4 py-4 transition-colors hover:bg-black/45"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200">
+                  {link.label}
+                </span>
+                <span className="text-[#a7f300] transition-transform group-hover:translate-x-0.5">
+                  →
+                </span>
+              </div>
+              <p className="mt-2 text-pretty text-[12px] leading-[1.55] text-zinc-500">
+                {link.detail}
+              </p>
+            </Link>
+          ))}
         </div>
       </section>
-    </>
+
+      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+          How Trail works
+        </div>
+        <div className="mt-4 space-y-3">
+          {onboardingSteps.map((step) => (
+            <div key={step.n} className="grid grid-cols-[28px_1fr] gap-3">
+              <span className="font-mono text-[11px] text-zinc-600 tabular-nums">{step.n}</span>
+              <div>
+                <div className="text-sm font-medium tracking-tight text-zinc-100">{step.title}</div>
+                <p className="mt-1 text-pretty text-[12px] leading-relaxed text-zinc-500">
+                  {step.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -857,468 +1285,101 @@ export default async function FeedPage({
   const isFollowingView = view === "following";
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
   const subtitle = isFollowingView
-    ? "A tighter stream of public receipts from builders you follow."
-    : "Public AI-building sessions stay open. Sign in only when you want to follow, react, and build a personal timeline.";
-  const feedTitle = isFollowingView ? "Your builder radar." : "Watch AI builders ship in public.";
+    ? "Public receipts from the builders you follow."
+    : "The live public timeline of AI builders shipping with agents, tools, and proof.";
+  const feedTitle = isFollowingView ? "Following" : "Home";
   const feedCountLabel = `${rows.length} ${rows.length === 1 ? "receipt" : "receipts"}`;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-black text-zinc-50">
       <SiteNav currentPath="/feed" />
 
-      <main className="flex-1 w-full">
-        <section className="border-b border-zinc-900 bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.09),transparent_34%),linear-gradient(180deg,rgba(24,24,27,0.7),rgba(0,0,0,0))]">
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-16">
-            <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-              <div>
-                <div className="mb-4 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
-                  <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;
-                  {isFollowingView ? "Following feed" : "Everyone feed"}
-                </div>
-                <h1 className="font-display text-[36px] leading-[0.98] tracking-[-0.04em] text-balance text-zinc-50 sm:text-[46px] md:text-[68px]">
-                  {feedTitle}
-                </h1>
-                <p className="mt-5 max-w-2xl text-pretty text-[15px] leading-[1.7] text-zinc-400 md:text-[17px]">
-                  {subtitle}
-                </p>
+      <main className="min-h-[calc(100vh-3.5rem)] w-full bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.08),transparent_28%),linear-gradient(180deg,rgba(24,24,27,0.36),rgba(0,0,0,0)_220px)]">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6 lg:px-4 xl:grid-cols-[220px_minmax(0,660px)_340px] xl:gap-8">
+          <aside className="hidden lg:block">
+            <FeedNavRail
+              followingHref={followingHref}
+              isFollowingView={isFollowingView}
+              viewerId={viewerId}
+            />
+          </aside>
 
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <TrailLink
-                    href={followingHref}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#a7f300] px-5 text-[12px] font-mono uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
-                  >
-                    {viewerId ? "Open following" : "Sign in to follow"}
-                  </TrailLink>
-                  <Link
-                    href="/install"
-                    className="inline-flex min-h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-[12px] font-mono uppercase tracking-[0.14em] text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,transform,color] hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.16)] active:scale-[0.96]"
-                  >
-                    Install locally
-                  </Link>
-                </div>
-
-                <dl className="mt-8 grid max-w-3xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-5">
-                  {[
-                    ["Builders", formatCount(discovery.stats.builders)],
-                    ["Receipts", formatCount(discovery.stats.receipts)],
-                    ["Shipped", formatCount(discovery.stats.shipped)],
-                    ["Reactions", formatCount(discovery.stats.reactions)],
-                    ["Comments", formatCount(discovery.stats.comments)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="bg-black/70 px-4 py-3">
-                      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
-                        {label}
-                      </dt>
-                      <dd className="mt-1 truncate font-mono text-[12px] text-zinc-200 tabular-nums">
-                        {value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="rounded-[28px] bg-zinc-950/80 p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-                <div className="rounded-[24px] bg-black/60 p-4">
-                  <div className="grid grid-cols-2 gap-1 rounded-full bg-zinc-950 p-1 text-[12px] font-mono uppercase tracking-[0.12em] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
-                    <Link
-                      href="/feed"
-                      className={`inline-flex min-h-10 items-center justify-center rounded-full px-4 transition-[background-color,color,transform] active:scale-[0.96] ${
-                        isFollowingView
-                          ? "text-zinc-500 hover:text-zinc-200"
-                          : "bg-zinc-100 text-zinc-950"
-                      }`}
-                    >
-                      Everyone
-                    </Link>
-                    <TrailLink
-                      href={followingHref}
-                      className={`inline-flex min-h-10 items-center justify-center rounded-full px-4 transition-[background-color,color,transform] active:scale-[0.96] ${
-                        isFollowingView
-                          ? "bg-[#a7f300] text-zinc-950"
-                          : "text-zinc-500 hover:text-zinc-200"
-                      }`}
-                    >
-                      Following
-                    </TrailLink>
+          <section className="min-w-0 border-x border-zinc-900 bg-black/80 lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-zinc-900 bg-black/90 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
+              <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
+                    Trail social
                   </div>
-
-                  <div className="mt-5 space-y-2">
-                    {discoveryLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="group block rounded-[18px] bg-zinc-950 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-zinc-900/80 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200">
-                            {link.label}
-                          </span>
-                          <span className="text-[#a7f300] transition-transform group-hover:translate-x-0.5">
-                            →
-                          </span>
-                        </div>
-                        <p className="mt-2 text-pretty text-[12px] leading-[1.55] text-zinc-500">
-                          {link.detail}
-                        </p>
-                      </Link>
-                    ))}
-                  </div>
+                  <h1 className="mt-1 text-[26px] font-semibold tracking-[-0.05em] text-zinc-50">
+                    {feedTitle}
+                  </h1>
+                  <p className="mt-1 max-w-xl text-pretty text-[13px] leading-5 text-zinc-500">
+                    {subtitle}
+                  </p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="mx-auto grid max-w-6xl gap-8 px-3 py-8 sm:px-4 md:px-6 md:py-10 lg:grid-cols-[minmax(0,720px)_320px]">
-          <section className="min-w-0 overflow-hidden rounded-[22px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.38)] sm:rounded-[28px]">
-            <div className="border-b border-zinc-900/90 bg-zinc-950 shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
-              <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5 md:px-6">
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-                    Live timeline
-                  </div>
-                  <h2 className="mt-1 text-[22px] font-medium tracking-[-0.03em] text-zinc-50">
-                    {isFollowingView ? "Following" : "Everyone"}
-                  </h2>
-                </div>
-                <span className="rounded-full bg-black px-3 py-2 font-mono text-[11px] text-zinc-500 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+                <span className="shrink-0 rounded-full bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-500 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
                   {feedCountLabel}
                 </span>
               </div>
-              <div className="grid grid-cols-2 border-t border-zinc-900/90 p-1 pb-2">
-                <Link
-                  href="/feed"
-                  className={`inline-flex min-h-11 items-center justify-center rounded-full px-4 text-[12px] font-mono uppercase tracking-[0.14em] transition-[background-color,color,transform] active:scale-[0.96] ${
-                    isFollowingView
-                      ? "text-zinc-500 hover:text-zinc-200"
-                      : "bg-zinc-100 text-zinc-950"
-                  }`}
-                >
-                  Everyone
-                </Link>
-                <TrailLink
-                  href={followingHref}
-                  className={`inline-flex min-h-11 items-center justify-center rounded-full px-4 text-[12px] font-mono uppercase tracking-[0.14em] transition-[background-color,color,transform] active:scale-[0.96] ${
-                    isFollowingView
-                      ? "bg-[#a7f300] text-zinc-950"
-                      : "text-zinc-500 hover:text-zinc-200"
-                  }`}
-                >
-                  Following
-                </TrailLink>
-              </div>
+              <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
             </div>
 
-            {!viewerId && !isFollowingView && (
-              <div className="border-b border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_42%),#09090b] px-5 py-5 md:px-6">
-                <div className="grid gap-4 md:grid-cols-[52px_1fr]">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#a7f300] font-mono text-[13px] text-black shadow-[0_0_32px_rgba(167,243,0,0.22)]">
-                    01
+            <FeedComposerPrompt viewerId={viewerId} />
+
+            {!viewerId && !isFollowingView ? (
+              <div className="border-b border-zinc-900 px-4 py-4 sm:px-5">
+                <div className="rounded-[24px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_44%),#09090b] p-4">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+                    Make it personal
                   </div>
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
-                      Start here
-                    </div>
-                    <h3 className="mt-2 text-balance text-[21px] font-medium tracking-[-0.03em] text-zinc-50">
-                      Read the open feed first. Follow builders when the signal is worth tuning.
-                    </h3>
-                    <p className="mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-zinc-400">
-                      Everyone can browse public receipts, see the tools and frameworks behind the
-                      work, and install Trail locally. GitHub sign-in only gates following and
-                      account actions.
-                    </p>
-                    <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                      <TrailLink
-                        href={FOLLOWING_SIGN_IN_HREF}
-                        className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
-                      >
-                        Sign in to follow
-                      </TrailLink>
-                      <Link
-                        href="/install"
-                        className="inline-flex min-h-10 items-center justify-center rounded-full bg-black px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.16)] active:scale-[0.96]"
-                      >
-                        Install Trail
-                      </Link>
-                    </div>
+                  <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+                    Follow builders, react to receipts, and get notifications.
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                    The public timeline is open. GitHub sign-in unlocks the social graph and turns
+                    Trail into your builder network.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <TrailLink
+                      href={FOLLOWING_SIGN_IN_HREF}
+                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
+                    >
+                      Sign in to follow
+                    </TrailLink>
+                    <Link
+                      href="/install"
+                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-black px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.16)] active:scale-[0.96]"
+                    >
+                      Install Trail
+                    </Link>
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {rows.length === 0 ? (
-              <div className="px-6 py-14 text-center">
-                {isFollowingView ? (
-                  <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
-                    Your Following timeline is empty. Follow builders from{" "}
-                    <Link href="/feed" className="text-[#a7f300] hover:underline">
-                      Everyone
-                    </Link>
-                    , or browse{" "}
-                    <Link href="/tools" className="text-[#a7f300] hover:underline">
-                      AI tools
-                    </Link>{" "}
-                    to find people shipping in your stack.
-                  </p>
-                ) : (
-                  <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
-                    No public sessions yet. Install Trail and share one with{" "}
-                    <span className="font-mono text-zinc-200">trail share latest</span>.
-                  </p>
-                )}
-              </div>
+              <EmptyTimeline isFollowingView={isFollowingView} />
             ) : (
-              <ul className="divide-y divide-zinc-900/90 border-t border-zinc-900/70 bg-black/20 pt-6">
-                {rows.map((r) => {
-                  const authorHref = profileHref(r);
-                  const currentReceiptHref = receiptHref(r);
-                  const displayName = r.name || r.handle || "Trail builder";
-                  const handleLabel = r.handle ? `@${r.handle}` : "anonymous";
-                  const repoLabel = r.linkedRepo ?? r.repo;
-                  const badge = receiptBadge(r);
-                  const chips = stackChips(r);
-                  const metrics = timelineMetrics(r);
-                  const currentPublicReceiptUrl = publicReceiptUrl(r);
-                  const tweetHref = tweetIntent(
-                    `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
-                    currentPublicReceiptUrl,
-                  );
-
-                  return (
-                    <li key={r.id}>
-                      <article className="group grid grid-cols-[44px_minmax(0,1fr)] gap-4 px-4 py-5 transition-[background-color] hover:bg-zinc-900/45 sm:px-5 md:grid-cols-[52px_minmax(0,1fr)] md:px-6">
-                        <Link
-                          href={authorHref}
-                          className="mt-0.5 inline-flex h-11 w-11 items-center justify-center rounded-full transition-transform group-hover:scale-[1.03] active:scale-[0.96] md:h-12 md:w-12"
-                          aria-label={`Open ${handleLabel}'s profile`}
-                        >
-                          <Avatar
-                            src={avatarSrc(r)}
-                            alt={displayName}
-                            size={48}
-                            fallback={r.handle ?? displayName}
-                            className="border-zinc-700 bg-black shadow-[0_0_0_3px_rgba(255,255,255,0.03)]"
-                          />
-                        </Link>
-
-                        <div className="min-w-0">
-                          <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                <Link
-                                  href={authorHref}
-                                  className="max-w-[220px] truncate font-medium tracking-tight text-zinc-100 transition-colors hover:text-white"
-                                >
-                                  {displayName}
-                                </Link>
-                                <Link
-                                  href={authorHref}
-                                  className="font-mono text-[12px] text-zinc-500 transition-colors hover:text-zinc-300"
-                                >
-                                  {handleLabel}
-                                </Link>
-                                <span className="text-zinc-700">·</span>
-                                <RelativeTime
-                                  date={r.sharedAt ?? r.startedAt}
-                                  className="font-mono text-[12px] text-zinc-500 tabular-nums"
-                                />
-                              </div>
-                              {r.bio && (
-                                <p className="mt-1 line-clamp-2 text-pretty text-[13px] leading-relaxed text-zinc-500">
-                                  {r.bio}
-                                </p>
-                              )}
-                            </div>
-
-                            {viewerId && viewerId !== r.authorId ? (
-                              <FollowButton
-                                targetUserId={r.authorId}
-                                initialFollowing={r.isFollowing}
-                                className="w-full justify-center sm:w-auto"
-                              />
-                            ) : !viewerId ? (
-                              <TrailLink
-                                href={signInHref(authorHref)}
-                                className="inline-flex min-h-9 w-full shrink-0 items-center justify-center rounded-full border border-zinc-800 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96] sm:w-auto"
-                              >
-                                Follow
-                              </TrailLink>
-                            ) : null}
-                          </div>
-
-                          <Link href={currentReceiptHref} className="mt-3 block">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="inline-flex min-h-8 items-center gap-2 rounded-full bg-black px-3 font-mono text-[11px] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
-                                <ToolIcon name={r.tool} size={13} className="text-[#a7f300]" />
-                                {formatToolName(r.tool)}
-                              </span>
-                              {badge && (
-                                <span className="inline-flex min-h-8 items-center rounded-full bg-[#a7f300]/10 px-3 font-mono text-[11px] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.14)]">
-                                  {badge}
-                                </span>
-                              )}
-                            </div>
-
-                            <h3 className="mt-4 break-words text-balance text-[20px] font-medium leading-snug tracking-[-0.03em] text-zinc-100 transition-colors group-hover:text-white">
-                              {r.title ?? r.slug}
-                            </h3>
-                            {r.summary && (
-                              <p className="mt-2 line-clamp-4 break-words text-pretty text-[15px] leading-relaxed text-zinc-400">
-                                {r.summary}
-                              </p>
-                            )}
-                          </Link>
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {chips.map((chip) => (
-                              <span
-                                key={chip}
-                                className="inline-flex min-h-8 items-center rounded-full bg-zinc-900 px-3 font-mono text-[11px] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
-                              >
-                                {chip}
-                              </span>
-                            ))}
-                          </div>
-
-                          <div className="mt-5 flex flex-col items-start gap-3 border-t border-zinc-900/80 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-zinc-500 tabular-nums">
-                              {metrics.map((metric) => (
-                                <span key={metric.label}>
-                                  <span className="text-zinc-700">{metric.label}</span>{" "}
-                                  {metric.value}
-                                </span>
-                              ))}
-                              {repoLabel && (
-                                <span className="max-w-full truncate sm:max-w-[260px]">
-                                  <span className="text-zinc-700">Repo</span> {repoLabel}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex flex-col gap-3 rounded-[18px] bg-zinc-950/70 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between">
-                            <ReactionBar
-                              slug={r.slug}
-                              authorHandle={r.handle}
-                              variant="inline"
-                              summary={reactionSummary(r)}
-                              initialCounts={{
-                                worked: r.workedReactions + r.verifiedReactions,
-                                "needs-tweak": r.tweakReactions,
-                                broken: r.brokenReactions,
-                              }}
-                              initialMine={r.viewerReactions}
-                              className="flex-1"
-                            />
-
-                            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                              <Link
-                                href={`${currentReceiptHref}#conversation`}
-                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-amber-200 hover:text-amber-100 active:scale-[0.96] sm:flex-none"
-                              >
-                                {formatCount(r.commentCount)}{" "}
-                                {r.commentCount === 1 ? "comment" : "comments"}
-                              </Link>
-                              <CopyButton
-                                value={currentPublicReceiptUrl}
-                                label="Copy link"
-                                copiedLabel="Copied"
-                                className="min-h-9 flex-1 justify-center rounded-full border-zinc-800 bg-black px-3 text-[11px] text-zinc-400 sm:flex-none"
-                              />
-                              <a
-                                href={tweetHref}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96] sm:flex-none"
-                              >
-                                Share on X
-                              </a>
-                              <Link
-                                href={currentReceiptHref}
-                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full bg-[#a7f300] px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96] sm:flex-none"
-                              >
-                                Open →
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="divide-y divide-zinc-900/90">
+                {rows.map((row) => (
+                  <FeedPostCard key={row.id} row={row} viewerId={viewerId} />
+                ))}
+              </div>
             )}
           </section>
 
-          <div className="space-y-4 lg:hidden">
-            <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
-          </div>
-
-          <aside className="hidden lg:block">
-            <div className="sticky top-24 space-y-4">
+          <aside className="hidden xl:block">
+            <div className="sticky top-20 py-6">
               <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
-
-              <section className="rounded-[26px] bg-zinc-950 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.26)]">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
-                  How to read it
-                </div>
-                <p className="mt-3 text-pretty text-sm leading-relaxed text-zinc-400">
-                  Trail receipts are build logs as social posts: who shipped, which agent they used,
-                  what stack showed up, and the proof you can inspect.
-                </p>
-                <div className="mt-5 space-y-3">
-                  {onboardingSteps.map((step) => (
-                    <div key={step.n} className="grid grid-cols-[28px_1fr] gap-3">
-                      <span className="font-mono text-[11px] text-zinc-600 tabular-nums">
-                        {step.n}
-                      </span>
-                      <div>
-                        <div className="text-sm font-medium tracking-tight text-zinc-100">
-                          {step.title}
-                        </div>
-                        <p className="mt-1 text-pretty text-[12px] leading-relaxed text-zinc-500">
-                          {step.body}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-[26px] bg-zinc-950 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.26)]">
-                {discoveryLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="group block rounded-[20px] px-4 py-4 transition-[background-color,transform] hover:bg-zinc-900/80 active:scale-[0.98]"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200">
-                        {link.label}
-                      </span>
-                      <span className="text-[#a7f300] transition-transform group-hover:translate-x-0.5">
-                        →
-                      </span>
-                    </div>
-                    <p className="mt-2 text-pretty text-[12px] leading-[1.55] text-zinc-500">
-                      {link.detail}
-                    </p>
-                  </Link>
-                ))}
-              </section>
             </div>
           </aside>
+
+          <div className="px-3 py-6 lg:col-start-2 xl:hidden">
+            <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+          </div>
         </div>
       </main>
-
-      <footer className="mt-10 border-t border-zinc-900">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 text-xs font-mono text-zinc-500">
-          <span>© 2026 Trail</span>
-          <Link href="/" className="hover:text-zinc-200 transition-colors">
-            Home
-          </Link>
-        </div>
-      </footer>
     </div>
   );
 }
