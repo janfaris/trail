@@ -35,12 +35,15 @@ function git(args: string[], cwd?: string): string | null {
  *   ssh://git@github.com/owner/repo.git
  */
 export function parseGithubRemote(remote: string): { repo: string; url: string } | null {
-  // SSH form: git@github.com:owner/repo(.git)
-  let m = remote.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
-  if (m) return { repo: `${m[1]}/${m[2]}`, url: `https://github.com/${m[1]}/${m[2]}` };
-  // HTTPS / SSH URL form
-  m = remote.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?(?:\/)?$/);
-  if (m) return { repo: `${m[1]}/${m[2]}`, url: `https://github.com/${m[1]}/${m[2]}` };
+  // SSH scp form: git@github.com:owner/repo(.git). Anchored at start so a
+  // look-alike like x-git@github.com can't sneak through.
+  let m = remote.match(/^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
+  if (m?.[1] && m[2]) return { repo: `${m[1]}/${m[2]}`, url: `https://github.com/${m[1]}/${m[2]}` };
+  // URL forms: https://github.com/... or ssh://git@github.com/...
+  // The host must be bounded by a scheme delimiter `//` or userinfo `@` so we
+  // never match deceptive hosts such as notgithub.com or github.com.evil.com.
+  m = remote.match(/(?:\/\/|@)github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
+  if (m?.[1] && m[2]) return { repo: `${m[1]}/${m[2]}`, url: `https://github.com/${m[1]}/${m[2]}` };
   return null;
 }
 

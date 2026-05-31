@@ -509,16 +509,18 @@ export async function POST(req: NextRequest) {
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
   const response: UploadSessionResponse & {
-    visibility?: string;
-    pendingReviewReasons?: string[];
     redactionsApplied?: number;
   } = {
     url: `${baseUrl}/u/${userRow.handle}/${slug}`,
     slug,
     receiptStatus,
-    visibility,
+    // Report the visibility we actually persisted (desiredVisibility honours a
+    // `--private` upload), not the pre-downgrade public/pending value — the CLI
+    // gates its "badge is live" copy on this.
+    visibility: desiredVisibility,
     pendingReviewReasons:
       pendingReasons.length > 0 ? pendingReasons : undefined,
+    profileUrl: `${baseUrl}/u/${userRow.handle}`,
     redactionsApplied: redactionReport.total,
   };
   return NextResponse.json(response);

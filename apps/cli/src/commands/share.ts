@@ -10,7 +10,7 @@ import { anonymize, type EntropySuspect } from "@trail/anonymize";
 import { createTrailClient, DEFAULT_TRAIL_API_URL } from "@trail/client";
 import { db } from "../db.js";
 import { getAuthCookie, clearAuth } from "../lib/auth-storage.js";
-import { detectGitContext } from "../git-context.js";
+import { detectGitContext, type GitContext } from "../git-context.js";
 
 interface SessionRow {
   id: string;
@@ -51,6 +51,77 @@ function formatReceiptStatus(status: "shipped" | "draft" | "unverified" | undefi
     default:
       return chalk.dim("[!] Unverified");
   }
+}
+
+// Pre-upload feedback so the user knows BEFORE sharing whether this trail can
+// count toward their Verified Builder badge. Badge eligibility on the server
+// requires a GitHub repo + a HEAD commit that later merges to the default
+// branch; without both the upload still succeeds but never lights the badge.
+function printLinkageFeedback(git: GitContext, opts: { indent?: string; bulk?: boolean } = {}): void {
+  const indent = opts.indent ?? "";
+  const subj = opts.bulk ? "these trails" : "this trail";
+  if (git.repo && git.commitSha) {
+    const verb = opts.bulk ? "linking all uploads to" : "linked to";
+    console.log(
+      indent + chalk.green("✓"),
+      `${verb} ${git.repo}@${git.commitSha.slice(0, 7)} — counts toward your Verified Builder badge once this commit lands on the default branch`,
+    );
+  } else {
+    const why = !git.repo ? "no GitHub repo detected" : "no HEAD commit detected";
+    console.log(
+      indent + chalk.yellow("⚠"),
+      `${why} — ${subj} won't count toward your Verified Builder badge. Run \`trail share\` from inside the repo after your PR merges.`,
+    );
+  }
+}
+
+// Derive the uploader's profile URL. Prefer the server-provided profileUrl;
+// fall back to stripping the slug off the receipt URL for older servers.
+function profileUrlFrom(r: { profileUrl?: string; url: string }): string {
+  return r.profileUrl ?? r.url.replace(/\/[^/]+$/, "");
+}
+
+// Post-share nudge pointing the user at their badge. Deliberately conservative:
+// only claims the badge is "live" when the receipt is BOTH verified-shipped and
+// public, matching the server's badge predicate. Private/pending shipped
+// receipts and drafts get honest, softer copy.
+function printBadgeNudge(
+  r: {
+    receiptStatus?: "shipped" | "draft" | "unverified";
+    visibility?: string;
+    profileUrl?: string;
+    url: string;
+  },
+  git: GitContext,
+  indent = "",
+): void {
+  const profile = profileUrlFrom(r);
+  const at = git.repo && git.commitSha ? `${git.repo}@${git.commitSha.slice(0, 7)}` : "your commit";
+  if (r.receiptStatus === "shipped") {
+    if (r.visibility === "public") {
+      console.log(indent + chalk.green("★"), `Verified shipped — your Verified Builder badge is live: ${profile}`);
+    } else if (r.visibility === "private" || r.visibility === "pending") {
+      const where = r.visibility === "private" ? "private" : "in pending review";
+      console.log(
+        indent + chalk.yellow("★"),
+        `Verified shipped, but this receipt is ${where} so it won't show on your public badge yet: ${profile}`,
+      );
+    } else {
+      console.log(indent + chalk.green("★"), `Verified shipped — view your profile: ${profile}`);
+    }
+    return;
+  }
+  if (r.receiptStatus === "draft") {
+    console.log(
+      indent + chalk.yellow("→"),
+      `Draft: ${at} isn't on the default branch yet — it lights your badge once merged (re-run \`trail share\` after a squash merge): ${profile}`,
+    );
+    return;
+  }
+  console.log(
+    indent + chalk.dim("→"),
+    `Not counting toward your badge yet — link a merged commit from inside the repo: ${profile}`,
+  );
 }
 
 function loadLocalSession(id: string): { session: SessionT; alreadyRedacted: boolean } | null {
@@ -350,6 +421,7 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
   if (git.repoUrl && git.commitSha) {
     linkHeaders["x-trail-linked-commit-url"] = `${git.repoUrl}/commit/${git.commitSha}`;
   }
+  printLinkageFeedback(git, { bulk: true });
 
   const client = createTrailClient({
     baseUrl: opts.baseUrl,
@@ -360,7 +432,7 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
     },
   });
 
-  const succeeded: Array<{ id: string; url: string }> = [];
+  const succeeded: Array<{ id: string; url: string; profileUrl?: string }> = [];
   for (let i = 0; i < prepared.length; i++) {
     const p = prepared[i];
     console.log(chalk.dim(`Uploading ${i + 1}/${prepared.length}...`), chalk.cyan(p.id.slice(0, 12)));
@@ -376,13 +448,17 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
       process.exit(1);
     }
     db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, p.id);
-    const v = result.value as { url: string; slug: string; receiptStatus?: "shipped" | "draft" | "unverified" };
-    succeeded.push({ id: p.id, url: v.url });
+    const v = result.value as { url: string; slug: string; profileUrl?: string; receiptStatus?: "shipped" | "draft" | "unverified" };
+    succeeded.push({ id: p.id, url: v.url, profileUrl: v.profileUrl });
     console.log(chalk.green("  ✓"), "Receipt created:", v.url);
     console.log(chalk.dim("    Status:"), formatReceiptStatus(v.receiptStatus));
   }
 
   console.log(chalk.green(`done: ${succeeded.length}/${prepared.length} uploaded`));
+  const first = succeeded[0];
+  if (first) {
+    console.log(chalk.dim("profile:"), profileUrlFrom(first));
+  }
   if (skipped.length > 0) {
     console.log(chalk.yellow(`skipped: ${skipped.length}`));
     for (const s of skipped) console.log(chalk.dim(`  - ${s.id}: ${s.reason}`));
@@ -529,12 +605,7 @@ export function shareCommand(): Command {
       if (git.repoUrl && git.commitSha) {
         linkHeaders["x-trail-linked-commit-url"] = `${git.repoUrl}/commit/${git.commitSha}`;
       }
-      if (git.repo) {
-        console.log(
-          chalk.dim("·"),
-          `linking to ${git.repo}${git.commitSha ? `@${git.commitSha.slice(0, 7)}` : ""}`,
-        );
-      }
+      printLinkageFeedback(git);
 
       const client = createTrailClient({
         baseUrl: opts.baseUrl,
@@ -571,7 +642,7 @@ export function shareCommand(): Command {
 
       db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, sid);
 
-      const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[]; receiptStatus?: "shipped" | "draft" | "unverified" };
+      const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[]; profileUrl?: string; receiptStatus?: "shipped" | "draft" | "unverified" };
       console.log(chalk.green("✓"), "Receipt created:", r.url);
       console.log(chalk.dim("Status:"), formatReceiptStatus(r.receiptStatus));
       if (r.visibility === "pending" && r.pendingReviewReasons?.length) {
@@ -581,6 +652,7 @@ export function shareCommand(): Command {
         }
         console.log(chalk.dim("       confirm at " + r.url + "/settings  (coming soon)"));
       }
+      printBadgeNudge(r, git);
       if (opts.copy) {
         const ok = copyToClipboard(r.url);
         console.log(ok ? chalk.dim("(copied to clipboard)") : chalk.dim("(pbcopy not available)"));
