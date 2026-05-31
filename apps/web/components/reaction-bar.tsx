@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 interface Props {
   slug: string;
+  authorHandle?: string | null;
   initialCounts?: Partial<Record<ReactionKind, number>>;
   initialMine?: ReactionKind[];
   variant?: "full" | "inline";
@@ -58,6 +59,7 @@ function normalizeCounts(counts?: Partial<Record<ReactionKind, number>>) {
 
 export function ReactionBar({
   slug,
+  authorHandle,
   initialCounts,
   initialMine,
   variant = "full",
@@ -70,6 +72,9 @@ export function ReactionBar({
   const [mine, setMine] = useState<ReactionKind[]>(() => initialMine ?? []);
   const [pendingKind, setPendingKind] = useState<ReactionKind | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const reactionsUrl = `/api/sessions/${encodeURIComponent(slug)}/reactions${
+    authorHandle ? `?user=${encodeURIComponent(authorHandle)}` : ""
+  }`;
 
   useEffect(() => {
     setCounts(normalizeCounts(initialCounts));
@@ -80,7 +85,7 @@ export function ReactionBar({
     if (initialCounts && initialMine) return;
 
     let cancelled = false;
-    fetch(`/api/sessions/${slug}/reactions`)
+    fetch(reactionsUrl)
       .then((r) => r.json())
       .then((d: { counts?: { kind: string; count: number }[]; mine?: string[] }) => {
         if (cancelled) return;
@@ -102,13 +107,13 @@ export function ReactionBar({
     return () => {
       cancelled = true;
     };
-  }, [initialCounts, initialMine, slug]);
+  }, [initialCounts, initialMine, reactionsUrl]);
 
   async function toggle(kind: ReactionKind) {
     setPendingKind(kind);
     setError(null);
     try {
-      const r = await fetch(`/api/sessions/${slug}/reactions`, {
+      const r = await fetch(reactionsUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ kind }),

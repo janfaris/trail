@@ -394,7 +394,7 @@ export default async function SessionView({
         </details>
 
         <div className="mt-10 space-y-6">
-          <ReactionBar slug={slug} />
+          <ReactionBar slug={slug} authorHandle={userRow.handle} />
           <CommentThread
             slug={slug}
             authorHandle={userRow.handle}

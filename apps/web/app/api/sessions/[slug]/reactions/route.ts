@@ -1,11 +1,8 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { db, schema } from "@/db/client";
-import { auth } from "@/lib/auth";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Phase 1.6 — session reactions ("worked" / "needs-tweak" / "broken").
@@ -15,12 +12,36 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const KIND_RE = /^(worked|needs-tweak|broken)$/;
 
+function requestedAuthorHandle(req: NextRequest) {
+  const authorHandle = req.nextUrl.searchParams.get("user")?.trim();
+  return authorHandle && authorHandle.length > 0 ? authorHandle : null;
+}
+
+async function loadReceipt(req: NextRequest, slug: string) {
+  const authorHandle = requestedAuthorHandle(req);
+  const { db, schema } = await import("@/db/client");
+  const rows = await db
+    .select({
+      id: schema.trailSession.id,
+      userId: schema.trailSession.userId,
+      authorHandle: schema.user.handle,
+    })
+    .from(schema.trailSession)
+    .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
+    .where(
+      authorHandle
+        ? and(eq(schema.trailSession.slug, slug), eq(schema.user.handle, authorHandle))
+        : eq(schema.trailSession.slug, slug),
+    )
+    .limit(1);
+
+  return { db, schema, receipt: rows[0] ?? null };
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const row = await db.query.trailSession.findFirst({
-    where: eq(schema.trailSession.slug, slug),
-  });
-  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const { db, schema, receipt } = await loadReceipt(req, slug);
+  if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const counts = (await db
     .select({
@@ -28,9 +49,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       count: sql<number>`count(*)::int`,
     })
     .from(schema.sessionReaction)
-    .where(eq(schema.sessionReaction.sessionId, row.id))
+    .where(eq(schema.sessionReaction.sessionId, receipt.id))
     .groupBy(schema.sessionReaction.kind)) as { kind: string; count: number }[];
 
+  const { auth } = await import("@/lib/auth");
   const sess = await auth.api.getSession({ headers: req.headers });
   let mine: string[] = [];
   if (sess?.user) {
@@ -39,7 +61,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       .from(schema.sessionReaction)
       .where(
         and(
-          eq(schema.sessionReaction.sessionId, row.id),
+          eq(schema.sessionReaction.sessionId, receipt.id),
           eq(schema.sessionReaction.userId, sess.user.id),
         ),
       );
@@ -50,7 +72,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const sess = await auth.api.getSession({ headers: await headers() });
+  const { auth } = await import("@/lib/auth");
+  const sess = await auth.api.getSession({ headers: req.headers });
   if (!sess?.user?.id) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -68,10 +91,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     );
   }
 
-  const row = await db.query.trailSession.findFirst({
-    where: eq(schema.trailSession.slug, slug),
-  });
-  if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const { db, schema, receipt } = await loadReceipt(req, slug);
+  if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Toggle: if (session, user, kind) row exists, delete it; else insert.
   const existing = await db
@@ -79,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     .from(schema.sessionReaction)
     .where(
       and(
-        eq(schema.sessionReaction.sessionId, row.id),
+        eq(schema.sessionReaction.sessionId, receipt.id),
         eq(schema.sessionReaction.userId, actorId),
         eq(schema.sessionReaction.kind, body.kind),
       ),
@@ -96,29 +117,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   } else {
     await db.insert(schema.sessionReaction).values({
       id: crypto.randomUUID(),
-      sessionId: row.id,
+      sessionId: receipt.id,
       userId: actorId,
       kind: body.kind,
       note: body.note?.slice(0, 200) ?? null,
     });
-    if (row.userId !== actorId) {
+    if (receipt.userId !== actorId) {
       await db
         .insert(schema.notification)
         .values({
           id: crypto.randomUUID(),
-          userId: row.userId,
+          userId: receipt.userId,
           actorId,
           type: "session_reaction",
-          sessionId: row.id,
+          sessionId: receipt.id,
         })
         .onConflictDoNothing();
     }
     action = "added";
   }
 
-  const userRow = await db.query.user.findFirst({
-    where: eq(schema.user.id, row.userId),
-  });
-  if (userRow?.handle) revalidatePath(`/u/${userRow.handle}/${slug}`);
+  if (receipt.authorHandle) revalidatePath(`/u/${receipt.authorHandle}/${slug}`);
   return NextResponse.json({ ok: true, action });
 }

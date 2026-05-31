@@ -1199,6 +1199,7 @@ export default async function FeedPage({
                           <div className="mt-4 flex flex-col gap-3 rounded-[18px] bg-zinc-950/70 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:flex-row sm:items-center sm:justify-between">
                             <ReactionBar
                               slug={r.slug}
+                              authorHandle={r.handle}
                               variant="inline"
                               summary={reactionSummary(r)}
                               initialCounts={{
