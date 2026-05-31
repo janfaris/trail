@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
-import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -213,6 +213,7 @@ interface BaseFeedRow extends RankableSession {
   tweakReactions: number;
   brokenReactions: number;
   viewerReactions: ReactionKind[];
+  commentCount: number;
 }
 
 interface FeedRow extends BaseFeedRow {
@@ -228,6 +229,7 @@ type FeedRowWithoutStats = Omit<
   | "tweakReactions"
   | "brokenReactions"
   | "viewerReactions"
+  | "commentCount"
 >;
 
 interface FeedStats {
@@ -235,6 +237,7 @@ interface FeedStats {
   builders: number;
   shipped: number;
   reactions: number;
+  comments: number;
 }
 
 interface BuilderRecommendation {
@@ -272,6 +275,7 @@ interface FeedStatsRaw {
   builders: unknown;
   shipped: unknown;
   reactions: unknown;
+  comments: unknown;
 }
 
 interface BuilderRecommendationRaw {
@@ -382,7 +386,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     )
     .limit(FEED_LIMIT);
 
-  const ranked = await attachReactionStats(rankFeed(rows), viewerId);
+  const ranked = await attachEngagementStats(rankFeed(rows), viewerId);
   if (!viewerId || ranked.length === 0) {
     return ranked.map((row) => ({ ...row, isFollowing: false }));
   }
@@ -457,7 +461,7 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
   // runs in prod and the page stays correct even if the query drifts.
-  return (await attachReactionStats(rankFeed(rows), viewerId)).map((row) => ({
+  return (await attachEngagementStats(rankFeed(rows), viewerId)).map((row) => ({
     ...row,
     isFollowing: row.authorId !== viewerId,
   }));
@@ -470,28 +474,39 @@ function toReactionKind(kind: string): ReactionKind | null {
   return null;
 }
 
-async function attachReactionStats(
+async function attachEngagementStats(
   rows: FeedRowWithoutStats[],
   viewerId: string | null,
 ): Promise<BaseFeedRow[]> {
   if (rows.length === 0) return [];
 
   const { db, schema } = await import("@/db/client");
-  const statsRows = await db
-    .select({
-      sessionId: schema.sessionReaction.sessionId,
-      kind: schema.sessionReaction.kind,
-      reactionCount: sql<number>`count(*)::int`,
-      viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
-    })
-    .from(schema.sessionReaction)
-    .where(
-      inArray(
-        schema.sessionReaction.sessionId,
-        rows.map((row) => row.id),
-      ),
-    )
-    .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind);
+  const sessionIds = rows.map((row) => row.id);
+  const [statsRows, commentRows] = await Promise.all([
+    db
+      .select({
+        sessionId: schema.sessionReaction.sessionId,
+        kind: schema.sessionReaction.kind,
+        reactionCount: sql<number>`count(*)::int`,
+        viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
+      })
+      .from(schema.sessionReaction)
+      .where(inArray(schema.sessionReaction.sessionId, sessionIds))
+      .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind),
+    db
+      .select({
+        sessionId: schema.sessionComment.sessionId,
+        commentCount: sql<number>`count(*)::int`,
+      })
+      .from(schema.sessionComment)
+      .where(
+        and(
+          inArray(schema.sessionComment.sessionId, sessionIds),
+          isNull(schema.sessionComment.deletedAt),
+        ),
+      )
+      .groupBy(schema.sessionComment.sessionId),
+  ]);
 
   const statsBySession = new Map<
     string,
@@ -524,6 +539,10 @@ async function attachReactionStats(
     statsBySession.set(stat.sessionId, sessionStats);
   }
 
+  const commentsBySession = new Map(
+    commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
+  );
+
   return rows.map((row) => ({
     ...row,
     positiveReactions:
@@ -537,6 +556,7 @@ async function attachReactionStats(
     tweakReactions: statsBySession.get(row.id)?.tweakReactions ?? 0,
     brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
     viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
+    commentCount: commentsBySession.get(row.id) ?? 0,
   }));
 }
 
@@ -551,10 +571,12 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
         count(DISTINCT ts.id) FILTER (
           WHERE coalesce(ts.receipt_status, ts.outcome) = 'shipped'
         ) AS shipped,
-        count(sr.id) AS reactions
+        count(DISTINCT sr.id) AS reactions,
+        count(DISTINCT sc.id) FILTER (WHERE sc.deleted_at IS NULL) AS comments
       FROM trail_session ts
       INNER JOIN "user" u ON u.id = ts.user_id
       LEFT JOIN session_reaction sr ON sr.session_id = ts.id
+      LEFT JOIN session_comment sc ON sc.session_id = ts.id
       WHERE ts.visibility = 'public'
         AND u.handle IS NOT NULL
     `),
@@ -621,6 +643,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
     builders: toCount(statsRow?.builders),
     shipped: toCount(statsRow?.shipped),
     reactions: toCount(statsRow?.reactions),
+    comments: toCount(statsRow?.comments),
   };
 
   const builders = rowsOf<BuilderRecommendationRaw>(buildersRes).map((builder) => ({
@@ -874,12 +897,13 @@ export default async function FeedPage({
                   </Link>
                 </div>
 
-                <dl className="mt-8 grid max-w-3xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-4">
+                <dl className="mt-8 grid max-w-3xl gap-px overflow-hidden rounded-[18px] bg-white/[0.07] text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.06)] sm:grid-cols-5">
                   {[
                     ["Builders", formatCount(discovery.stats.builders)],
                     ["Receipts", formatCount(discovery.stats.receipts)],
                     ["Shipped", formatCount(discovery.stats.shipped)],
                     ["Reactions", formatCount(discovery.stats.reactions)],
+                    ["Comments", formatCount(discovery.stats.comments)],
                   ].map(([label, value]) => (
                     <div key={label} className="bg-black/70 px-4 py-3">
                       <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
@@ -1187,6 +1211,13 @@ export default async function FeedPage({
                             />
 
                             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                              <Link
+                                href={`${currentReceiptHref}#conversation`}
+                                className="inline-flex min-h-9 flex-1 items-center justify-center rounded-full border border-zinc-800 bg-black px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[border-color,color,transform] hover:border-amber-200 hover:text-amber-100 active:scale-[0.96] sm:flex-none"
+                              >
+                                {formatCount(r.commentCount)}{" "}
+                                {r.commentCount === 1 ? "comment" : "comments"}
+                              </Link>
                               <CopyButton
                                 value={currentPublicReceiptUrl}
                                 label="Copy link"
