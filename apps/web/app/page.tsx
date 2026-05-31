@@ -1,6 +1,5 @@
 import { CopyButton } from "@/components/copy-button";
 import { SiteNav } from "@/components/site-nav";
-import { auth } from "@/lib/auth";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 /* Hallmark · macrostructure: 06-feed-led · genre: technical · theme: trail-dark-lime
@@ -31,6 +30,8 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 // Real session 161blsz1 — every number below is from production, not a mockup.
 const INSTALL = "npm install -g @gettrail/cli";
 const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
@@ -59,10 +60,10 @@ const feedPreview = [
     tag: "merged PR",
   },
   {
-    handle: "Discover",
+    handle: "Feed",
     action: "browse shipped AI work",
-    detail: "Public receipts across tools and frameworks",
-    href: "/discover",
+    detail: "Public sessions across tools and frameworks",
+    href: "/feed",
     tag: "public feed",
   },
   {
@@ -131,13 +132,17 @@ const captures = [
 ];
 
 export default async function Home() {
-  let sess: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
-  try {
-    sess = await auth.api.getSession({ headers: await headers() });
-  } catch {
-    sess = null;
+  let signedIn = false;
+  if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
+    try {
+      const { auth } = await import("@/lib/auth");
+      const sess = await auth.api.getSession({ headers: await headers() });
+      signedIn = Boolean(sess?.user);
+    } catch {
+      signedIn = false;
+    }
   }
-  if (sess?.user) redirect("/feed");
+  if (signedIn) redirect("/feed");
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-50">
@@ -175,10 +180,10 @@ export default async function Home() {
                   Join the feed →
                 </Link>
                 <Link
-                  href="/discover"
+                  href="/feed"
                   className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-700 hover:text-zinc-50 transition-colors"
                 >
-                  Browse shipped work
+                  Browse feed
                 </Link>
               </div>
 
@@ -568,8 +573,8 @@ export default async function Home() {
             <span className="font-mono text-[12px] text-zinc-500">@gettrail/cli on npm</span>
           </div>
           <div className="flex items-center gap-5 text-[12px] font-mono text-zinc-500">
-            <Link href="/discover" className="hover:text-zinc-200">
-              discover
+            <Link href="/feed" className="hover:text-zinc-200">
+              feed
             </Link>
             <a href="https://github.com/janfaris/trail" className="hover:text-zinc-200">
               github

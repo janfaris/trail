@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { type RankableSession, canFollow, rankFeed, toggleDecision } from "./follow";
+import {
+  type RankableSession,
+  canFollow,
+  normalizeFeedView,
+  rankFeed,
+  toggleDecision,
+} from "./follow";
+
+describe("normalizeFeedView", () => {
+  it("defaults to the public everyone feed", () => {
+    expect(normalizeFeedView(undefined)).toBe("everyone");
+    expect(normalizeFeedView(null)).toBe("everyone");
+    expect(normalizeFeedView("")).toBe("everyone");
+    expect(normalizeFeedView("popular")).toBe("everyone");
+  });
+
+  it("accepts the signed-in following feed", () => {
+    expect(normalizeFeedView("following")).toBe("following");
+  });
+
+  it("normalizes repeated query params from the first value", () => {
+    expect(normalizeFeedView(["following", "everyone"])).toBe("following");
+    expect(normalizeFeedView(["everyone", "following"])).toBe("everyone");
+  });
+});
 
 describe("canFollow", () => {
   it("allows following a different, valid user", () => {

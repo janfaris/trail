@@ -5,8 +5,8 @@ import Link from "next/link";
 type NavLink = { href: string; label: string; external?: boolean };
 
 const PRIMARY_LINKS: NavLink[] = [
+  { href: "/feed", label: "Feed" },
   { href: "/install", label: "Install" },
-  { href: "/pricing", label: "Pricing" },
   { href: "https://github.com/janfaris/trail", label: "GitHub", external: true },
 ];
 

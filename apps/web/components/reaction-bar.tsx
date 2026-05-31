@@ -43,7 +43,8 @@ export function ReactionBar({ slug }: Props) {
         body: JSON.stringify({ kind }),
       });
       if (r.status === 401) {
-        window.location.href = "/api/auth/sign-in/github";
+        const callbackURL = `${window.location.pathname}${window.location.search}`;
+        window.location.href = `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
         return;
       }
       const data = (await r.json()) as { action?: "added" | "removed" };
@@ -85,9 +86,7 @@ export function ReactionBar({ slug }: Props) {
             >
               <span className="font-mono">{k.emoji}</span>
               <span>{k.label}</span>
-              {n > 0 && (
-                <span className="font-mono text-xs opacity-70">{n}</span>
-              )}
+              {n > 0 && <span className="font-mono text-xs opacity-70">{n}</span>}
             </button>
           );
         })}
