@@ -26,6 +26,7 @@ import { computeUserStats } from "@/lib/aggregates";
 import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { computeVerifiedBuilder } from "@/lib/verified-builder";
+import { CopyButton } from "@/components/copy-button";
 
 function parseUsd(raw: string | null | undefined): number {
   if (raw == null) return 0;
@@ -112,6 +113,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const li = userRow.linkedinHandle;
   const site = userRow.website;
   const hasSocials = Boolean(gh || x || li || site);
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
 
   const viewerId = sessionInfo?.user?.id ?? null;
   const [followerRow] = await db
@@ -258,14 +260,6 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                     </a>
                   </>
                 )}
-                <span className="text-zinc-700">·</span>
-                <Link
-                  href={`/u/${userRow.handle}/interview`}
-                  className="inline-flex items-center gap-1.5 text-[#a7f300] hover:text-[#c8ff5e] transition-colors"
-                  title="Recruiter mode — shipped trails only"
-                >
-                  Recruiter view →
-                </Link>
                 {site && (
                   <>
                     <span className="text-zinc-700">·</span>
@@ -330,6 +324,41 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
               )}
             </div>
           </div>
+        </div>
+
+        <div className="mb-8">
+          {isSelf ? (
+            <div className="rounded-lg border border-zinc-900 bg-zinc-950/60 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-100">Share for hiring</p>
+                <p className="text-xs text-zinc-500 mt-0.5 leading-snug">
+                  A recruiter-ready view of your shipped, commit-backed work — paste the link
+                  into job applications and DMs.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href={`/u/${userRow.handle}/interview`}
+                  className="inline-flex items-center h-7 px-2.5 rounded-md border border-[#a7f300]/30 bg-[#a7f300]/10 text-xs font-mono text-[#a7f300] hover:bg-[#a7f300]/20 transition-colors"
+                >
+                  Open recruiter view →
+                </Link>
+                <CopyButton
+                  value={`${base}/u/${userRow.handle}/interview`}
+                  label="Copy link"
+                  copiedLabel="Copied"
+                />
+              </div>
+            </div>
+          ) : (
+            <Link
+              href={`/u/${userRow.handle}/interview`}
+              className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a7f300] hover:text-[#c8ff5e] transition-colors"
+              title="Recruiter mode — shipped trails only"
+            >
+              Recruiter view →
+            </Link>
+          )}
         </div>
 
         {all.length > 0 && (
