@@ -35,6 +35,9 @@ export const dynamic = "force-dynamic";
 // Real session 161blsz1 — every number below is from production, not a mockup.
 const INSTALL = "npm install -g @gettrail/cli";
 const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
+const FOLLOWING_SIGNIN_HREF = `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(
+  "/feed?view=following",
+)}`;
 // The merged PR is public on GitHub — anyone can verify the ship third-party.
 const PR_HREF = "https://github.com/janfaris/trail/pull/23";
 // A real, public builder profile — receipts compound here.
@@ -72,6 +75,40 @@ const feedPreview = [
     detail: "Public receipts filtered for portfolio review",
     href: `${PROFILE_HREF}/interview`,
     tag: "profile proof",
+  },
+];
+
+const startHere = [
+  {
+    n: "01",
+    label: "Browse",
+    title: "Open the feed first.",
+    body: "Read public AI-building sessions without an account. See what shipped, who built it, and which model/tool did the work.",
+    links: [{ href: "/feed", label: "Browse feed" }],
+  },
+  {
+    n: "02",
+    label: "Follow",
+    title: "Sign in with GitHub.",
+    body: "Following, reactions, and your personal timeline unlock after GitHub sign-in. The public feed stays open.",
+    links: [{ href: FOLLOWING_SIGNIN_HREF, label: "Sign in to follow" }],
+  },
+  {
+    n: "03",
+    label: "Install",
+    title: "Record your own trail.",
+    body: "Install the CLI locally, keep working in Claude Code or Codex, then share the sessions that should become proof.",
+    links: [{ href: "/install", label: "Install locally" }],
+  },
+  {
+    n: "04",
+    label: "Discover",
+    title: "Track tools and stacks.",
+    body: "Trail groups public receipts by the AI tools and frameworks people are actually using to ship.",
+    links: [
+      { href: "/tools", label: "AI tools" },
+      { href: "/frameworks", label: "Frameworks" },
+    ],
   },
 ];
 
@@ -174,10 +211,10 @@ export default async function Home() {
 
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <Link
-                  href={SIGNIN_HREF}
+                  href={FOLLOWING_SIGNIN_HREF}
                   className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-[#a7f300]/50 bg-[#a7f300] text-black text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-[#c8ff5e] transition-colors"
                 >
-                  Join the feed →
+                  Sign in to follow →
                 </Link>
                 <Link
                   href="/feed"
@@ -263,6 +300,55 @@ export default async function Home() {
                   </Link>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* START HERE — make the product loop explicit without gating the public feed. */}
+        <section className="border-t border-zinc-900">
+          <div className="mx-auto max-w-5xl px-6 lg:px-10 py-16">
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
+              <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Start here
+            </div>
+
+            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden md:grid-cols-2 lg:grid-cols-4">
+              {startHere.map((item) => (
+                <div key={item.n} className="bg-zinc-950 p-5">
+                  <div className="flex items-center justify-between gap-4 mb-5">
+                    <span className="font-mono text-[11px] text-[#a7f300] tracking-[0.14em]">
+                      {item.n}
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+                      {item.label}
+                    </span>
+                  </div>
+                  <h2 className="font-display text-[21px] leading-tight text-zinc-50 mb-3">
+                    {item.title}
+                  </h2>
+                  <p className="text-zinc-500 text-[13px] leading-[1.6] mb-5">{item.body}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+                    {item.links.map((link) =>
+                      link.href.startsWith("/api/") ? (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          className="text-[#a7f300] hover:underline"
+                        >
+                          {link.label} →
+                        </a>
+                      ) : (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="text-[#a7f300] hover:underline"
+                        >
+                          {link.label} →
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>

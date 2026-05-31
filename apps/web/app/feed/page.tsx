@@ -14,6 +14,34 @@ const FOLLOWING_SIGN_IN_HREF = `/api/auth/sign-in/github?callbackURL=${encodeURI
   "/feed?view=following",
 )}`;
 
+const discoveryLinks = [
+  { href: "/tools", label: "AI tools" },
+  { href: "/frameworks", label: "Frameworks" },
+  { href: "/install", label: "Install CLI" },
+];
+
+const onboardingSteps = [
+  {
+    n: "01",
+    title: "Browse openly",
+    body: "The Everyone feed is public: no account needed to read sessions, costs, models, and merged work.",
+  },
+  {
+    n: "02",
+    title: "Sign in to follow",
+    body: "GitHub sign-in unlocks follow buttons, reactions, and your personal Following feed.",
+    href: FOLLOWING_SIGN_IN_HREF,
+    cta: "Sign in",
+  },
+  {
+    n: "03",
+    title: "Install and share",
+    body: "Run Trail locally, keep using your AI tools, then publish the sessions worth turning into proof.",
+    href: "/install",
+    cta: "Install",
+  },
+];
+
 // /feed — open discovery by default. Everyone can browse public sessions; the
 // following timeline is personalized and therefore remains signed-in only.
 // Joins always key on trail_session.id / userId (slugs are unique only per-user,
@@ -147,6 +175,18 @@ export default async function FeedPage({
               {isFollowingView ? "Following" : "Feed"}
             </h1>
             <p className="text-sm text-zinc-400 max-w-xl">{subtitle}</p>
+            <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] font-mono uppercase tracking-[0.12em]">
+              <span className="text-zinc-600">Explore</span>
+              {discoveryLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-full border border-zinc-900 bg-zinc-950 px-3 py-1.5 text-zinc-400 transition-colors hover:border-zinc-700 hover:text-[#a7f300]"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </div>
 
           <div className="inline-flex w-fit rounded-full border border-zinc-900 bg-zinc-950 p-1 text-[12px] font-mono uppercase tracking-[0.12em]">
@@ -170,16 +210,32 @@ export default async function FeedPage({
         </div>
 
         {!viewerId && !isFollowingView && (
-          <div className="mb-6 rounded-md border border-[#a7f300]/20 bg-[#a7f300]/5 px-4 py-3 text-sm text-zinc-300">
-            Browse freely.{" "}
-            <a
-              href="/api/auth/sign-in/github?callbackURL=/feed"
-              className="text-[#a7f300] hover:underline"
-            >
-              Sign in
-            </a>{" "}
-            when you want to follow builders and build a personal timeline.
-          </div>
+          <section className="mb-8 grid gap-px overflow-hidden rounded-md border border-zinc-900 bg-zinc-900 md:grid-cols-3">
+            {onboardingSteps.map((step) => (
+              <div key={step.n} className="bg-zinc-950 p-5">
+                <div className="mb-4 font-mono text-[11px] text-[#a7f300] tracking-[0.14em]">
+                  {step.n}
+                </div>
+                <h2 className="mb-2 text-[15px] font-medium tracking-tight text-zinc-50">
+                  {step.title}
+                </h2>
+                <p className="text-sm leading-relaxed text-zinc-500">{step.body}</p>
+                {step.href && step.cta && (
+                  <div className="mt-4">
+                    {step.href.startsWith("/api/") ? (
+                      <a href={step.href} className="text-sm text-[#a7f300] hover:underline">
+                        {step.cta} →
+                      </a>
+                    ) : (
+                      <Link href={step.href} className="text-sm text-[#a7f300] hover:underline">
+                        {step.cta} →
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
         )}
 
         {rows.length === 0 ? (
@@ -187,10 +243,14 @@ export default async function FeedPage({
             {isFollowingView ? (
               <p className="text-sm text-zinc-400">
                 Your following feed is empty. Follow builders on{" "}
-                <Link href="/discover" className="text-[#a7f300] hover:underline">
-                  Discover
+                <Link href="/feed" className="text-[#a7f300] hover:underline">
+                  Everyone
+                </Link>
+                , or browse{" "}
+                <Link href="/tools" className="text-[#a7f300] hover:underline">
+                  AI tools
                 </Link>{" "}
-                to fill it up.
+                to find people shipping in your stack.
               </p>
             ) : (
               <p className="text-sm text-zinc-400">
