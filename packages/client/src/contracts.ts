@@ -16,6 +16,9 @@ export const UploadSessionResponse = z.object({
   // Human-readable reasons the session was held in pending review (entropy /
   // sensitive-content gates). Empty/absent when published directly.
   pendingReviewReasons: z.array(z.string()).optional(),
+  // Present when the client asked to publish but the server saved the upload
+  // as a private draft instead.
+  publishBlockedReason: z.enum(["quota_or_state", "receipt_failed"]).optional(),
   // The uploader's public profile URL (/u/<handle>). Lets the CLI point users
   // at their Verified Builder badge after a share. Optional for older servers.
   profileUrl: z.string().url().optional(),

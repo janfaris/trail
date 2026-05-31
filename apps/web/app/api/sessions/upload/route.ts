@@ -1,31 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
-import { Session as SessionSchema } from "@trail/schema";
-import { type UploadSessionResponse } from "@trail/client";
-import { anonymize } from "@trail/anonymize";
-import { deriveTitle } from "@/lib/derive-title";
-import { generateSessionMeta, flagSensitive } from "@/lib/openai";
-import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
-import {
-  extractLanguages,
-  computeDurationSeconds,
-  extractToolCallCounts,
-  countDistinctFiles,
-  countPrompts,
-  countFailedToolCalls,
-} from "@/lib/session-metrics";
-import { eq, sql, and, gte } from "drizzle-orm";
-import { ensureReceipt } from "@/lib/receipt-generator";
-import { checkPaywall } from "@/lib/paywall";
-import { resolvePullRequest } from "@/lib/github-verify";
-import { extractSessionTags } from "@/lib/tags";
 import { randomUUID } from "node:crypto";
+import { db, schema } from "@/db/client";
+import { auth } from "@/lib/auth";
+import { type PriceSnapshot, computeCostUsd, lookupModelPrice } from "@/lib/cost/price-lookup";
+import { deriveTitle } from "@/lib/derive-title";
+import { generateSessionEmbedding, toVectorLiteral } from "@/lib/embeddings";
+import { resolvePullRequest } from "@/lib/github-verify";
+import { flagSensitive, generateSessionMeta } from "@/lib/openai";
+import { checkPaywall } from "@/lib/paywall";
+import { promoteSessionToPublicReceipt } from "@/lib/public-receipt-publishing";
+import { ensureReceipt } from "@/lib/receipt-generator";
 import {
-  lookupModelPrice,
-  computeCostUsd,
-  type PriceSnapshot,
-} from "@/lib/cost/price-lookup";
+  computeDurationSeconds,
+  countDistinctFiles,
+  countFailedToolCalls,
+  countPrompts,
+  extractLanguages,
+  extractToolCallCounts,
+} from "@/lib/session-metrics";
+import { extractSessionTags } from "@/lib/tags";
+import { anonymize } from "@trail/anonymize";
+import type { UploadSessionResponse } from "@trail/client";
+import { Session as SessionSchema } from "@trail/schema";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Week 4 — cost-per-PR pivot. Path A of the attribution engine reads
 // trail_session.estimated_cost_usd as the "native" baseline, so the upload
@@ -41,6 +38,7 @@ const COST_ELIGIBLE_TOOL_VENDOR: Record<string, "anthropic" | "openai"> = {
   claude: "anthropic",
   codex: "openai",
 };
+type UploadVisibility = NonNullable<UploadSessionResponse["visibility"]>;
 
 function normalizeModelId(raw: string): string {
   // Strip leading vendor prefixes ("anthropic/claude-sonnet-4-5" →
@@ -76,9 +74,7 @@ async function computeSessionCost(
 
   const snapshot = await lookupModelPrice(vendor, modelId);
   if (!snapshot) {
-    console.warn(
-      `upload-cost: unknown model ${modelId} for vendor ${vendor}`,
-    );
+    console.warn(`upload-cost: unknown model ${modelId} for vendor ${vendor}`);
     return null;
   }
 
@@ -116,6 +112,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    return NextResponse.json({ error: "database unavailable" }, { status: 500 });
+  }
 
   let body: unknown;
   try {
@@ -126,7 +126,10 @@ export async function POST(req: NextRequest) {
 
   const parsed = SessionSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid session", issues: parsed.error.issues }, { status: 400 });
+    return NextResponse.json(
+      { error: "invalid session", issues: parsed.error.issues },
+      { status: 400 },
+    );
   }
   // Defense-in-depth: even if the CLI forgot to scrub, we scrub server-side too.
   const { session: s, report: redactionReport } = anonymize(parsed.data);
@@ -134,8 +137,7 @@ export async function POST(req: NextRequest) {
   // Phase 0 trust gate. If the scrubbed payload still contains high-entropy
   // tokens or the LLM flag fires, hold the session in pending-review state
   // rather than publishing immediately. The owner can confirm later.
-  const allowSuspects =
-    req.headers.get("x-trail-allow-suspects")?.toLowerCase() === "true";
+  const allowSuspects = req.headers.get("x-trail-allow-suspects")?.toLowerCase() === "true";
 
   // Phase 2 — GitHub linkage headers, populated by `trail share` from the
   // git remote + HEAD. All optional; treat as opaque strings + light sanity
@@ -147,30 +149,29 @@ export async function POST(req: NextRequest) {
       ? linkedRepoHdr
       : null;
   const linkedCommitSha =
-    linkedCommitHdr && /^[a-f0-9]{7,40}$/i.test(linkedCommitHdr)
-      ? linkedCommitHdr
-      : null;
+    linkedCommitHdr && /^[a-f0-9]{7,40}$/i.test(linkedCommitHdr) ? linkedCommitHdr : null;
   const entropyReasons =
     redactionReport.suspects.length > 0 && !allowSuspects
       ? [
-          `entropy guard found ${redactionReport.suspects.length} suspicious token(s) — ` +
-            redactionReport.suspects
-              .slice(0, 3)
-              .map((s) => `${s.location} (~${s.entropy} bits)`)
-              .join(", "),
+          `entropy guard found ${redactionReport.suspects.length} suspicious token(s) — ${redactionReport.suspects
+            .slice(0, 3)
+            .map((s) => `${s.location} (~${s.entropy} bits)`)
+            .join(", ")}`,
         ]
       : [];
   const flag = await flagSensitive(s).catch(() => null);
   const flagReasons = flag?.has_sensitive ? flag.reasons : [];
   const pendingReasons = [...entropyReasons, ...flagReasons];
-  const visibility = pendingReasons.length > 0 ? "pending" : "public";
+  const visibility: UploadVisibility = pendingReasons.length > 0 ? "pending" : "public";
 
   // Task 7 — paywall gate. Free plan: max 3 public receipts, no private.
-  // Pending/redacted are not counted. Pro is unlimited.
-  const desiredVisibility =
-    req.headers.get("x-trail-visibility")?.toLowerCase() === "private"
-      ? "private"
-      : visibility;
+  // Pending/redacted are not counted. Pro is unlimited. This is a fast-fail
+  // check; intended-public uploads are enforced again when promoted after
+  // receipt generation under the per-user quota lock.
+  const desiredVisibility: UploadVisibility =
+    req.headers.get("x-trail-visibility")?.toLowerCase() === "private" ? "private" : visibility;
+  const publishAfterReceipt = desiredVisibility === "public";
+  const initialVisibility: UploadVisibility = publishAfterReceipt ? "private" : desiredVisibility;
   const paywall = await checkPaywall(session.user.id, { visibility: desiredVisibility });
   if (!paywall.allowed) {
     const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
@@ -231,7 +232,9 @@ export async function POST(req: NextRequest) {
 
   // Best-effort AI title + summary. Failures fall back silently to heuristic.
   const prompts = s.events
-    .filter((e): e is typeof e & { text: string } => e.kind === "prompt" && typeof e.text === "string")
+    .filter(
+      (e): e is typeof e & { text: string } => e.kind === "prompt" && typeof e.text === "string",
+    )
     .slice(0, 3)
     .map((e) => e.text);
   const lastEventKinds = s.events.slice(-3).map((e) => e.kind);
@@ -311,11 +314,7 @@ export async function POST(req: NextRequest) {
     ),
   );
   const aiModels =
-    eventModels.length > 0
-      ? eventModels
-      : ai?.models && ai.models.length > 0
-        ? ai.models
-        : null;
+    eventModels.length > 0 ? eventModels : ai?.models && ai.models.length > 0 ? ai.models : null;
   let costResult: Awaited<ReturnType<typeof computeSessionCost>> = null;
   try {
     costResult = await computeSessionCost(s.tool, aiModels, {
@@ -340,8 +339,7 @@ export async function POST(req: NextRequest) {
   let githubUserToken: string | null = null;
   if (linkedRepo && linkedCommitSha) {
     const ghAccount = await db.query.account.findFirst({
-      where: (a, { and, eq }) =>
-        and(eq(a.userId, session.user.id), eq(a.providerId, "github")),
+      where: (a, { and, eq }) => and(eq(a.userId, session.user.id), eq(a.providerId, "github")),
       columns: { accessToken: true },
     });
     githubUserToken = ghAccount?.accessToken ?? null;
@@ -369,12 +367,10 @@ export async function POST(req: NextRequest) {
     distinctFiles,
     promptCount,
     failedToolCalls,
-    visibility: desiredVisibility,
+    visibility: initialVisibility,
     pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : null,
-    toolsUsed:
-      ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,
-    frameworks:
-      ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
+    toolsUsed: ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,
+    frameworks: ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
     models: aiModels,
     taskType: ai?.task_type ?? null,
     // Auto-infer "shipped" when the LLM didn't tag it but the session has
@@ -382,17 +378,14 @@ export async function POST(req: NextRequest) {
     // sustained run (≥20 events ≈ real work, not a one-shot question). This
     // keeps the recruiter view populated without requiring per-session
     // curation. Owners can override from /dashboard.
-    outcome:
-      ai?.outcome ??
-      (linkedCommitSha || s.events.length >= 20 ? "shipped" : null),
+    outcome: ai?.outcome ?? (linkedCommitSha || s.events.length >= 20 ? "shipped" : null),
     linkedRepo,
     linkedCommitSha,
     linkedPrUrl,
     inputTokens: inputTokensTotal,
     outputTokens: outputTokensTotal,
     cachedTokens: cachedTokensTotal,
-    estimatedCostUsd:
-      costResult != null ? costResult.estimatedCostUsd.toFixed(4) : null,
+    estimatedCostUsd: costResult != null ? costResult.estimatedCostUsd.toFixed(4) : null,
     modelPriceSnapshot: costResult?.modelPriceSnapshot ?? null,
   });
 
@@ -462,13 +455,12 @@ export async function POST(req: NextRequest) {
         // Tokens are duplicated here (event.data carries the whole event
         // object too) so analytics queries can stay on indexable columns
         // and never have to crack open the jsonb blob.
-        inputTokens: "inputTokens" in e ? e.inputTokens ?? null : null,
-        outputTokens: "outputTokens" in e ? e.outputTokens ?? null : null,
+        inputTokens: "inputTokens" in e ? (e.inputTokens ?? null) : null,
+        outputTokens: "outputTokens" in e ? (e.outputTokens ?? null) : null,
         cacheCreationInputTokens:
-          "cacheCreationInputTokens" in e ? e.cacheCreationInputTokens ?? null : null,
-        cacheReadInputTokens:
-          "cacheReadInputTokens" in e ? e.cacheReadInputTokens ?? null : null,
-        model: "model" in e ? e.model ?? null : null,
+          "cacheCreationInputTokens" in e ? (e.cacheCreationInputTokens ?? null) : null,
+        cacheReadInputTokens: "cacheReadInputTokens" in e ? (e.cacheReadInputTokens ?? null) : null,
+        model: "model" in e ? (e.model ?? null) : null,
       })),
     );
   }
@@ -493,18 +485,39 @@ export async function POST(req: NextRequest) {
   // Best-effort; failures must not block the upload response. ensureReceipt
   // is idempotent — safe to call on every upload.
   let receiptStatus: "shipped" | "draft" | "unverified" | undefined;
+  let persistedVisibility: UploadVisibility = initialVisibility;
+  let publishBlockedReason: "quota_or_state" | "receipt_failed" | undefined;
   try {
     await ensureReceipt(sessionId);
     const fresh = await db.query.trailSession.findFirst({
       where: eq(schema.trailSession.id, sessionId),
-      columns: { receiptStatus: true },
+      columns: { receiptGeneratedAt: true, receiptStatus: true },
     });
     const s = fresh?.receiptStatus;
     if (s === "shipped" || s === "draft" || s === "unverified") {
       receiptStatus = s;
     }
+    if (publishAfterReceipt) {
+      if (fresh?.receiptGeneratedAt) {
+        const promoted = await promoteSessionToPublicReceipt({
+          databaseUrl,
+          userId: session.user.id,
+          sessionId,
+        });
+        if (promoted.published) {
+          persistedVisibility = "public";
+        } else {
+          publishBlockedReason = "quota_or_state";
+        }
+      } else {
+        publishBlockedReason = "receipt_failed";
+      }
+    }
   } catch (err) {
     console.error("[upload] receipt generation failed:", (err as Error).message);
+    if (publishAfterReceipt) {
+      publishBlockedReason = "receipt_failed";
+    }
   }
 
   const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
@@ -514,12 +527,12 @@ export async function POST(req: NextRequest) {
     url: `${baseUrl}/u/${userRow.handle}/${slug}`,
     slug,
     receiptStatus,
-    // Report the visibility we actually persisted (desiredVisibility honours a
-    // `--private` upload), not the pre-downgrade public/pending value — the CLI
-    // gates its "badge is live" copy on this.
-    visibility: desiredVisibility,
-    pendingReviewReasons:
-      pendingReasons.length > 0 ? pendingReasons : undefined,
+    // Report the visibility we actually persisted. Intended-public uploads are
+    // first staged privately, then promoted only after receipt generation passes
+    // the locked quota gate.
+    visibility: persistedVisibility,
+    pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : undefined,
+    publishBlockedReason,
     profileUrl: `${baseUrl}/u/${userRow.handle}`,
     redactionsApplied: redactionReport.total,
   };
