@@ -119,6 +119,36 @@ export async function publishSessionFromFeed(input: FeedPublishInput): Promise<F
         actionLabel: "Open dashboard",
       };
     }
+    if (!sessionRow.sharedAt) {
+      const title = cleanText(input.title, 120) ?? sessionRow.title ?? sessionRow.slug;
+      const summary = cleanSummary(input.summary, 700) ?? sessionRow.summary;
+      const outcome =
+        input.outcome && OUTCOMES.has(input.outcome)
+          ? input.outcome
+          : input.outcome === null
+            ? null
+            : "unknown";
+      const { promoteSessionToPublicReceipt } = await import("@/lib/public-receipt-publishing");
+      const published = await promoteSessionToPublicReceipt({
+        databaseUrl,
+        userId: viewer.id,
+        sessionId: sessionRow.id,
+        title,
+        summary,
+        outcome,
+      });
+      if (!published.published) {
+        return {
+          ok: false,
+          error:
+            "That receipt could not be shared because it needs review, a generated receipt, or quota.",
+          actionHref: "/dashboard",
+          actionLabel: "Open dashboard",
+        };
+      }
+      revalidatePath("/feed");
+      revalidatePath(`/u/${viewer.handle}`);
+    }
     const href = `/u/${viewer.handle}/${sessionRow.slug}`;
     return {
       ok: true,

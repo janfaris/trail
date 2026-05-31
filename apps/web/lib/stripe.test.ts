@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // Tests for Task 7 paywall + Stripe wiring.
 //
@@ -14,7 +14,7 @@ describe("stripe lib — server-only secrets", () => {
 
   test("getProPriceId throws if env unset (allowlist enforced)", async () => {
     const prev = process.env.STRIPE_PRICE_ID_PRO;
-    delete process.env.STRIPE_PRICE_ID_PRO;
+    Reflect.deleteProperty(process.env, "STRIPE_PRICE_ID_PRO");
     const { getProPriceId } = await import("./stripe");
     expect(() => getProPriceId()).toThrow(/STRIPE_PRICE_ID_PRO/);
     if (prev) process.env.STRIPE_PRICE_ID_PRO = prev;
@@ -28,7 +28,7 @@ describe("stripe lib — server-only secrets", () => {
 
   test("getStripe throws if STRIPE_SECRET_KEY missing", async () => {
     const prev = process.env.STRIPE_SECRET_KEY;
-    delete process.env.STRIPE_SECRET_KEY;
+    Reflect.deleteProperty(process.env, "STRIPE_SECRET_KEY");
     const { getStripe } = await import("./stripe");
     expect(() => getStripe()).toThrow(/STRIPE_SECRET_KEY/);
     if (prev) process.env.STRIPE_SECRET_KEY = prev;
@@ -41,9 +41,7 @@ describe("stripe webhook — signature verification", () => {
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_dummy";
     const { getStripe } = await import("./stripe");
     const stripe = getStripe();
-    expect(() =>
-      stripe.webhooks.constructEvent("{}", "bogus", "whsec_test_dummy"),
-    ).toThrow();
+    expect(() => stripe.webhooks.constructEvent("{}", "bogus", "whsec_test_dummy")).toThrow();
   });
 });
 
@@ -74,6 +72,7 @@ describe("paywall — free tier counter", () => {
         trailSession: {
           userId: "userId",
           visibility: "visibility",
+          sharedAt: "sharedAt",
           receiptGeneratedAt: "receiptGeneratedAt",
         },
       },

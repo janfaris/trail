@@ -2,9 +2,9 @@
 // the `session_tag` projection JOINed to public `trail_session` rows; all
 // ranking/summary shaping lives in the pure helpers in lib/entity-tags.ts.
 //
-// Visibility is enforced here (ts.visibility = 'public') rather than
-// denormalized onto session_tag, so these queries are the trust boundary for
-// what the public pages may surface.
+// Explicit public sharing is enforced here (ts.visibility = 'public' and
+// ts.shared_at is not null) rather than denormalized onto session_tag, so these
+// queries are the trust boundary for what the public pages may surface.
 
 import { db } from "@/db/client";
 import { sql } from "drizzle-orm";
@@ -53,7 +53,10 @@ export async function loadEntityIndex(kind: EntityKind): Promise<EntityStat[]> {
       count(DISTINCT ts.user_id) AS builders,
       count(DISTINCT ts.id) FILTER (WHERE ts.outcome = 'shipped') AS shipped
     FROM session_tag st
-    JOIN trail_session ts ON ts.id = st.session_id AND ts.visibility = 'public'
+    JOIN trail_session ts
+      ON ts.id = st.session_id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
     WHERE st.kind = ${kind}
     GROUP BY st.tag
   `);
@@ -139,7 +142,10 @@ async function loadEntityDetailImpl(kind: EntityKind, slug: string): Promise<Ent
       count(DISTINCT ts.id) FILTER (WHERE ts.outcome = 'rabbithole') AS rabbithole,
       mode() WITHIN GROUP (ORDER BY st.label) AS label
     FROM session_tag st
-    JOIN trail_session ts ON ts.id = st.session_id AND ts.visibility = 'public'
+    JOIN trail_session ts
+      ON ts.id = st.session_id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
     WHERE st.kind = ${kind} AND st.tag = ${slug}
   `);
   const stats = rowsOf<{
@@ -177,7 +183,10 @@ async function loadEntityDetailImpl(kind: EntityKind, slug: string): Promise<Ent
       COALESCE(rx.positive, 0) AS "positiveReactions",
       COALESCE(rx.negative, 0) AS "negativeReactions"
     FROM session_tag st
-    JOIN trail_session ts ON ts.id = st.session_id AND ts.visibility = 'public'
+    JOIN trail_session ts
+      ON ts.id = st.session_id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
     JOIN "user" u ON u.id = ts.user_id
     LEFT JOIN (
       SELECT
@@ -188,7 +197,7 @@ async function loadEntityDetailImpl(kind: EntityKind, slug: string): Promise<Ent
       GROUP BY session_id
     ) rx ON rx.session_id = ts.id
     WHERE st.kind = ${kind} AND st.tag = ${slug}
-    ORDER BY COALESCE(ts.shared_at, ts.started_at) DESC
+    ORDER BY ts.shared_at DESC
     LIMIT ${SESSION_CAP}
   `);
 
@@ -231,7 +240,10 @@ async function loadEntityDetailImpl(kind: EntityKind, slug: string): Promise<Ent
       mode() WITHIN GROUP (ORDER BY st2.label) AS label,
       count(DISTINCT ts.id) AS sessions
     FROM session_tag st1
-    JOIN trail_session ts ON ts.id = st1.session_id AND ts.visibility = 'public'
+    JOIN trail_session ts
+      ON ts.id = st1.session_id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
     JOIN session_tag st2 ON st2.session_id = ts.id
     WHERE st1.kind = ${kind}
       AND st1.tag = ${slug}
@@ -299,7 +311,10 @@ export async function loadEntitySlugs(): Promise<{ kind: EntityKind; tag: string
   const res = await db.execute<{ kind: EntityKind; tag: string }>(sql`
     SELECT DISTINCT st.kind AS kind, st.tag AS tag
     FROM session_tag st
-    JOIN trail_session ts ON ts.id = st.session_id AND ts.visibility = 'public'
+    JOIN trail_session ts
+      ON ts.id = st.session_id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
     WHERE st.kind IN ('tool', 'framework')
   `);
   return rowsOf<{ kind: EntityKind; tag: string }>(res).map((r) => ({ kind: r.kind, tag: r.tag }));

@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -38,6 +38,7 @@ async function loadReceipt(req: NextRequest, slug: string) {
         eq(schema.trailSession.slug, slug),
         eq(schema.user.handle, authorHandle),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
       ),
     )
     .limit(1);

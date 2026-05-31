@@ -13,22 +13,16 @@
 export const runtime = "nodejs";
 
 import { db, schema } from "@/db/client";
-import { eq, or } from "drizzle-orm";
 import { renderReceiptPng } from "@/lib/receipt-image";
+import { eq, or } from "drizzle-orm";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const sessionRow = await db.query.trailSession.findFirst({
-    where: or(
-      eq(schema.trailSession.id, id),
-      eq(schema.trailSession.slug, id),
-    ),
+    where: or(eq(schema.trailSession.id, id), eq(schema.trailSession.slug, id)),
   });
-  if (!sessionRow || sessionRow.visibility !== "public") {
+  if (!sessionRow || sessionRow.visibility !== "public" || !sessionRow.sharedAt) {
     return new Response("Not found", { status: 404 });
   }
 
@@ -53,11 +47,7 @@ export async function GET(
     tool: sessionRow.tool,
     // Use the date portion only — stable across renders.
     date: new Date(sessionRow.startedAt).toISOString().slice(0, 10),
-    tldr:
-      sessionRow.receiptTldr ??
-      sessionRow.recipeTldr ??
-      sessionRow.summary ??
-      "",
+    tldr: sessionRow.receiptTldr ?? sessionRow.recipeTldr ?? sessionRow.summary ?? "",
     commitSha: sessionRow.linkedCommitSha ?? sessionRow.receiptVerifiedSha ?? null,
     changedFiles: sessionRow.receiptChangedFiles ?? [],
     redactionCount: (sessionRow.receiptValidatorWarnings ?? []).length,

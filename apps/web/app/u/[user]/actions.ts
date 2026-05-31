@@ -84,12 +84,18 @@ export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
     if (!databaseUrl) return { ok: false, error: "database unavailable" };
 
     const currentRows = await db
-      .select({ id: schema.trailSession.id, visibility: schema.trailSession.visibility })
+      .select({
+        id: schema.trailSession.id,
+        visibility: schema.trailSession.visibility,
+        sharedAt: schema.trailSession.sharedAt,
+      })
       .from(schema.trailSession)
       .where(inArray(schema.trailSession.id, owned));
-    let updated = currentRows.filter((row) => row.visibility === "public").length;
+    let updated = currentRows.filter(
+      (row) => row.visibility === "public" && row.sharedAt != null,
+    ).length;
     for (const row of currentRows) {
-      if (row.visibility === "public") continue;
+      if (row.visibility === "public" && row.sharedAt != null) continue;
       const result = await promoteSessionToPublicReceipt({
         databaseUrl,
         userId: u.id,

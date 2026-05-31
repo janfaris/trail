@@ -43,7 +43,10 @@ export async function promoteSessionToPublicReceipt(args: {
             shared_at = coalesce(shared_at, now())
           where id = ${args.sessionId}
             and user_id = (select id from current_viewer)
-            and visibility = 'private'
+            and (
+              visibility = 'private'
+              or (visibility = 'public' and shared_at is null)
+            )
             and (pending_review_reasons is null or jsonb_array_length(pending_review_reasons) = 0)
             and redacted_at is null
             and ended_at is not null
@@ -56,6 +59,7 @@ export async function promoteSessionToPublicReceipt(args: {
                 from trail_session public_receipts
                 where public_receipts.user_id = (select id from current_viewer)
                   and public_receipts.visibility = 'public'
+                  and public_receipts.shared_at is not null
                   and public_receipts.receipt_generated_at is not null
               ) < ${FREE_PUBLIC_RECEIPT_LIMIT}
             )

@@ -6,9 +6,9 @@
  * consistent with weekly/monthly/wrapped tiers.
  */
 import { randomBytes } from "node:crypto";
-import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/db/client";
-import { aggregate, type SessionInput } from "./aggregate";
+import { and, eq } from "drizzle-orm";
+import { type SessionInput, aggregate } from "./aggregate";
 import { generateOneLiner } from "./one-liner";
 
 export type GeneratePulseResult =
@@ -55,10 +55,7 @@ export async function generatePulseRecap(
 
   // Idempotent — if a pulse recap already exists for this session, return it.
   const existing = await db.query.recap.findFirst({
-    where: and(
-      eq(schema.recap.sessionId, sessionId),
-      eq(schema.recap.tier, "pulse"),
-    ),
+    where: and(eq(schema.recap.sessionId, sessionId), eq(schema.recap.tier, "pulse")),
   });
   if (existing) {
     return { ok: true, recapId: existing.id, slug: existing.slug, created: false };
@@ -88,9 +85,10 @@ export async function generatePulseRecap(
   }
 
   const id = randomBytes(12).toString("base64url");
-  // Default visibility = same as the source session. If session is public,
-  // recap is public. Otherwise private.
-  const visibility = row.visibility === "public" ? "public" : "private";
+  // Default visibility = same as the source session only when it was
+  // explicitly shared. Legacy/default-public rows should not produce public
+  // recap cards until the owner shares the source receipt.
+  const visibility = row.visibility === "public" && row.sharedAt != null ? "public" : "private";
 
   try {
     await db.insert(schema.recap).values({
@@ -103,8 +101,7 @@ export async function generatePulseRecap(
       windowEnd: null,
       payload,
       oneLiner: oneLiner.text,
-      oneLinerValidatorWarnings:
-        oneLiner.warnings.length > 0 ? oneLiner.warnings : null,
+      oneLinerValidatorWarnings: oneLiner.warnings.length > 0 ? oneLiner.warnings : null,
       visibility,
       sharedAt: visibility === "public" ? new Date() : null,
     });

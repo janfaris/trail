@@ -1,7 +1,7 @@
-import { eq, and } from "drizzle-orm";
-import { notFound } from "next/navigation";
-import { db, schema } from "@/db/client";
 import { ToolIcon } from "@/components/tool-icon";
+import { db, schema } from "@/db/client";
+import { and, eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +32,9 @@ export default async function Embed({ params }: Props) {
   });
   if (!userRow) notFound();
   const sessionRow = await db.query.trailSession.findFirst({
-    where: and(
-      eq(schema.trailSession.userId, userRow.id),
-      eq(schema.trailSession.slug, slug),
-    ),
+    where: and(eq(schema.trailSession.userId, userRow.id), eq(schema.trailSession.slug, slug)),
   });
-  if (!sessionRow || sessionRow.visibility !== "public") notFound();
+  if (!sessionRow || sessionRow.visibility !== "public" || !sessionRow.sharedAt) notFound();
 
   const fullUrl = `${BASE}/u/${user}/${slug}`;
   const title = sessionRow.title || slug;
@@ -161,8 +158,7 @@ export default async function Embed({ params }: Props) {
                   key={t}
                   style={{
                     fontSize: 10,
-                    fontFamily:
-                      "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                     color: "#a1a1aa",
                     background: "#18181b",
                     padding: "2px 6px",
@@ -187,9 +183,7 @@ export default async function Embed({ params }: Props) {
             <span>{events} events</span>
             {prompts > 0 && <span>· {prompts} prompts</span>}
             {dur && <span>· {dur}</span>}
-            <span style={{ marginLeft: "auto", color: "#a7f300" }}>
-              Open ↗
-            </span>
+            <span style={{ marginLeft: "auto", color: "#a7f300" }}>Open ↗</span>
           </div>
         </a>
       </body>

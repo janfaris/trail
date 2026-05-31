@@ -22,7 +22,8 @@ import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
 import { computeStreak } from "@/lib/streak";
 import { computeVerifiedBuilder } from "@/lib/verified-builder";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -90,6 +91,8 @@ function ArrowUpRightIcon({ size = 14 }: { size?: number }) {
 
 type TrailSessionRow = typeof schema.trailSession.$inferSelect;
 
+type PageProps = { params: Promise<{ user: string }> };
+
 interface ProfileEngagementRow {
   sessionId: string;
   reactions: number;
@@ -133,7 +136,8 @@ function sessionStatusLabel(s: TrailSessionRow): string {
   if (s.receiptStatus === "shipped") return "Verified ship";
   if (s.outcome === "shipped") return "Shipped";
   if (s.receiptStatus === "draft") return "Draft receipt";
-  return s.visibility === "public" ? "Public proof" : "Private proof";
+  if (isPublicReceipt(s)) return "Public proof";
+  return s.visibility === "public" ? "Unshared proof" : "Private proof";
 }
 
 function stackHref(tag: string): string {
@@ -147,7 +151,99 @@ function githubRepoUrl(repo: string | null | undefined): string | null {
   return `https://github.com/${normalized}`;
 }
 
-export default async function UserProfile({ params }: { params: Promise<{ user: string }> }) {
+function isPublicReceipt(s: TrailSessionRow): boolean {
+  return s.visibility === "public" && s.sharedAt != null;
+}
+
+const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app").replace(
+  /\/$/,
+  "",
+);
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { user } = await params;
+  const builder = await db.query.user.findFirst({
+    where: eq(schema.user.handle, user),
+    columns: { id: true, name: true, handle: true },
+  });
+
+  const handle = builder?.handle ?? user;
+  const displayName = builder?.name && builder.name !== handle ? builder.name : `@${handle}`;
+  const profileUrl = `${baseUrl}/u/${handle}`;
+  const imageUrl = `${profileUrl}/opengraph-image`;
+
+  if (!builder) {
+    return {
+      title: `@${handle} on Trail`,
+      description: "Trail builder profile and AI coding receipts.",
+      alternates: { canonical: profileUrl },
+      openGraph: {
+        title: `@${handle} on Trail`,
+        description: "Trail builder profile and AI coding receipts.",
+        url: profileUrl,
+        type: "profile",
+        images: [{ url: imageUrl, width: 1200, height: 630, alt: `@${handle} on Trail` }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `@${handle} on Trail`,
+        description: "Trail builder profile and AI coding receipts.",
+        images: [imageUrl],
+      },
+    };
+  }
+
+  const [stats] = await db
+    .select({
+      publicCount: sql<number>`count(*)::int`,
+      shippedCount: sql<number>`count(*) filter (where ${schema.trailSession.receiptStatus} = 'shipped' or ${schema.trailSession.outcome} = 'shipped')::int`,
+      eventCount: sql<number>`coalesce(sum(${schema.trailSession.eventCount}), 0)::int`,
+    })
+    .from(schema.trailSession)
+    .where(
+      and(
+        eq(schema.trailSession.userId, builder.id),
+        eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
+      ),
+    );
+
+  const [followers] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.follow)
+    .where(eq(schema.follow.followingId, builder.id));
+
+  const publicCount = Number(stats?.publicCount ?? 0);
+  const shippedCount = Number(stats?.shippedCount ?? 0);
+  const eventCount = Number(stats?.eventCount ?? 0);
+  const followerCount = Number(followers?.count ?? 0);
+  const title = `${displayName} (@${handle}) on Trail`;
+  const description =
+    publicCount > 0
+      ? `${formatCount(publicCount)} public AI coding receipts, ${formatCount(shippedCount)} shipped outcomes, ${formatCount(eventCount)} agent events, and ${formatCount(followerCount)} followers.`
+      : `Follow @${handle}'s AI coding receipts, shipped work, and builder proof on Trail.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: profileUrl },
+    openGraph: {
+      title,
+      description,
+      url: profileUrl,
+      type: "profile",
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: `${displayName} Trail proof` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
+
+export default async function UserProfile({ params }: PageProps) {
   const { user } = await params;
   const userRow = await db.query.user.findFirst({ where: eq(schema.user.handle, user) });
   if (!userRow) return notFound();
@@ -174,8 +270,13 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
       and(
         eq(schema.trailSession.userId, userRow.id),
         // Owners see every visibility on their own profile; everyone else
-        // (anon + signed-in strangers) only sees public sessions.
-        isSelf ? undefined : eq(schema.trailSession.visibility, "public"),
+        // (anon + signed-in strangers) only sees receipts that were explicitly shared.
+        isSelf
+          ? undefined
+          : and(
+              eq(schema.trailSession.visibility, "public"),
+              isNotNull(schema.trailSession.sharedAt),
+            ),
       ),
     )
     .orderBy(desc(schema.trailSession.isFeatured), desc(schema.trailSession.startedAt))
@@ -193,7 +294,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const li = userRow.linkedinHandle;
   const site = userRow.website;
   const hasSocials = Boolean(gh || x || li || site);
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
+  const base = baseUrl;
 
   const viewerId = sessionInfo?.user?.id ?? null;
   const [followerRow] = await db
@@ -241,13 +342,14 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const failurePct = Math.round(tier2.failureRate * 1000) / 10;
   // Public proof-of-work credential — counts only public, commit-backed
   // shipped sessions, so it reads identically for owners and recruiters.
-  const verifiedBuilder = computeVerifiedBuilder(all);
-  const publicSessions = all.filter((s) => s.visibility === "public");
+  const publicSessions = all.filter(isPublicReceipt);
+  const publicEventCount = publicSessions.reduce((n, s) => n + (s.eventCount ?? 0), 0);
+  const verifiedBuilder = computeVerifiedBuilder(publicSessions);
   const shippedPublicCount = publicSessions.filter(
     (s) => s.receiptStatus === "shipped" || s.outcome === "shipped",
   ).length;
   const latestPublicSession = [...publicSessions].sort(
-    (a, b) => b.startedAt.getTime() - a.startedAt.getTime(),
+    (a, b) => (b.sharedAt ?? b.startedAt).getTime() - (a.sharedAt ?? a.startedAt).getTime(),
   )[0];
   const heroSession = heroFeatured ?? latestPublicSession ?? all[0];
   const profileUrl = `${base}/u/${handle}`;
@@ -256,7 +358,6 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   } is shipping AI-built work on Trail: ${formatCount(publicSessions.length)} public receipts, ${formatCount(shippedPublicCount)} shipped.`;
   const profileTweetUrl = tweetIntent(profileShareText, profileUrl);
 
-  const visibilityFilter = isSelf ? sql`` : sql`and ts.visibility = 'public'`;
   const [engagementResult, stackResult] = await Promise.all([
     db.execute(sql`
       select
@@ -267,7 +368,8 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
       left join ${schema.sessionReaction} sr on sr.session_id = ts.id
       left join ${schema.sessionComment} sc on sc.session_id = ts.id and sc.deleted_at is null
       where ts.user_id = ${userRow.id}
-      ${visibilityFilter}
+        and ts.visibility = 'public'
+        and ts.shared_at is not null
       group by ts.id
     `),
     db.execute(sql`
@@ -276,6 +378,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
       join ${schema.trailSession} ts on ts.id = st.session_id
       where ts.user_id = ${userRow.id}
         and ts.visibility = 'public'
+        and ts.shared_at is not null
       group by lower(st.tag)
       order by count desc, tag asc
       limit 8
@@ -296,15 +399,28 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const stackRows = rowsOf<ProfileStackRow>(stackResult).filter((row) => row.tag);
   const stackPills = stackRows.length
     ? stackRows
-    : tools.slice(0, 8).map((tool) => ({
-        tag: tool,
-        count: all.filter((s) => s.tool === tool).length,
-      }));
+    : Array.from(new Set(publicSessions.map((s) => s.tool)))
+        .filter((tool): tool is string => Boolean(tool))
+        .slice(0, 8)
+        .map((tool) => ({
+          tag: tool,
+          count: publicSessions.filter((s) => s.tool === tool).length,
+        }));
+  const topStack = stackPills[0]?.tag;
+  const proofSummary = [
+    `${userRow.name || `@${handle}`} on Trail`,
+    `${formatCount(publicSessions.length)} public receipts · ${formatCount(shippedPublicCount)} shipped · ${formatCount(reactionCount)} reactions · ${formatCount(commentCount)} comments`,
+    `${formatCount(publicEventCount)} agent events · ${formatCount(followerCount)} followers`,
+    topStack ? `Top stack/tool: ${topStack}` : null,
+    profileUrl,
+  ]
+    .filter(Boolean)
+    .join("\n");
   const heroEngagement = heroSession
     ? (engagementBySession.get(heroSession.id) ?? { reactions: 0, comments: 0 })
     : null;
   const heroReceiptUrl =
-    heroSession?.visibility === "public" ? shareUrl(handle, heroSession.slug, base) : null;
+    heroSession && isPublicReceipt(heroSession) ? shareUrl(handle, heroSession.slug, base) : null;
   const heroTweetUrl =
     heroSession && heroReceiptUrl
       ? tweetIntent(
@@ -670,8 +786,7 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                       comments: 0,
                     };
                     const repoUrl = githubRepoUrl(s.linkedRepo ?? s.repo);
-                    const receiptUrl =
-                      s.visibility === "public" ? shareUrl(handle, s.slug, base) : null;
+                    const receiptUrl = isPublicReceipt(s) ? shareUrl(handle, s.slug, base) : null;
                     return (
                       <li key={s.id} className="border-b border-zinc-800 last:border-b-0">
                         <article className="group grid gap-4 px-4 py-5 transition-colors hover:bg-zinc-900/45 sm:grid-cols-[3.5rem_1fr] sm:px-5">
@@ -853,6 +968,20 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                   ? "Use your profile or recruiter view as a proof-of-work link in DMs, applications, and launch posts."
                   : "Open the recruiter view for a compact scan of shipped, commit-backed work."}
               </p>
+              <div className="mt-4 rounded-[1.25rem] border border-zinc-800 bg-black/35 p-4">
+                <p className="text-sm font-semibold text-zinc-100">
+                  {userRow.name || `@${handle}`} builder proof
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                  {formatCount(publicSessions.length)} public receipts ·{" "}
+                  {formatCount(shippedPublicCount)} shipped · {formatCount(reactionCount)} reactions
+                  · {formatCount(commentCount)} comments
+                </p>
+                <p className="mt-2 text-xs font-mono text-zinc-500">
+                  {formatCount(publicEventCount)} agent events · {formatCount(followerCount)}{" "}
+                  followers{topStack ? ` · ${topStack}` : ""}
+                </p>
+              </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   href={`/u/${handle}/interview`}
@@ -861,11 +990,21 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
                   Recruiter view
                   <ArrowUpRightIcon size={12} />
                 </Link>
+                <CopyButton value={proofSummary} label="Copy proof" copiedLabel="Copied" />
                 <CopyButton
                   value={`${base}/u/${handle}/interview`}
                   label="Copy link"
                   copiedLabel="Copied"
                 />
+                <a
+                  href={profileTweetUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-black/20 px-3 py-2 text-xs font-mono text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                >
+                  Post to X
+                  <XIcon size={12} />
+                </a>
               </div>
             </section>
           </aside>

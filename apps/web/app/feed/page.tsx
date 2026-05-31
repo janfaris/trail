@@ -198,7 +198,7 @@ function receiptBadge(row: BaseFeedRow): string | null {
 // /feed — open discovery by default. Everyone can browse public sessions; the
 // following timeline is personalized and therefore remains signed-in only.
 // Joins always key on trail_session.id / userId (slugs are unique only per-user,
-// never globally) and filter visibility = 'public' in SQL.
+// never globally) and filter to explicitly shared public receipts in SQL.
 
 interface BaseFeedRow extends RankableSession {
   slug: string;
@@ -491,11 +491,14 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
     })
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
-    .where(and(eq(schema.trailSession.visibility, "public"), isNotNull(schema.user.handle)))
-    .orderBy(
-      desc(sql`coalesce(${schema.trailSession.sharedAt}, ${schema.trailSession.startedAt})`),
-      desc(schema.trailSession.id),
+    .where(
+      and(
+        eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
+        isNotNull(schema.user.handle),
+      ),
     )
+    .orderBy(desc(schema.trailSession.sharedAt), desc(schema.trailSession.id))
     .limit(FEED_LIMIT);
 
   const ranked = await attachEngagementStats(rankFeed(rows), viewerId);
@@ -562,13 +565,11 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
       and(
         eq(schema.follow.followerId, viewerId),
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
         isNotNull(schema.user.handle),
       ),
     )
-    .orderBy(
-      desc(sql`coalesce(${schema.trailSession.sharedAt}, ${schema.trailSession.startedAt})`),
-      desc(schema.trailSession.id),
-    )
+    .orderBy(desc(schema.trailSession.sharedAt), desc(schema.trailSession.id))
     .limit(FEED_LIMIT);
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
@@ -725,6 +726,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
       LEFT JOIN session_reaction sr ON sr.session_id = ts.id
       LEFT JOIN session_comment sc ON sc.session_id = ts.id
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
     `),
     db.execute<BuilderRecommendationRaw>(sql`
@@ -751,6 +753,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
         ON viewer_follow.following_id = u.id
        AND viewer_follow.follower_id = ${viewerId}
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
         AND (${viewerId}::text IS NULL OR u.id <> ${viewerId})
       GROUP BY u.id
@@ -773,6 +776,7 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
       INNER JOIN trail_session ts ON ts.id = st.session_id
       INNER JOIN "user" u ON u.id = ts.user_id
       WHERE ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
         AND u.handle IS NOT NULL
         AND st.kind IN ('tool', 'framework', 'model')
       GROUP BY st.kind, st.tag

@@ -54,7 +54,7 @@ describe("toggleDecision", () => {
 function row(p: Partial<RankableSession> & { id: string }): RankableSession {
   return {
     visibility: "public",
-    sharedAt: null,
+    sharedAt: new Date("2024-01-01T00:00:00Z"),
     startedAt: new Date("2024-01-01T00:00:00Z"),
     ...p,
   };
@@ -71,7 +71,7 @@ describe("rankFeed", () => {
     expect(out.map((r) => r.id)).toEqual(["1"]);
   });
 
-  it("orders by coalesce(sharedAt, startedAt) desc", () => {
+  it("orders by sharedAt desc", () => {
     const out = rankFeed([
       row({ id: "old", sharedAt: new Date("2024-01-01T00:00:00Z") }),
       row({ id: "new", sharedAt: new Date("2024-03-01T00:00:00Z") }),
@@ -80,15 +80,15 @@ describe("rankFeed", () => {
     expect(out.map((r) => r.id)).toEqual(["new", "mid", "old"]);
   });
 
-  it("falls back to startedAt when sharedAt is null", () => {
+  it("drops public sessions that have not been explicitly shared", () => {
     const out = rankFeed([
       row({ id: "a", sharedAt: null, startedAt: new Date("2024-01-01T00:00:00Z") }),
       row({ id: "b", sharedAt: null, startedAt: new Date("2024-05-01T00:00:00Z") }),
     ]);
-    expect(out.map((r) => r.id)).toEqual(["b", "a"]);
+    expect(out).toEqual([]);
   });
 
-  it("treats sharedAt as newer than a startedAt-only row", () => {
+  it("does not rank startedAt-only rows above shared receipts", () => {
     const out = rankFeed([
       row({ id: "started-only", sharedAt: null, startedAt: new Date("2024-06-01T00:00:00Z") }),
       row({
@@ -97,9 +97,7 @@ describe("rankFeed", () => {
         startedAt: new Date("2024-01-01T00:00:00Z"),
       }),
     ]);
-    // 'started-only' coalesces to its startedAt (June), which is later than
-    // 'shared''s sharedAt (Feb), so it ranks first.
-    expect(out[0]?.id).toBe("started-only");
+    expect(out.map((r) => r.id)).toEqual(["shared"]);
   });
 
   it("handles string timestamps", () => {
@@ -139,11 +137,11 @@ describe("rankFeed", () => {
     expect(input.map((r) => r.id)).toEqual(snapshot);
   });
 
-  it("ignores invalid date strings without crashing", () => {
+  it("ignores invalid share dates without crashing", () => {
     const out = rankFeed([
       row({ id: "bad", sharedAt: "not-a-date", startedAt: new Date("2024-01-01T00:00:00Z") }),
       row({ id: "good", sharedAt: new Date("2024-09-01T00:00:00Z") }),
     ]);
-    expect(out.map((r) => r.id)).toEqual(["good", "bad"]);
+    expect(out.map((r) => r.id)).toEqual(["good"]);
   });
 });

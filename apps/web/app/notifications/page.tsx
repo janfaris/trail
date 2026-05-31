@@ -223,7 +223,10 @@ export default async function NotificationsPage() {
           OR (
             s.id IS NOT NULL
             AND owner.handle IS NOT NULL
-            AND (s.visibility = 'public' OR s.user_id = ${viewerId})
+            AND (
+              (s.visibility = 'public' AND s.shared_at IS NOT NULL)
+              OR s.user_id = ${viewerId}
+            )
           )
         )
         AND (

@@ -18,7 +18,7 @@ import { auth } from "@/lib/auth";
 import { deriveTitle } from "@/lib/derive-title";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { absoluteTime, durationBetween } from "@/lib/time";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -46,6 +46,7 @@ export async function generateMetadata({
       eq(schema.trailSession.userId, userRow.id),
       eq(schema.trailSession.slug, slug),
       eq(schema.trailSession.visibility, "public"),
+      isNotNull(schema.trailSession.sharedAt),
     ),
   });
   if (!sessionRow) return {};
@@ -121,7 +122,8 @@ export default async function SessionView({
   if (!sessionRow) return notFound();
 
   const isOwner = viewer?.user?.id === userRow.id;
-  if (sessionRow.visibility !== "public" && !isOwner) return notFound();
+  const isPubliclyShared = sessionRow.visibility === "public" && sessionRow.sharedAt != null;
+  if (!isPubliclyShared && !isOwner) return notFound();
 
   const events = await db
     .select()

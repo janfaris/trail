@@ -1,9 +1,9 @@
+import { RelativeTime } from "@/components/relative-time";
+import { ToolIcon } from "@/components/tool-icon";
+import { db, schema } from "@/db/client";
+import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, asc } from "drizzle-orm";
-import { db, schema } from "@/db/client";
-import { ToolIcon } from "@/components/tool-icon";
-import { RelativeTime } from "@/components/relative-time";
 
 export const dynamic = "force-dynamic";
 
@@ -37,21 +37,19 @@ export default async function PlaylistPage({ params }: Props) {
       taskType: schema.trailSession.taskType,
       outcome: schema.trailSession.outcome,
       startedAt: schema.trailSession.startedAt,
+      sharedAt: schema.trailSession.sharedAt,
       visibility: schema.trailSession.visibility,
       handle: schema.user.handle,
     })
     .from(schema.playlistItem)
-    .innerJoin(
-      schema.trailSession,
-      eq(schema.playlistItem.sessionId, schema.trailSession.id),
-    )
+    .innerJoin(schema.trailSession, eq(schema.playlistItem.sessionId, schema.trailSession.id))
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
     .where(eq(schema.playlistItem.playlistId, p.id))
     .orderBy(asc(schema.playlistItem.position));
 
-  // Filter to public visibility client-side so curators can't unintentionally
-  // expose pending/redacted sessions through a playlist.
-  const publicItems = items.filter((i) => i.visibility === "public");
+  // Filter to explicitly shared public receipts client-side so curators can't
+  // unintentionally expose staged/private sessions through a playlist.
+  const publicItems = items.filter((i) => i.visibility === "public" && i.sharedAt != null);
 
   const curator = await db.query.user.findFirst({
     where: eq(schema.user.id, p.curatorId),
@@ -65,9 +63,15 @@ export default async function PlaylistPage({ params }: Props) {
             <span className="text-[#a7f300]">/</span>trail
           </Link>
           <nav className="flex items-center gap-5 text-sm">
-            <Link href="/learn" className="text-zinc-400 hover:text-zinc-100">Learn</Link>
-            <Link href="/discover" className="text-zinc-400 hover:text-zinc-100">Discover</Link>
-            <Link href="/search" className="text-zinc-400 hover:text-zinc-100">Search</Link>
+            <Link href="/learn" className="text-zinc-400 hover:text-zinc-100">
+              Learn
+            </Link>
+            <Link href="/discover" className="text-zinc-400 hover:text-zinc-100">
+              Discover
+            </Link>
+            <Link href="/search" className="text-zinc-400 hover:text-zinc-100">
+              Search
+            </Link>
           </nav>
         </div>
       </header>
@@ -75,13 +79,9 @@ export default async function PlaylistPage({ params }: Props) {
       <main className="max-w-4xl mx-auto px-6 py-10 w-full">
         <div className="mb-2 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-zinc-500">
           <span>Playlist</span>
-          {p.isOfficial && (
-            <span className="text-[#a7f300]">· Curated by Trail</span>
-          )}
+          {p.isOfficial && <span className="text-[#a7f300]">· Curated by Trail</span>}
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-2">
-          {p.title}
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-2">{p.title}</h1>
         {p.description && (
           <p className="text-zinc-400 max-w-2xl leading-relaxed mb-2">{p.description}</p>
         )}
@@ -90,10 +90,7 @@ export default async function PlaylistPage({ params }: Props) {
           {curator?.handle && (
             <>
               {" · curated by "}
-              <Link
-                href={`/u/${curator.handle}`}
-                className="text-zinc-300 hover:text-[#a7f300]"
-              >
+              <Link href={`/u/${curator.handle}`} className="text-zinc-300 hover:text-[#a7f300]">
                 @{curator.handle}
               </Link>
             </>
@@ -101,9 +98,7 @@ export default async function PlaylistPage({ params }: Props) {
         </div>
 
         {publicItems.length === 0 ? (
-          <div className="text-zinc-500 text-sm font-mono">
-            No trails in this playlist yet.
-          </div>
+          <div className="text-zinc-500 text-sm font-mono">No trails in this playlist yet.</div>
         ) : (
           <ol className="space-y-5">
             {publicItems.map((it, i) => (
@@ -143,9 +138,7 @@ export default async function PlaylistPage({ params }: Props) {
                     <h3 className="text-base font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors">
                       {it.title ?? it.sessionSlug}
                     </h3>
-                    {it.summary && (
-                      <p className="text-sm text-zinc-400 mt-0.5">{it.summary}</p>
-                    )}
+                    {it.summary && <p className="text-sm text-zinc-400 mt-0.5">{it.summary}</p>}
                   </Link>
                   {it.note && (
                     <p className="text-sm text-zinc-300 mt-2 pl-3 border-l-2 border-[#a7f300]/40 italic">

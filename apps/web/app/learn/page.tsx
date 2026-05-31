@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { eq, and, desc, isNotNull, sql, type SQL } from "drizzle-orm";
-import { db, schema } from "@/db/client";
-import { ToolIcon } from "@/components/tool-icon";
-import { SiteNav } from "@/components/site-nav";
 import { RelativeTime } from "@/components/relative-time";
+import { SiteNav } from "@/components/site-nav";
+import { ToolIcon } from "@/components/tool-icon";
+import { db, schema } from "@/db/client";
+import { type SQL, and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Learn — Trail" };
@@ -42,6 +42,7 @@ async function loadRows(sp: SP): Promise<Row[]> {
 
   const conds: SQL[] = [
     eq(schema.trailSession.visibility, "public"),
+    isNotNull(schema.trailSession.sharedAt),
   ];
   if (tool) conds.push(eq(schema.trailSession.tool, tool));
   if (taskType) conds.push(eq(schema.trailSession.taskType, taskType));
@@ -88,7 +89,9 @@ async function loadFacets(): Promise<{
       count: sql<number>`count(*)::int`,
     })
     .from(schema.trailSession)
-    .where(eq(schema.trailSession.visibility, "public"))
+    .where(
+      and(eq(schema.trailSession.visibility, "public"), isNotNull(schema.trailSession.sharedAt)),
+    )
     .groupBy(schema.trailSession.tool)
     .orderBy(sql`count(*) desc`)
     .limit(12)) as { value: string; count: number }[];
@@ -102,6 +105,7 @@ async function loadFacets(): Promise<{
     .where(
       and(
         eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
         isNotNull(schema.trailSession.taskType),
       ),
     )
@@ -115,7 +119,9 @@ async function loadFacets(): Promise<{
     FROM (
       SELECT jsonb_array_elements_text(frameworks) AS fw
       FROM trail_session
-      WHERE visibility = 'public' AND frameworks IS NOT NULL
+      WHERE visibility = 'public'
+        AND shared_at IS NOT NULL
+        AND frameworks IS NOT NULL
     ) t
     GROUP BY fw
     ORDER BY count DESC
@@ -225,18 +231,8 @@ export default async function LearnPage({
       <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-10 w-full">
         <aside>
           <FacetGroup label="Tool" options={facets.tools} paramKey="tool" sp={sp} />
-          <FacetGroup
-            label="Framework"
-            options={facets.frameworks}
-            paramKey="framework"
-            sp={sp}
-          />
-          <FacetGroup
-            label="Task type"
-            options={facets.taskTypes}
-            paramKey="task_type"
-            sp={sp}
-          />
+          <FacetGroup label="Framework" options={facets.frameworks} paramKey="framework" sp={sp} />
+          <FacetGroup label="Task type" options={facets.taskTypes} paramKey="task_type" sp={sp} />
           <FacetGroup
             label="Outcome"
             options={[
@@ -260,16 +256,14 @@ export default async function LearnPage({
 
           {rows.length === 0 ? (
             <div className="text-zinc-500 text-sm font-mono">
-              No trails match these filters yet. Try clearing one, or check back after more sessions are uploaded.
+              No trails match these filters yet. Try clearing one, or check back after more sessions
+              are uploaded.
             </div>
           ) : (
             <ul className="divide-y divide-zinc-900">
               {rows.map((r) => (
                 <li key={r.slug} className="py-4">
-                  <Link
-                    href={r.handle ? `/u/${r.handle}/${r.slug}` : "#"}
-                    className="block group"
-                  >
+                  <Link href={r.handle ? `/u/${r.handle}/${r.slug}` : "#"} className="block group">
                     <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
                       <ToolIcon name={r.tool} className="w-3 h-3" />
                       <span>{r.tool}</span>
@@ -302,7 +296,7 @@ export default async function LearnPage({
                     {r.summary && (
                       <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">{r.summary}</p>
                     )}
-                    {(r.toolsUsed?.length || r.frameworks?.length) ? (
+                    {r.toolsUsed?.length || r.frameworks?.length ? (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {(r.toolsUsed ?? []).slice(0, 6).map((t) => (
                           <span
