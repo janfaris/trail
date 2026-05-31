@@ -24,6 +24,8 @@ import { VelocitySparkline } from "@/components/velocity-sparkline";
 import { TopRepos } from "@/components/top-repos";
 import { computeUserStats } from "@/lib/aggregates";
 import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
+import { VerifiedBadge } from "@/components/verified-badge";
+import { computeVerifiedBuilder } from "@/lib/verified-builder";
 
 function parseUsd(raw: string | null | undefined): number {
   if (raw == null) return 0;
@@ -160,6 +162,9 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
   const tier2 = computeUserStats(all);
   const showTier2 = all.length >= 3;
   const failurePct = Math.round(tier2.failureRate * 1000) / 10;
+  // Public proof-of-work credential — counts only public, commit-backed
+  // shipped sessions, so it reads identically for owners and recruiters.
+  const verifiedBuilder = computeVerifiedBuilder(all);
 
   return (
     <div className="min-h-screen">
@@ -178,9 +183,12 @@ export default async function UserProfile({ params }: { params: Promise<{ user: 
           <Avatar src={avatar} alt={userRow.handle ?? user} size={64} fallback={userRow.handle ?? user} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3">
-              <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight text-zinc-50">
-                @{userRow.handle}
-              </h1>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight text-zinc-50 truncate">
+                  @{userRow.handle}
+                </h1>
+                <VerifiedBadge status={verifiedBuilder} />
+              </div>
               {!isSelf &&
                 (viewerId ? (
                   <FollowButton targetUserId={userRow.id} initialFollowing={isFollowing} />
