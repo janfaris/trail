@@ -1,4 +1,3 @@
-import { db, schema } from "@/db/client";
 // Task 7 — Stripe paywall enforcement.
 //
 // Rules:
@@ -25,6 +24,8 @@ export async function checkPaywall(
   userId: string,
   opts: { visibility: string },
 ): Promise<PaywallCheck> {
+  const { db, schema } = await import("@/db/client");
+
   const userRow = await db.query.user.findFirst({
     where: eq(schema.user.id, userId),
     columns: { plan: true },

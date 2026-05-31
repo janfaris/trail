@@ -17,7 +17,7 @@ const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
   { href: "/notifications", label: "Inbox" },
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Studio" },
 ];
 
 function linkClass(href: string, currentPath?: string, className?: string) {
