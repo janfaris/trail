@@ -27,7 +27,11 @@ function readParentId(value: unknown) {
 
 export async function GET(req: NextRequest, context: RouteContext) {
   const { slug } = await context.params;
-  const { receipt } = await loadReceipt(req, slug);
+  const { receipt, error } = await loadReceipt(req, slug);
+
+  if (error) {
+    return jsonError(error, 400);
+  }
 
   if (!receipt) {
     return jsonError("Receipt not found.", 404);
@@ -47,7 +51,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const actorId = session.user.id;
 
   const { slug } = await context.params;
-  const { db, schema, receipt } = await loadReceipt(req, slug);
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+
+  if (error) {
+    return jsonError(error, 400);
+  }
 
   if (!receipt) {
     return jsonError("Receipt not found.", 404);

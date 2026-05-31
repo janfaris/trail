@@ -248,6 +248,7 @@ export const sessionReaction = pgTable(
   },
   (t) => ({
     sessionIdx: index("session_reaction_session_idx").on(t.sessionId, t.kind),
+    userKindIdx: uniqueIndex("session_reaction_user_kind_idx").on(t.sessionId, t.userId, t.kind),
   }),
 );
 

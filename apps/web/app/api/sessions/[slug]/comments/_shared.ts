@@ -91,6 +91,11 @@ export function validateCommentBody(
 export async function loadReceipt(req: NextRequest, slug: string) {
   const authorHandle = requestedAuthorHandle(req);
   const { db, schema } = await import("@/db/client");
+
+  if (!authorHandle) {
+    return { db, schema, receipt: null, error: "Receipt owner is required." };
+  }
+
   const receiptRows = await db
     .select({
       id: schema.trailSession.id,
@@ -101,13 +106,15 @@ export async function loadReceipt(req: NextRequest, slug: string) {
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
     .where(
-      authorHandle
-        ? and(eq(schema.trailSession.slug, slug), eq(schema.user.handle, authorHandle))
-        : eq(schema.trailSession.slug, slug),
+      and(
+        eq(schema.trailSession.slug, slug),
+        eq(schema.user.handle, authorHandle),
+        eq(schema.trailSession.visibility, "public"),
+      ),
     )
     .limit(1);
 
-  return { db, schema, receipt: receiptRows[0] ?? null };
+  return { db, schema, receipt: receiptRows[0] ?? null, error: null };
 }
 
 export async function loadComments(sessionId: string) {

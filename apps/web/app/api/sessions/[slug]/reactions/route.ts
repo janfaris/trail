@@ -20,6 +20,11 @@ function requestedAuthorHandle(req: NextRequest) {
 async function loadReceipt(req: NextRequest, slug: string) {
   const authorHandle = requestedAuthorHandle(req);
   const { db, schema } = await import("@/db/client");
+
+  if (!authorHandle) {
+    return { db, schema, receipt: null, error: "Receipt owner is required." };
+  }
+
   const rows = await db
     .select({
       id: schema.trailSession.id,
@@ -29,18 +34,21 @@ async function loadReceipt(req: NextRequest, slug: string) {
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
     .where(
-      authorHandle
-        ? and(eq(schema.trailSession.slug, slug), eq(schema.user.handle, authorHandle))
-        : eq(schema.trailSession.slug, slug),
+      and(
+        eq(schema.trailSession.slug, slug),
+        eq(schema.user.handle, authorHandle),
+        eq(schema.trailSession.visibility, "public"),
+      ),
     )
     .limit(1);
 
-  return { db, schema, receipt: rows[0] ?? null };
+  return { db, schema, receipt: rows[0] ?? null, error: null };
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { db, schema, receipt } = await loadReceipt(req, slug);
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+  if (error) return NextResponse.json({ error }, { status: 400 });
   if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const counts = (await db
@@ -91,7 +99,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     );
   }
 
-  const { db, schema, receipt } = await loadReceipt(req, slug);
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+  if (error) return NextResponse.json({ error }, { status: 400 });
   if (!receipt) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   // Toggle: if (session, user, kind) row exists, delete it; else insert.
@@ -115,13 +124,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       .where(eq(schema.sessionReaction.id, existingReaction.id));
     action = "removed";
   } else {
-    await db.insert(schema.sessionReaction).values({
-      id: crypto.randomUUID(),
-      sessionId: receipt.id,
-      userId: actorId,
-      kind: body.kind,
-      note: body.note?.slice(0, 200) ?? null,
-    });
+    await db
+      .insert(schema.sessionReaction)
+      .values({
+        id: crypto.randomUUID(),
+        sessionId: receipt.id,
+        userId: actorId,
+        kind: body.kind,
+        note: body.note?.slice(0, 200) ?? null,
+      })
+      .onConflictDoNothing({
+        target: [
+          schema.sessionReaction.sessionId,
+          schema.sessionReaction.userId,
+          schema.sessionReaction.kind,
+        ],
+      });
     if (receipt.userId !== actorId) {
       await db
         .insert(schema.notification)

@@ -22,7 +22,11 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
   const actorId = session.user.id;
 
   const { slug, commentId } = await context.params;
-  const { db, schema, receipt } = await loadReceipt(req, slug);
+  const { db, schema, receipt, error } = await loadReceipt(req, slug);
+
+  if (error) {
+    return jsonError(error, 400);
+  }
 
   if (!receipt) {
     return jsonError("Receipt not found.", 404);
