@@ -1,5 +1,6 @@
 import { ProfileMenu } from "@/components/profile-menu";
 import { SignOutButton } from "@/components/sign-out-button";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 type NavLink = { href: string; label: string; external?: boolean };
@@ -18,9 +19,42 @@ const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/dashboard", label: "Dashboard" },
 ];
 
-function linkClass(href: string, currentPath?: string) {
+function linkClass(href: string, currentPath?: string, className?: string) {
   const active = currentPath && href === currentPath;
-  return `${active ? "text-zinc-100" : "text-zinc-400"} hover:text-zinc-100 transition-colors`;
+  return cn(
+    active ? "text-zinc-100" : "text-zinc-400",
+    "hover:text-zinc-100 transition-colors",
+    className,
+  );
+}
+
+function NavLinkItem({
+  link,
+  currentPath,
+  className,
+}: {
+  link: NavLink;
+  currentPath?: string;
+  className?: string;
+}) {
+  if (link.external) {
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={linkClass(link.href, currentPath, className)}
+      >
+        {link.label}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={link.href} className={linkClass(link.href, currentPath, className)}>
+      {link.label}
+    </Link>
+  );
 }
 
 export async function SiteNav({ currentPath }: { currentPath?: string }) {
@@ -52,44 +86,31 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
     image = userRow?.image ?? null;
   }
 
+  const mobileLinks = handle ? SIGNED_IN_LINKS : PRIMARY_LINKS;
+
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md bg-zinc-950/70 border-b border-zinc-900/80">
-      <div className="mx-auto max-w-6xl px-6 lg:px-10 h-14 flex items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/80 backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
           <span className="text-[#a7f300]">/</span>trail
         </Link>
         <nav className="flex items-center gap-5 text-[13px]">
           {handle ? null : (
             <div className="hidden md:flex items-center gap-5">
-              {PRIMARY_LINKS.map((l) =>
-                l.external ? (
-                  <a
-                    key={l.href}
-                    href={l.href}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={linkClass(l.href, currentPath)}
-                  >
-                    {l.label}
-                  </a>
-                ) : (
-                  <Link key={l.href} href={l.href} className={linkClass(l.href, currentPath)}>
-                    {l.label}
-                  </Link>
-                ),
-              )}
+              {PRIMARY_LINKS.map((link) => (
+                <NavLinkItem key={link.href} link={link} currentPath={currentPath} />
+              ))}
             </div>
           )}
           {handle ? (
             <div className="flex items-center gap-3 sm:gap-5">
-              {SIGNED_IN_LINKS.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={`hidden md:inline ${linkClass(l.href, currentPath)}`}
-                >
-                  {l.label}
-                </Link>
+              {SIGNED_IN_LINKS.map((link) => (
+                <NavLinkItem
+                  key={link.href}
+                  link={link}
+                  currentPath={currentPath}
+                  className="hidden md:inline"
+                />
               ))}
               <ProfileMenu handle={handle} name={name} image={image} signOut={<SignOutButton />} />
             </div>
@@ -103,6 +124,16 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           )}
         </nav>
       </div>
+      <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto border-t border-zinc-900/70 px-4 py-2 text-[12px] md:hidden">
+        {mobileLinks.map((link) => (
+          <NavLinkItem
+            key={link.href}
+            link={link}
+            currentPath={currentPath}
+            className="inline-flex min-h-8 shrink-0 items-center rounded-full bg-black/35 px-3 font-mono uppercase tracking-[0.12em] shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+          />
+        ))}
+      </nav>
     </header>
   );
 }
