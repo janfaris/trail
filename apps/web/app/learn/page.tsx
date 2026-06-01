@@ -3,6 +3,7 @@ import { RelativeTime } from "@/components/relative-time";
 import { SaveLessonButton } from "@/components/save-lesson-button";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
+import { UseLessonButton } from "@/components/use-lesson-button";
 import { db, schema } from "@/db/client";
 import { type SQL, and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -36,6 +37,7 @@ type LessonRow = {
   confidence: string;
   generatedAt: Date;
   sessionId: string;
+  authorId: string;
   slug: string;
   sessionTitle: string | null;
   sessionSummary: string | null;
@@ -54,6 +56,7 @@ type LessonRow = {
   fileDiffCount: number;
   decisionCount: number;
   savedCount: number;
+  reuseCount: number;
   sharedAt: Date | null;
   handle: string;
   name: string | null;
@@ -89,7 +92,9 @@ type LearnData = {
   patterns: PatternRow[];
   viewer: {
     signedIn: boolean;
+    viewerId: string | null;
     savedLessonIds: Set<string>;
+    usedLessonIds: Set<string>;
     personalizedTags: Facet[];
   };
 };
@@ -107,7 +112,13 @@ const emptyData: LearnData = {
   stats: emptyStats,
   facets: { tools: [], frameworks: [], taskTypes: [], tags: [] },
   patterns: [],
-  viewer: { signedIn: false, savedLessonIds: new Set(), personalizedTags: [] },
+  viewer: {
+    signedIn: false,
+    viewerId: null,
+    savedLessonIds: new Set(),
+    usedLessonIds: new Set(),
+    personalizedTags: [],
+  },
 };
 
 function pick(sp: SP, key: string): string | null {
@@ -293,6 +304,7 @@ async function loadLessons(sp: SP): Promise<LessonRow[]> {
       confidence: schema.sessionLesson.confidence,
       generatedAt: schema.sessionLesson.generatedAt,
       sessionId: schema.trailSession.id,
+      authorId: schema.trailSession.userId,
       slug: schema.trailSession.slug,
       sessionTitle: schema.trailSession.title,
       sessionSummary: schema.trailSession.summary,
@@ -336,6 +348,11 @@ async function loadLessons(sp: SP): Promise<LessonRow[]> {
         select count(*)::int
         from saved_lesson saved
         where saved.lesson_id = ${schema.sessionLesson.id}
+      )`,
+      reuseCount: sql<number>`(
+        select count(*)::int
+        from lesson_reuse used
+        where used.lesson_id = ${schema.sessionLesson.id}
       )`,
       sharedAt: schema.trailSession.sharedAt,
       handle: schema.user.handle,
@@ -501,10 +518,16 @@ async function loadViewerContext(lessonIds: string[]): Promise<LearnData["viewer
   const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) {
-    return { signedIn: false, savedLessonIds: new Set(), personalizedTags: [] };
+    return {
+      signedIn: false,
+      viewerId: null,
+      savedLessonIds: new Set(),
+      usedLessonIds: new Set(),
+      personalizedTags: [],
+    };
   }
 
-  const [savedRows, tagRows] = await Promise.all([
+  const [savedRows, usedRows, tagRows] = await Promise.all([
     lessonIds.length > 0
       ? db
           .select({ lessonId: schema.savedLesson.lessonId })
@@ -513,6 +536,17 @@ async function loadViewerContext(lessonIds: string[]): Promise<LearnData["viewer
             and(
               eq(schema.savedLesson.userId, session.user.id),
               inArray(schema.savedLesson.lessonId, lessonIds),
+            ),
+          )
+      : Promise.resolve([]),
+    lessonIds.length > 0
+      ? db
+          .select({ lessonId: schema.lessonReuse.lessonId })
+          .from(schema.lessonReuse)
+          .where(
+            and(
+              eq(schema.lessonReuse.userId, session.user.id),
+              inArray(schema.lessonReuse.lessonId, lessonIds),
             ),
           )
       : Promise.resolve([]),
@@ -532,7 +566,9 @@ async function loadViewerContext(lessonIds: string[]): Promise<LearnData["viewer
 
   return {
     signedIn: true,
+    viewerId: session.user.id,
     savedLessonIds: new Set(savedRows.map((row) => row.lessonId)),
+    usedLessonIds: new Set(usedRows.map((row) => row.lessonId)),
     personalizedTags: rowsOf(tagRows),
   };
 }
@@ -630,11 +666,13 @@ function LessonCard({
   index,
   signedIn,
   saved,
+  used,
 }: {
   lesson: LessonRow;
   index: number;
   signedIn: boolean;
   saved: boolean;
+  used: boolean;
 }) {
   const href = receiptHref(lesson);
   const discussHref = `${href}#conversation`;
@@ -650,6 +688,7 @@ function LessonCard({
     lesson.fileDiffCount > 0 ? `${formatCount(lesson.fileDiffCount)} diffs` : null,
     lesson.decisionCount > 0 ? `${formatCount(lesson.decisionCount)} decisions` : null,
     lesson.savedCount > 0 ? `${formatCount(lesson.savedCount)} saves` : null,
+    lesson.reuseCount > 0 ? `${formatCount(lesson.reuseCount)} used this` : null,
   ].filter(Boolean);
 
   return (
@@ -668,6 +707,9 @@ function LessonCard({
             </span>
             <span className="rounded-full border border-zinc-800 bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
               evidence {lesson.confidence}
+            </span>
+            <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-100/75">
+              {lesson.reuseCount > 0 ? `${formatCount(lesson.reuseCount)} used` : "ready to use"}
             </span>
             <span className="font-mono text-[11px] text-zinc-500">
               @{lesson.handle} - <RelativeTime date={lesson.sharedAt ?? lesson.generatedAt} />
@@ -810,6 +852,12 @@ function LessonCard({
             <SaveLessonButton
               lessonId={lesson.id}
               initialSaved={saved}
+              signedIn={signedIn}
+              signInHref={signInHref(`/learn#lesson-${lesson.id}`)}
+            />
+            <UseLessonButton
+              lessonId={lesson.id}
+              initialUsed={used}
               signedIn={signedIn}
               signInHref={signInHref(`/learn#lesson-${lesson.id}`)}
             />
@@ -1076,6 +1124,7 @@ export default async function LearnPage({
                       index={index}
                       signedIn={data.viewer.signedIn}
                       saved={data.viewer.savedLessonIds.has(lesson.id)}
+                      used={data.viewer.usedLessonIds.has(lesson.id)}
                     />
                   ))}
                 </div>

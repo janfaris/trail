@@ -27,6 +27,7 @@ type ActivityRow = {
   ownerHandle: string | null;
   commentBody: string | null;
   commentDeletedAt: Date | string | null;
+  lessonTitle: string | null;
 };
 
 type CountRow = { count: number | string };
@@ -123,6 +124,16 @@ function activityCopy(row: ActivityRow) {
     };
   }
 
+  if (row.type === "lesson_reuse") {
+    return {
+      eyebrow: "Lesson used",
+      title: `${actor} used one of your Trail lessons`,
+      body: row.lessonTitle
+        ? `"${row.lessonTitle}" became reusable proof for another builder.`
+        : `${receiptTitle(row)} turned into a move another builder used.`,
+    };
+  }
+
   return {
     eyebrow: "Activity",
     title: `${actor} created new Trail activity`,
@@ -135,6 +146,7 @@ function activityAction(row: ActivityRow) {
   if (row.type === "comment_reply") return "Reply";
   if (row.type === "session_comment") return "Open thread";
   if (row.type === "session_reaction") return "View receipt";
+  if (row.type === "lesson_reuse") return "Open lesson";
   return "Open";
 }
 
@@ -145,7 +157,11 @@ function activityHref(row: ActivityRow) {
 
   if (row.ownerHandle && row.sessionSlug) {
     const anchor =
-      row.type === "session_comment" || row.type === "comment_reply" ? "#conversation" : "";
+      row.type === "session_comment" || row.type === "comment_reply"
+        ? "#conversation"
+        : row.type === "lesson_reuse"
+          ? "#lessons"
+          : "";
     return `/u/${row.ownerHandle}/${row.sessionSlug}${anchor}`;
   }
 
@@ -219,14 +235,17 @@ export default async function NotificationsPage() {
         s.receipt_tldr AS "sessionTldr",
         owner.handle AS "ownerHandle",
         c.body AS "commentBody",
-        c.deleted_at AS "commentDeletedAt"
+        c.deleted_at AS "commentDeletedAt",
+        l.title AS "lessonTitle"
       FROM notification n
       LEFT JOIN "user" actor ON actor.id = n.actor_id
       LEFT JOIN trail_session s ON s.id = n.session_id
       LEFT JOIN "user" owner ON owner.id = s.user_id
       LEFT JOIN session_comment c ON c.id = n.comment_id
+      LEFT JOIN session_lesson l ON l.id = n.lesson_id
       WHERE n.user_id = ${viewerId}
         AND (n.type <> 'follow' OR actor.handle IS NOT NULL)
+        AND (n.type <> 'lesson_reuse' OR l.id IS NOT NULL)
         AND (
           n.type = 'follow'
           OR (

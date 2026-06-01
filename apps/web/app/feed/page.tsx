@@ -6,6 +6,8 @@ import { SaveReceiptButton } from "@/components/save-receipt-button";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
+import { UseLessonButton } from "@/components/use-lesson-button";
+import { type BuilderReputation, computeBuilderReputation } from "@/lib/builder-reputation";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
@@ -13,7 +15,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { FeedComposer, type FeedComposerDraft, type FeedComposerViewer } from "./feed-composer";
 
 export const dynamic = "force-dynamic";
@@ -307,6 +309,61 @@ interface FeedDiscovery {
   stats: FeedStats;
   builders: BuilderRecommendation[];
   stacks: TrendingStack[];
+}
+
+interface DailyBriefSummaryRaw {
+  [key: string]: unknown;
+  unreadNotifications: unknown;
+  followingCount: unknown;
+  followingReceipts: unknown;
+  publicReceipts: unknown;
+  verifiedShips: unknown;
+  extractedLessons: unknown;
+  lessonSaves: unknown;
+  lessonReuses: unknown;
+  reactions: unknown;
+  comments: unknown;
+  followers: unknown;
+}
+
+interface DailyBriefLessonRaw {
+  [key: string]: unknown;
+  id: string;
+  title: string;
+  whatToSteal: string;
+  useWhen: string;
+  promptPattern: string | null;
+  transferabilityScore: unknown;
+  reuseCount: unknown;
+  usedByViewer: boolean | null;
+  slug: string;
+  handle: string;
+  tool: string;
+  sharedAt: Date | string | null;
+}
+
+interface DailyBriefLesson {
+  id: string;
+  title: string;
+  whatToSteal: string;
+  useWhen: string;
+  promptPattern: string | null;
+  transferabilityScore: number;
+  reuseCount: number;
+  usedByViewer: boolean;
+  slug: string;
+  handle: string;
+  tool: string;
+  sharedAt: Date | string | null;
+}
+
+interface DailyBuilderBriefData {
+  draftCount: number;
+  unreadNotifications: number;
+  followingCount: number;
+  followingReceipts: number;
+  reputation: BuilderReputation;
+  lessons: DailyBriefLesson[];
 }
 
 interface FeedStatsRaw {
@@ -885,6 +942,187 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
   return { stats, builders, stacks };
 }
 
+async function loadDailyBuilderBrief(
+  viewerId: string,
+  draftCount: number,
+): Promise<DailyBuilderBriefData> {
+  const { db } = await import("@/db/client");
+
+  const [summaryRes, lessonsRes] = await Promise.all([
+    db.execute<DailyBriefSummaryRaw>(sql`
+      SELECT
+        (SELECT count(*)::int FROM notification n WHERE n.user_id = ${viewerId} AND n.read_at IS NULL)
+          AS "unreadNotifications",
+        (SELECT count(*)::int FROM "follow" f WHERE f.follower_id = ${viewerId}) AS "followingCount",
+        (
+          SELECT count(*)::int
+          FROM trail_session ts
+          JOIN "follow" f ON f.following_id = ts.user_id
+          JOIN "user" u ON u.id = ts.user_id
+          WHERE f.follower_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+            AND u.handle IS NOT NULL
+            AND ts.shared_at >= now() - interval '7 days'
+        ) AS "followingReceipts",
+        (
+          SELECT count(*)::int
+          FROM trail_session ts
+          WHERE ts.user_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS "publicReceipts",
+        (
+          SELECT count(*)::int
+          FROM trail_session ts
+          WHERE ts.user_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+            AND ts.receipt_status = 'shipped'
+            AND ts.receipt_verified_at IS NOT NULL
+        ) AS "verifiedShips",
+        (
+          SELECT count(*)::int
+          FROM session_lesson sl
+          JOIN trail_session ts ON ts.id = sl.session_id
+          WHERE ts.user_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS "extractedLessons",
+        (
+          SELECT count(*)::int
+          FROM saved_lesson saved
+          JOIN session_lesson sl ON sl.id = saved.lesson_id
+          JOIN trail_session ts ON ts.id = sl.session_id
+          WHERE ts.user_id = ${viewerId}
+            AND saved.user_id <> ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS "lessonSaves",
+        (
+          SELECT count(*)::int
+          FROM lesson_reuse used
+          JOIN session_lesson sl ON sl.id = used.lesson_id
+          JOIN trail_session ts ON ts.id = sl.session_id
+          WHERE ts.user_id = ${viewerId}
+            AND used.user_id <> ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS "lessonReuses",
+        (
+          SELECT count(*)::int
+          FROM session_reaction sr
+          JOIN trail_session ts ON ts.id = sr.session_id
+          WHERE ts.user_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS reactions,
+        (
+          SELECT count(*)::int
+          FROM session_comment sc
+          JOIN trail_session ts ON ts.id = sc.session_id
+          WHERE ts.user_id = ${viewerId}
+            AND sc.deleted_at IS NULL
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS comments,
+        (SELECT count(*)::int FROM "follow" f WHERE f.following_id = ${viewerId}) AS followers
+    `),
+    db.execute<DailyBriefLessonRaw>(sql`
+      WITH viewer_tags AS (
+        SELECT lower(tag.value) AS tag
+        FROM trail_session ts
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+          coalesce(ts.frameworks, '[]'::jsonb) ||
+          coalesce(ts.tools_used, '[]'::jsonb)
+        ) tag(value)
+        WHERE ts.user_id = ${viewerId}
+        GROUP BY lower(tag.value)
+      )
+      SELECT
+        sl.id,
+        sl.title,
+        sl.what_to_steal AS "whatToSteal",
+        sl.use_when AS "useWhen",
+        sl.prompt_pattern AS "promptPattern",
+        sl.transferability_score AS "transferabilityScore",
+        count(DISTINCT used.id)::int AS "reuseCount",
+        coalesce(bool_or(viewer_used.user_id IS NOT NULL), false) AS "usedByViewer",
+        ts.slug,
+        u.handle,
+        ts.tool,
+        ts.shared_at AS "sharedAt"
+      FROM session_lesson sl
+      JOIN trail_session ts ON ts.id = sl.session_id
+      JOIN "user" u ON u.id = ts.user_id
+      LEFT JOIN lesson_reuse used ON used.lesson_id = sl.id
+      LEFT JOIN lesson_reuse viewer_used
+        ON viewer_used.lesson_id = sl.id
+       AND viewer_used.user_id = ${viewerId}
+      WHERE ts.user_id <> ${viewerId}
+        AND ts.visibility = 'public'
+        AND ts.shared_at IS NOT NULL
+        AND ts.redacted_at IS NULL
+        AND u.handle IS NOT NULL
+      GROUP BY sl.id, ts.slug, u.handle, ts.tool, ts.shared_at
+      ORDER BY
+        CASE WHEN EXISTS (
+          SELECT 1
+          FROM jsonb_array_elements_text(
+            coalesce(sl.stack, '[]'::jsonb) || coalesce(sl.tags, '[]'::jsonb)
+          ) lesson_tag(tag)
+          JOIN viewer_tags vt ON vt.tag = lower(lesson_tag.tag)
+        ) THEN 0 ELSE 1 END,
+        sl.transferability_score DESC,
+        count(DISTINCT used.id) DESC,
+        sl.generated_at DESC
+      LIMIT 3
+    `),
+  ]);
+
+  const summary = rowsOf<DailyBriefSummaryRaw>(summaryRes)[0];
+  const reputation = computeBuilderReputation({
+    publicReceipts: toCount(summary?.publicReceipts),
+    verifiedShips: toCount(summary?.verifiedShips),
+    extractedLessons: toCount(summary?.extractedLessons),
+    lessonSaves: toCount(summary?.lessonSaves),
+    lessonReuses: toCount(summary?.lessonReuses),
+    reactions: toCount(summary?.reactions),
+    comments: toCount(summary?.comments),
+    followers: toCount(summary?.followers),
+  });
+
+  return {
+    draftCount,
+    unreadNotifications: toCount(summary?.unreadNotifications),
+    followingCount: toCount(summary?.followingCount),
+    followingReceipts: toCount(summary?.followingReceipts),
+    reputation,
+    lessons: rowsOf<DailyBriefLessonRaw>(lessonsRes).map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title,
+      whatToSteal: lesson.whatToSteal,
+      useWhen: lesson.useWhen,
+      promptPattern: lesson.promptPattern,
+      transferabilityScore: toCount(lesson.transferabilityScore),
+      reuseCount: toCount(lesson.reuseCount),
+      usedByViewer: lesson.usedByViewer === true,
+      slug: lesson.slug,
+      handle: lesson.handle,
+      tool: lesson.tool,
+      sharedAt: lesson.sharedAt,
+    })),
+  };
+}
+
 function FeedTabs({
   followingHref,
   isFollowingView,
@@ -929,6 +1167,189 @@ function FeedTabs({
   );
 }
 
+function dailyBriefAction(data: DailyBuilderBriefData): {
+  href: string;
+  label: string;
+  title: string;
+  body: string;
+} {
+  if (data.draftCount > 0) {
+    return {
+      href: "#feed-composer",
+      label: "Publish",
+      title: "Ship one receipt today",
+      body: `${pluralize(data.draftCount, "draft")} can become public proof from the composer below.`,
+    };
+  }
+
+  if (data.unreadNotifications > 0) {
+    return {
+      href: "/notifications",
+      label: "Open inbox",
+      title: "Answer the network",
+      body: `${pluralize(data.unreadNotifications, "unread signal")} waiting: replies, follows, reactions, or lessons used.`,
+    };
+  }
+
+  const firstLesson = data.lessons[0];
+  if (firstLesson) {
+    return {
+      href: `/learn#lesson-${firstLesson.id}`,
+      label: "Steal move",
+      title: "Steal one proven move",
+      body: "Mark a lesson used when it helps your own work. That is the habit loop.",
+    };
+  }
+
+  if (data.followingCount === 0) {
+    return {
+      href: "/discover",
+      label: "Follow builders",
+      title: "Build your graph",
+      body: "Follow a few builders so Following becomes a useful daily stream.",
+    };
+  }
+
+  return {
+    href: "/learn",
+    label: "Read lessons",
+    title: "Find one move to reuse",
+    body: "Search the playbook for the stack or bug you are working on today.",
+  };
+}
+
+function DailyBuilderBriefSkeleton() {
+  return (
+    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
+      <div className="h-48 animate-pulse rounded-[28px] border border-zinc-900 bg-zinc-950/75" />
+    </section>
+  );
+}
+
+async function DailyBuilderBrief({
+  viewer,
+  draftCount,
+}: {
+  viewer: FeedComposerViewer | null;
+  draftCount: number;
+}) {
+  if (!viewer?.id) return null;
+
+  const data = await loadDailyBuilderBrief(viewer.id, draftCount);
+  const action = dailyBriefAction(data);
+  const stats = [
+    { label: "Ship", value: formatCount(data.draftCount), detail: "ready drafts" },
+    { label: "Read", value: formatCount(data.followingReceipts), detail: "followed this week" },
+    { label: "Inbox", value: formatCount(data.unreadNotifications), detail: "unread" },
+    { label: "Signal", value: formatCount(data.reputation.score), detail: data.reputation.label },
+  ];
+
+  return (
+    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
+      <div className="overflow-hidden rounded-[28px] border border-[#a7f300]/25 bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01)),#080908] shadow-[0_24px_90px_rgba(0,0,0,0.35)]">
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="p-4 sm:p-5">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+              Today on Trail
+            </div>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-[24px] font-semibold tracking-[-0.055em] text-white">
+                  {action.title}
+                </h2>
+                <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-400">{action.body}</p>
+              </div>
+              <Link
+                href={action.href}
+                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
+              >
+                {action.label}
+              </Link>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-3"
+                >
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+                    {stat.label}
+                  </div>
+                  <div className="mt-1 font-mono text-lg text-zinc-100 tabular-nums">
+                    {stat.value}
+                  </div>
+                  <div className="mt-0.5 truncate text-[11px] text-zinc-500">{stat.detail}</div>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-4 text-[12px] leading-5 text-zinc-500">
+              Builder signal: {data.reputation.summary}. Trail gets useful when you read one
+              receipt, steal one move, ship one receipt, and answer one signal.
+            </p>
+          </div>
+
+          <div className="border-t border-white/10 bg-black/25 p-4 lg:border-l lg:border-t-0">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-100/70">
+              Moves to steal
+            </div>
+            <div className="mt-3 space-y-3">
+              {data.lessons.length > 0 ? (
+                data.lessons.map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    className="rounded-2xl border border-white/10 bg-black/30 p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                      <span className="text-[#a7f300]">{lesson.transferabilityScore}/5</span>
+                      <span>@{lesson.handle}</span>
+                      <span>{formatToolName(lesson.tool)}</span>
+                    </div>
+                    <Link href={`/learn#lesson-${lesson.id}`} className="mt-2 block">
+                      <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-zinc-100 transition hover:text-[#a7f300]">
+                        {lesson.title}
+                      </h3>
+                      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-zinc-500">
+                        {lesson.whatToSteal}
+                      </p>
+                    </Link>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <UseLessonButton
+                        lessonId={lesson.id}
+                        initialUsed={lesson.usedByViewer}
+                        signedIn={true}
+                        signInHref={signInHref("/feed")}
+                        className="min-h-8 px-2.5 text-[10px]"
+                        refreshOnChange={true}
+                      />
+                      <Link
+                        href={`/u/${lesson.handle}/${lesson.slug}#lessons`}
+                        className="inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                      >
+                        Proof
+                      </Link>
+                      {lesson.reuseCount > 0 ? (
+                        <span className="inline-flex min-h-8 items-center rounded-full px-2.5 font-mono text-[10px] text-zinc-600">
+                          {formatCount(lesson.reuseCount)} used
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl border border-dashed border-zinc-800 bg-black/20 p-3 text-sm leading-6 text-zinc-500">
+                  Publish or follow more builders and Trail will recommend specific moves to reuse.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FeedNavRail({
   followingHref,
   isFollowingView,
@@ -943,8 +1364,8 @@ function FeedNavRail({
   const navItems = [
     {
       href: "/feed",
-      label: "Home",
-      detail: "Public receipt timeline",
+      label: "Today",
+      detail: "Read / steal / ship",
       active: !isFollowingView,
     },
     {
@@ -1007,7 +1428,7 @@ function FeedNavRail({
       </div>
 
       <div className="rounded-[24px] bg-zinc-950/80 p-4 text-sm leading-6 text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
-        Trail is the public proof feed for AI builders: ship, publish the receipt, get feedback.
+        Daily loop: read one receipt, steal one move, publish one proof, answer one signal.
       </div>
     </div>
   );
@@ -1192,7 +1613,8 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             className="mt-3 block rounded-[22px] border border-[#a7f300]/20 bg-[#a7f300]/[0.055] px-4 py-3 transition-[border-color,background-color] hover:border-[#a7f300]/50 hover:bg-[#a7f300]/[0.08]"
           >
             <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
-              <span>{pluralize(r.lessonCount, "reusable lesson")}</span>
+              <span>Steal this move</span>
+              <span className="text-lime-100/45">{pluralize(r.lessonCount, "lesson")}</span>
               {r.lessonPreviewTitle ? (
                 <span className="text-lime-100/45">{r.lessonPreviewTitle}</span>
               ) : null}
@@ -1684,9 +2106,9 @@ export default async function FeedPage({
   const isFollowingView = view === "following";
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
   const subtitle = isFollowingView
-    ? "Public receipts from the builders you follow."
-    : "The live public timeline of AI builders shipping with agents, tools, and proof.";
-  const feedTitle = isFollowingView ? "Following" : "Home";
+    ? "Read the builders you follow, steal one move, and reply while the thread is warm."
+    : "Read what shipped, steal reusable moves, follow useful builders, then publish your own proof.";
+  const feedTitle = isFollowingView ? "Following" : "Today";
   const feedCountLabel = `${rows.length} ${rows.length === 1 ? "receipt" : "receipts"}`;
 
   return (
@@ -1724,9 +2146,15 @@ export default async function FeedPage({
               <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
             </div>
 
-            <div className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
+            <div id="feed-composer" className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
               <FeedComposer viewer={viewer} drafts={composerDrafts} />
             </div>
+
+            {viewerId ? (
+              <Suspense fallback={<DailyBuilderBriefSkeleton />}>
+                <DailyBuilderBrief viewer={viewer} draftCount={composerDrafts.length} />
+              </Suspense>
+            ) : null}
 
             {!isFollowingView ? (
               <PersonalizationNudge builders={discovery.builders} viewerId={viewerId} />

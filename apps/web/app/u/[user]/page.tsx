@@ -17,6 +17,7 @@ import { VerifiedBadge } from "@/components/verified-badge";
 import { db, schema } from "@/db/client";
 import { computeUserStats } from "@/lib/aggregates";
 import { auth } from "@/lib/auth";
+import { computeBuilderReputation } from "@/lib/builder-reputation";
 import { formatRepoPath } from "@/lib/format";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
@@ -102,6 +103,12 @@ interface ProfileEngagementRow {
 interface ProfileStackRow {
   tag: string;
   count: number;
+}
+
+interface ProfileLessonSignalRow {
+  lessons: number;
+  saves: number;
+  reuses: number;
 }
 
 function rowsOf<T>(result: unknown): T[] {
@@ -358,7 +365,7 @@ export default async function UserProfile({ params }: PageProps) {
   } is shipping AI-built work on Trail: ${formatCount(publicSessions.length)} public receipts, ${formatCount(shippedPublicCount)} shipped.`;
   const profileTweetUrl = tweetIntent(profileShareText, profileUrl);
 
-  const [engagementResult, stackResult] = await Promise.all([
+  const [engagementResult, stackResult, lessonSignalResult] = await Promise.all([
     db.execute(sql`
       select
         ts.id as "sessionId",
@@ -383,6 +390,20 @@ export default async function UserProfile({ params }: PageProps) {
       order by count desc, tag asc
       limit 8
     `),
+    db.execute(sql`
+      select
+        count(distinct sl.id)::int as lessons,
+        count(distinct saved.id) filter (where saved.user_id <> ${userRow.id})::int as saves,
+        count(distinct used.id) filter (where used.user_id <> ${userRow.id})::int as reuses
+      from ${schema.trailSession} ts
+      left join ${schema.sessionLesson} sl on sl.session_id = ts.id
+      left join ${schema.savedLesson} saved on saved.lesson_id = sl.id
+      left join ${schema.lessonReuse} used on used.lesson_id = sl.id
+      where ts.user_id = ${userRow.id}
+        and ts.visibility = 'public'
+        and ts.shared_at is not null
+        and ts.redacted_at is null
+    `),
   ]);
   const engagementRows = rowsOf<ProfileEngagementRow>(engagementResult);
   const engagementBySession = new Map(
@@ -396,6 +417,22 @@ export default async function UserProfile({ params }: PageProps) {
   );
   const reactionCount = engagementRows.reduce((n, row) => n + (row.reactions ?? 0), 0);
   const commentCount = engagementRows.reduce((n, row) => n + (row.comments ?? 0), 0);
+  const lessonSignal = rowsOf<ProfileLessonSignalRow>(lessonSignalResult)[0] ?? {
+    lessons: 0,
+    saves: 0,
+    reuses: 0,
+  };
+  const reputation = computeBuilderReputation({
+    publicReceipts: publicSessions.length,
+    verifiedShips: verifiedBuilder.verifiedShippedCount,
+    extractedLessons: lessonSignal.lessons ?? 0,
+    lessonSaves: lessonSignal.saves ?? 0,
+    lessonReuses: lessonSignal.reuses ?? 0,
+    reactions: reactionCount,
+    comments: commentCount,
+    followers: followerCount,
+    streakDays: streak.current,
+  });
   const stackRows = rowsOf<ProfileStackRow>(stackResult).filter((row) => row.tag);
   const stackPills = stackRows.length
     ? stackRows
@@ -409,8 +446,9 @@ export default async function UserProfile({ params }: PageProps) {
   const topStack = stackPills[0]?.tag;
   const proofSummary = [
     `${userRow.name || `@${handle}`} on Trail`,
-    `${formatCount(publicSessions.length)} public receipts · ${formatCount(shippedPublicCount)} shipped · ${formatCount(reactionCount)} reactions · ${formatCount(commentCount)} comments`,
+    `${formatCount(publicSessions.length)} public receipts · ${formatCount(shippedPublicCount)} shipped · ${formatCount(lessonSignal.lessons)} lessons · ${formatCount(lessonSignal.reuses)} moves reused`,
     `${formatCount(publicEventCount)} agent events · ${formatCount(followerCount)} followers`,
+    `${reputation.label}: ${formatCount(reputation.score)} signal`,
     topStack ? `Top stack/tool: ${topStack}` : null,
     profileUrl,
   ]
@@ -531,8 +569,8 @@ export default async function UserProfile({ params }: PageProps) {
                 {[
                   ["Public receipts", publicSessions.length],
                   ["Verified ships", shippedPublicCount],
-                  ["Followers", followerCount],
-                  ["Reactions", reactionCount],
+                  ["Moves reused", lessonSignal.reuses],
+                  ["Builder signal", reputation.score],
                 ].map(([label, value]) => (
                   <div
                     key={label}
@@ -549,6 +587,9 @@ export default async function UserProfile({ params }: PageProps) {
               </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
+                <span className="rounded-full border border-[#a7f300]/25 bg-[#a7f300]/10 px-3 py-1 text-[#a7f300]">
+                  {reputation.label} · {formatCount(reputation.score)}
+                </span>
                 <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
                   {formatCount(totalEvents)} agent events
                 </span>
@@ -878,6 +919,22 @@ export default async function UserProfile({ params }: PageProps) {
               </p>
               <div className="mt-4 space-y-3 text-sm text-zinc-400">
                 <div className="flex items-center justify-between">
+                  <span>Builder signal</span>
+                  <span className="font-mono text-[#a7f300]">{formatCount(reputation.score)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Lessons extracted</span>
+                  <span className="font-mono text-zinc-200">
+                    {formatCount(lessonSignal.lessons)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Moves reused</span>
+                  <span className="font-mono text-zinc-200">
+                    {formatCount(lessonSignal.reuses)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span>Verified builder</span>
                   <span className={verifiedBuilder.verified ? "text-[#a7f300]" : "text-zinc-500"}>
                     {verifiedBuilder.verified ? "Active" : "Pending"}
@@ -974,12 +1031,14 @@ export default async function UserProfile({ params }: PageProps) {
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                   {formatCount(publicSessions.length)} public receipts ·{" "}
-                  {formatCount(shippedPublicCount)} shipped · {formatCount(reactionCount)} reactions
-                  · {formatCount(commentCount)} comments
+                  {formatCount(shippedPublicCount)} shipped · {formatCount(lessonSignal.lessons)}{" "}
+                  lessons · {formatCount(lessonSignal.reuses)} used by builders
                 </p>
                 <p className="mt-2 text-xs font-mono text-zinc-500">
+                  {reputation.label} · {formatCount(reputation.score)} signal ·{" "}
                   {formatCount(publicEventCount)} agent events · {formatCount(followerCount)}{" "}
-                  followers{topStack ? ` · ${topStack}` : ""}
+                  followers
+                  {topStack ? ` · ${topStack}` : ""}
                 </p>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
