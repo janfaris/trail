@@ -507,6 +507,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
       and(
         eq(schema.trailSession.visibility, "public"),
         isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
         isNotNull(schema.user.handle),
       ),
     )
@@ -578,6 +579,7 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
         eq(schema.follow.followerId, viewerId),
         eq(schema.trailSession.visibility, "public"),
         isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
         isNotNull(schema.user.handle),
       ),
     )
@@ -669,7 +671,15 @@ async function attachEngagementStats(
         whatToSteal: schema.sessionLesson.whatToSteal,
       })
       .from(schema.sessionLesson)
-      .where(inArray(schema.sessionLesson.sessionId, sessionIds))
+      .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
+      .where(
+        and(
+          inArray(schema.sessionLesson.sessionId, sessionIds),
+          eq(schema.trailSession.visibility, "public"),
+          isNotNull(schema.trailSession.sharedAt),
+          isNull(schema.trailSession.redactedAt),
+        ),
+      )
       .orderBy(
         desc(schema.sessionLesson.transferabilityScore),
         asc(schema.sessionLesson.lessonIndex),

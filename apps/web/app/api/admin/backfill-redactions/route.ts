@@ -1,11 +1,11 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { db, schema } from "@/db/client";
-import { eq, asc } from "drizzle-orm";
-import { anonymize } from "@trail/anonymize";
 import type { EventData } from "@/components/timeline-event";
+import { db, schema } from "@/db/client";
+import { anonymize } from "@trail/anonymize";
+import { asc, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Phase 0.8 — replay the expanded detectors against existing trails.
 //
@@ -65,7 +65,8 @@ async function diffSessions(limit: number): Promise<DiffEntry[]> {
     };
 
     const before = JSON.stringify(fakeSession.events);
-    let scrubbed, report;
+    let scrubbed: ReturnType<typeof anonymize>["session"];
+    let report: ReturnType<typeof anonymize>["report"];
     try {
       const r = anonymize(fakeSession as Parameters<typeof anonymize>[0]);
       scrubbed = r.session;
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
       startedAt: new Date(0).toISOString(),
       events: events.map((e) => e.data as EventData),
     };
-    let scrubbed;
+    let scrubbed: ReturnType<typeof anonymize>["session"];
     try {
       scrubbed = anonymize(fakeSession as Parameters<typeof anonymize>[0]).session;
     } catch {
@@ -162,25 +163,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Rewrite each event whose data changed.
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i]!;
+    for (const [i, e] of events.entries()) {
       const orig = JSON.stringify(e.data);
-      const fresh = JSON.stringify(scrubbed.events[i]);
+      const scrubbedEvent = scrubbed.events[i];
+      if (!scrubbedEvent) continue;
+      const fresh = JSON.stringify(scrubbedEvent);
       if (orig === fresh) continue;
       await db
         .update(schema.event)
-        .set({ data: scrubbed.events[i] as Record<string, unknown> })
+        .set({ data: scrubbedEvent as Record<string, unknown> })
         .where(eq(schema.event.id, e.id));
       appliedEvents += 1;
     }
     appliedSessions += 1;
 
     const updates: Record<string, unknown> = { redactedAt: new Date() };
-    if (
-      flagSuspectsToPending &&
-      d.newSuspects > 0 &&
-      d.visibility === "public"
-    ) {
+    if (flagSuspectsToPending && d.newSuspects > 0 && d.visibility === "public") {
       updates.visibility = "pending";
       updates.pendingReviewReasons = [
         `backfill: entropy guard found ${d.newSuspects} suspicious token(s)`,
@@ -191,6 +189,7 @@ export async function POST(req: NextRequest) {
       .update(schema.trailSession)
       .set(updates)
       .where(eq(schema.trailSession.id, d.sessionId));
+    await db.delete(schema.sessionLesson).where(eq(schema.sessionLesson.sessionId, d.sessionId));
   }
 
   return NextResponse.json({

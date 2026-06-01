@@ -21,7 +21,7 @@ import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -357,7 +357,15 @@ export default async function SessionView({
         confidence: schema.sessionLesson.confidence,
       })
       .from(schema.sessionLesson)
-      .where(eq(schema.sessionLesson.sessionId, sessionRow.id))
+      .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
+      .where(
+        and(
+          eq(schema.sessionLesson.sessionId, sessionRow.id),
+          eq(schema.trailSession.visibility, "public"),
+          isNotNull(schema.trailSession.sharedAt),
+          isNull(schema.trailSession.redactedAt),
+        ),
+      )
       .orderBy(
         desc(schema.sessionLesson.transferabilityScore),
         asc(schema.sessionLesson.lessonIndex),
