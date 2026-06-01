@@ -2,6 +2,7 @@ import { CopyButton } from "@/components/copy-button";
 import { FollowButton } from "@/components/follow-button";
 import { ReactionBar, type ReactionKind } from "@/components/reaction-bar";
 import { RelativeTime } from "@/components/relative-time";
+import { SaveReceiptButton } from "@/components/save-receipt-button";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
@@ -232,6 +233,7 @@ interface BaseFeedRow extends RankableSession {
   tweakReactions: number;
   brokenReactions: number;
   viewerReactions: ReactionKind[];
+  viewerHasSaved: boolean;
   commentCount: number;
   commentPreviews: FeedCommentPreview[];
 }
@@ -249,6 +251,7 @@ type FeedRowWithoutStats = Omit<
   | "tweakReactions"
   | "brokenReactions"
   | "viewerReactions"
+  | "viewerHasSaved"
   | "commentCount"
   | "commentPreviews"
 >;
@@ -597,7 +600,7 @@ async function attachEngagementStats(
 
   const { db, schema } = await import("@/db/client");
   const sessionIds = rows.map((row) => row.id);
-  const [statsRows, commentRows, commentPreviewRows] = await Promise.all([
+  const [statsRows, commentRows, commentPreviewRows, savedRows] = await Promise.all([
     db
       .select({
         sessionId: schema.sessionReaction.sessionId,
@@ -641,6 +644,17 @@ async function attachEngagementStats(
       )
       .orderBy(desc(schema.sessionComment.createdAt))
       .limit(sessionIds.length * 3),
+    viewerId
+      ? db
+          .select({ sessionId: schema.savedReceipt.sessionId })
+          .from(schema.savedReceipt)
+          .where(
+            and(
+              eq(schema.savedReceipt.userId, viewerId),
+              inArray(schema.savedReceipt.sessionId, sessionIds),
+            ),
+          )
+      : Promise.resolve([]),
   ]);
 
   const statsBySession = new Map<
@@ -677,6 +691,7 @@ async function attachEngagementStats(
   const commentsBySession = new Map(
     commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
   );
+  const savedSessionIds = new Set(savedRows.map((row) => row.sessionId));
   const commentPreviewsBySession = new Map<string, FeedCommentPreview[]>();
   for (const comment of commentPreviewRows) {
     const previews = commentPreviewsBySession.get(comment.sessionId) ?? [];
@@ -705,6 +720,7 @@ async function attachEngagementStats(
     tweakReactions: statsBySession.get(row.id)?.tweakReactions ?? 0,
     brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
     viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
+    viewerHasSaved: savedSessionIds.has(row.id),
     commentCount: commentsBySession.get(row.id) ?? 0,
     commentPreviews: commentPreviewsBySession.get(row.id) ?? [],
   }));
@@ -1220,6 +1236,13 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             >
               Reply {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
             </Link>
+            <SaveReceiptButton
+              sessionId={r.id}
+              initialSaved={r.viewerHasSaved}
+              signedIn={viewerId !== null}
+              signInHref={signInHref(currentReceiptHref)}
+              className="border-transparent"
+            />
             <CopyButton
               value={currentPublicReceiptUrl}
               label="Copy"

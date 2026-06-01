@@ -9,6 +9,7 @@ import { ReceiptActions } from "@/components/receipt-actions";
 import { ReceiptBlock } from "@/components/receipt-block";
 import { RecipeCard } from "@/components/recipe-card";
 import { RelativeTime } from "@/components/relative-time";
+import { SaveReceiptButton } from "@/components/save-receipt-button";
 import { SessionCostBlock, SessionCostBlockSkeleton } from "@/components/session-cost-block";
 import { type EventData, TimelineEvent } from "@/components/timeline-event";
 import { TimelineToggle } from "@/components/timeline-toggle";
@@ -140,7 +141,7 @@ export default async function SessionView({
     columns: { slug: true },
   });
 
-  const [commentRows, viewerRow] = await Promise.all([
+  const [commentRows, viewerRow, savedRow] = await Promise.all([
     db
       .select({
         id: schema.sessionComment.id,
@@ -163,6 +164,15 @@ export default async function SessionView({
       ? db.query.user.findFirst({
           where: eq(schema.user.id, viewer.user.id),
           columns: { id: true, name: true, handle: true, image: true },
+        })
+      : Promise.resolve(null),
+    viewer?.user?.id && isPubliclyShared
+      ? db.query.savedReceipt.findFirst({
+          where: and(
+            eq(schema.savedReceipt.userId, viewer.user.id),
+            eq(schema.savedReceipt.sessionId, sessionRow.id),
+          ),
+          columns: { id: true },
         })
       : Promise.resolve(null),
   ]);
@@ -286,6 +296,15 @@ export default async function SessionView({
         {/* Action strip */}
         <div className="flex flex-wrap items-center gap-2 mb-12 pb-6 border-b border-zinc-900">
           <CopyButton value={fullUrl} label="Copy link" copiedLabel="Copied" />
+          {isPubliclyShared ? (
+            <SaveReceiptButton
+              sessionId={sessionRow.id}
+              initialSaved={Boolean(savedRow)}
+              signedIn={Boolean(viewer?.user?.id)}
+              signInHref={signInHref(`/u/${user}/${slug}`)}
+              className="h-7 min-h-0 rounded-md border-zinc-800 bg-zinc-900/50 px-2.5 text-xs normal-case tracking-normal text-zinc-400 hover:border-zinc-700 hover:text-zinc-100"
+            />
+          ) : null}
           <ForkButton user={user} slug={slug} title={sessionRow.title ?? slug} />
           <a
             href={tweetIntent(`${title} — a trail by @${user}`, fullUrl)}

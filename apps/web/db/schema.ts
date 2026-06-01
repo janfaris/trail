@@ -280,6 +280,27 @@ export const sessionComment = pgTable(
   }),
 );
 
+// Saved receipts are private bookmarks for signed-in builders. They point at
+// public receipts, but reads still re-check the receipt's current visibility so
+// unpublished/redacted sessions disappear from saved collections immediately.
+export const savedReceipt = pgTable(
+  "saved_receipt",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("saved_receipt_user_session_idx").on(t.userId, t.sessionId),
+    userCreatedIdx: index("saved_receipt_user_created_idx").on(t.userId, t.createdAt),
+  }),
+);
+
 // Phase 2 — notification hooks for social activity. The first producer is
 // comments/replies; read surfaces can evolve without rewriting activity rows.
 export const notification = pgTable(

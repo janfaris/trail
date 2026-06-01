@@ -1,5 +1,6 @@
 import { FollowButton } from "@/components/follow-button";
 import { RelativeTime } from "@/components/relative-time";
+import { SaveReceiptButton } from "@/components/save-receipt-button";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
@@ -50,6 +51,7 @@ type ReceiptRow = {
   reactions: unknown;
   comments: unknown;
   score: unknown;
+  viewerHasSaved: boolean | null;
 };
 
 type BuilderRow = {
@@ -257,6 +259,12 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
           u.github_handle as "githubHandle",
           count(distinct sr.id)::int as reactions,
           count(distinct sc.id)::int as comments,
+          exists (
+            select 1
+            from saved_receipt sv
+            where sv.session_id = ps.id
+              and sv.user_id = ${viewerId}
+          ) as "viewerHasSaved",
           (
             ln(ps.event_count + 1)
               * exp(-extract(epoch from (now() - ps.shared_at)) / 86400.0 / 14.0)
@@ -495,7 +503,12 @@ export default async function DiscoverPage() {
                 />
                 <div className="grid gap-4">
                   {data.receipts.map((receipt, index) => (
-                    <ReceiptCard key={receipt.id} receipt={receipt} rank={index + 1} />
+                    <ReceiptCard
+                      key={receipt.id}
+                      receipt={receipt}
+                      rank={index + 1}
+                      viewerId={viewerId}
+                    />
                   ))}
                 </div>
 
@@ -680,7 +693,15 @@ function SectionHeader({
   );
 }
 
-function ReceiptCard({ receipt, rank }: { receipt: ReceiptRow; rank: number }) {
+function ReceiptCard({
+  receipt,
+  rank,
+  viewerId,
+}: {
+  receipt: ReceiptRow;
+  rank: number;
+  viewerId: string | null;
+}) {
   const href = `/u/${receipt.handle}/${receipt.slug}`;
   const forkHref = `${href}/fork`;
   const title = receiptTitle(receipt);
@@ -727,10 +748,19 @@ function ReceiptCard({ receipt, rank }: { receipt: ReceiptRow; rank: number }) {
           </div>
         </div>
       </Link>
-      <div className="grid grid-cols-3 border-t border-zinc-900 bg-black/25 text-xs text-zinc-500 sm:grid-cols-6">
+      <div className="grid grid-cols-3 border-t border-zinc-900 bg-black/25 text-xs text-zinc-500 sm:grid-cols-7">
         <ProofMetric label="events" value={formatCount(receipt.eventCount)} />
         <ProofMetric label="reactions" value={formatCount(receipt.reactions)} />
         <ProofMetric label="comments" value={formatCount(receipt.comments)} />
+        <SaveReceiptButton
+          sessionId={receipt.id}
+          initialSaved={Boolean(receipt.viewerHasSaved)}
+          signedIn={viewerId !== null}
+          signInHref={signInHref(href)}
+          className="flex min-h-0 items-center justify-center rounded-none border-0 border-l border-zinc-900 px-3 py-3 text-xs font-semibold normal-case tracking-normal text-zinc-300 transition hover:bg-lime-300/10 hover:text-lime-100"
+          savedLabel="saved"
+          unsavedLabel="save"
+        />
         <Link
           href={forkHref}
           className="flex items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition hover:bg-lime-300/10 hover:text-lime-100"
