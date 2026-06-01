@@ -266,6 +266,31 @@ export const sessionLesson = pgTable(
   }),
 );
 
+// Saved lessons are private bookmarks for reusable moves extracted from public
+// receipts. `session_id` is denormalized so saved collections can re-check
+// receipt visibility without relying only on the lesson row.
+export const savedLesson = pgTable(
+  "saved_lesson",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    lessonId: text("lesson_id")
+      .notNull()
+      .references(() => sessionLesson.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("saved_lesson_user_lesson_idx").on(t.userId, t.lessonId),
+    userCreatedIdx: index("saved_lesson_user_created_idx").on(t.userId, t.createdAt),
+    sessionIdx: index("saved_lesson_session_idx").on(t.sessionId, t.createdAt),
+  }),
+);
+
 // Materialized trending feed. Refreshed nightly by /api/cron/discover.
 // Score formula lives in the cron route, not here — this table is just the
 // rendered output (rank + score + slug). FK cascade handles row deletes.

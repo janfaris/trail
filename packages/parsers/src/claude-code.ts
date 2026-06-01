@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import type { Session, Event } from "@trail/schema";
+import type { Event, Session } from "@trail/schema";
 
 type Row = {
   type?: string;
@@ -20,6 +20,14 @@ type Row = {
   sessionId?: string;
   cwd?: string;
 };
+
+const MAX_TOOL_RESULT_CHARS = 12_000;
+
+function capToolResult(value: string): string {
+  return value.length > MAX_TOOL_RESULT_CHARS
+    ? `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n<truncated:${value.length - MAX_TOOL_RESULT_CHARS} chars>`
+    : value;
+}
 
 function extractText(content: unknown): string {
   if (typeof content === "string") return content;
@@ -45,6 +53,28 @@ function extractText(content: unknown): string {
   return "";
 }
 
+function extractToolResultText(content: unknown): unknown {
+  if (typeof content === "string") return capToolResult(content);
+  if (Array.isArray(content)) {
+    const text = content
+      .map((b) => {
+        if (!b || typeof b !== "object") return "";
+        const blk = b as { type?: string; text?: string; content?: unknown };
+        if (typeof blk.text === "string") return blk.text;
+        if (typeof blk.content === "string") return blk.content;
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (text) return capToolResult(text);
+  }
+  try {
+    return capToolResult(JSON.stringify(content));
+  } catch {
+    return content;
+  }
+}
+
 // Non-negative integer or null. Anything else (negative, NaN, string,
 // missing) collapses to null so we never plant garbage in token columns.
 function safeInt(v: unknown): number | null {
@@ -52,10 +82,7 @@ function safeInt(v: unknown): number | null {
   return Math.trunc(v);
 }
 
-export async function parseClaudeCodeSession(
-  filePath: string,
-  user: string,
-): Promise<Session> {
+export async function parseClaudeCodeSession(filePath: string, user: string): Promise<Session> {
   const raw = await readFile(filePath, "utf8");
   const lines = raw.split(/\r?\n/).filter(Boolean);
   const events: Event[] = [];
@@ -63,6 +90,7 @@ export async function parseClaudeCodeSession(
   let endedAt: string | undefined;
   let repo: string | undefined;
   let sessionId: string | undefined;
+  const pendingToolCalls = new Map<string, Extract<Event, { kind: "tool_call" }>>();
 
   for (const line of lines) {
     let row: Row;
@@ -89,7 +117,10 @@ export async function parseClaudeCodeSession(
           if (blk && typeof blk === "object") {
             const b = blk as { type?: string; tool_use_id?: string; content?: unknown };
             if (b.type === "tool_result") {
-              // skip standalone tool_result here — handled via prior tool_use
+              const toolCall = b.tool_use_id ? pendingToolCalls.get(b.tool_use_id) : undefined;
+              if (toolCall && toolCall.result === undefined) {
+                toolCall.result = extractToolResultText(b.content);
+              }
             }
           }
         }
@@ -117,7 +148,13 @@ export async function parseClaudeCodeSession(
       if (Array.isArray(content)) {
         for (const blk of content) {
           if (!blk || typeof blk !== "object") continue;
-          const b = blk as { type?: string; text?: string; name?: string; input?: unknown };
+          const b = blk as {
+            type?: string;
+            id?: string;
+            text?: string;
+            name?: string;
+            input?: unknown;
+          };
           const usageForThisBlock = firstBlockOfMessage
             ? tokens
             : {
@@ -136,14 +173,16 @@ export async function parseClaudeCodeSession(
             });
             firstBlockOfMessage = false;
           } else if (b.type === "tool_use") {
-            events.push({
+            const toolCall: Extract<Event, { kind: "tool_call" }> = {
               kind: "tool_call",
               at,
               name: String(b.name ?? "unknown"),
               args: b.input,
               model,
               ...usageForThisBlock,
-            });
+            };
+            events.push(toolCall);
+            if (b.id) pendingToolCalls.set(b.id, toolCall);
             firstBlockOfMessage = false;
           }
         }
