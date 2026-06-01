@@ -4,7 +4,7 @@ import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { canFollow, toggleDecision } from "@/lib/follow";
 import { promoteSessionToPublicReceipt } from "@/lib/public-receipt-publishing";
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -54,6 +54,59 @@ export async function toggleFeatured(sessionId: string) {
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
   if (me?.handle) revalidatePath(`/u/${me.handle}`);
   return { ok: true };
+}
+
+export async function setSavedReceipt(sessionId: string, saved: boolean) {
+  const u = await requireUser();
+
+  if (!saved) {
+    await db
+      .delete(schema.savedReceipt)
+      .where(
+        and(eq(schema.savedReceipt.userId, u.id), eq(schema.savedReceipt.sessionId, sessionId)),
+      );
+    revalidatePath("/saved");
+    revalidatePath("/feed");
+    revalidatePath("/discover");
+    return { ok: true, saved: false };
+  }
+
+  const rows = await db
+    .select({
+      id: schema.trailSession.id,
+      slug: schema.trailSession.slug,
+      authorHandle: schema.user.handle,
+    })
+    .from(schema.trailSession)
+    .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
+    .where(
+      and(
+        eq(schema.trailSession.id, sessionId),
+        eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
+        isNotNull(schema.user.handle),
+      ),
+    )
+    .limit(1);
+
+  const receipt = rows[0];
+  if (!receipt) {
+    return { ok: false, saved: false, error: "receipt is not public" };
+  }
+
+  await db
+    .insert(schema.savedReceipt)
+    .values({ id: crypto.randomUUID(), userId: u.id, sessionId })
+    .onConflictDoNothing({
+      target: [schema.savedReceipt.userId, schema.savedReceipt.sessionId],
+    });
+
+  revalidatePath("/saved");
+  revalidatePath("/feed");
+  revalidatePath("/discover");
+  revalidatePath(`/u/${receipt.authorHandle}/${receipt.slug}`);
+  return { ok: true, saved: true };
 }
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ const PRIMARY_LINKS: NavLink[] = [
 
 const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
+  { href: "/saved", label: "Saved" },
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
   { href: "/notifications", label: "Inbox" },
