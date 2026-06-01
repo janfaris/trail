@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => {
   const update = vi.fn().mockReturnValue({ set: updateSet });
   const create = vi.fn();
   const createReview = vi.fn();
+  const createLessons = vi.fn();
   const verifyShipped = vi.fn();
   return {
     findFirst,
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => {
     updateSet,
     create,
     createReview,
+    createLessons,
     verifyShipped,
   };
 });
@@ -59,6 +61,10 @@ vi.mock("./receipt-ai-review", () => ({
   createReceiptAiReview: (...args: unknown[]) => mocks.createReview(...args),
 }));
 
+vi.mock("./session-lessons", () => ({
+  generateSessionLessons: (...args: unknown[]) => mocks.createLessons(...args),
+}));
+
 const {
   findFirst,
   accountFindFirst,
@@ -69,6 +75,7 @@ const {
   updateSet,
   create,
   createReview,
+  createLessons,
   verifyShipped,
 } = mocks;
 
@@ -111,6 +118,7 @@ describe("generateReceipt", () => {
     mocks.updateSet.mockClear();
     mocks.create.mockReset();
     mocks.createReview.mockReset();
+    mocks.createLessons.mockReset();
     mocks.verifyShipped.mockReset();
     validateSpy.mockClear();
     // Default owner identity for the commit-linked cases.
@@ -129,6 +137,11 @@ describe("generateReceipt", () => {
         questions: ["What broke first?"],
       },
       model: "test-model",
+    });
+    mocks.createLessons.mockResolvedValue({
+      ok: false,
+      sessionId: "s1",
+      reason: "not-public",
     });
   });
 

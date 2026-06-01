@@ -111,6 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       receiptAiReviewError: "cleared-after-redaction",
     })
     .where(eq(schema.trailSession.id, row.id));
+  await db.delete(schema.sessionLesson).where(eq(schema.sessionLesson.sessionId, row.id));
 
   // Owner page + public page both need invalidation.
   const userRow = await db.query.user.findFirst({
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     revalidatePath(`/u/${userRow.handle}`);
   }
   revalidatePath("/discover");
+  revalidatePath("/learn");
 
   return NextResponse.json({ ok: true, applied });
 }

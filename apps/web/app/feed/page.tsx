@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -184,6 +184,7 @@ function feedReason(row: BaseFeedRow): string {
   }
   if (row.commentCount > 0)
     return `${pluralize(row.commentCount, "reply", "replies")} in the thread`;
+  if (row.lessonCount > 0) return `${pluralize(row.lessonCount, "reusable lesson")} extracted`;
   if (row.positiveReactions + row.negativeReactions > 0) return reactionSummary(row);
   if (row.receiptStatus === "shipped" || row.outcome === "shipped") return "Fresh shipping proof";
   if (row.linkedRepo ?? row.repo) return `Proof from ${row.linkedRepo ?? row.repo}`;
@@ -234,6 +235,9 @@ interface BaseFeedRow extends RankableSession {
   brokenReactions: number;
   viewerReactions: ReactionKind[];
   viewerHasSaved: boolean;
+  lessonCount: number;
+  lessonPreviewTitle: string | null;
+  lessonPreviewWhatToSteal: string | null;
   commentCount: number;
   commentPreviews: FeedCommentPreview[];
 }
@@ -252,6 +256,9 @@ type FeedRowWithoutStats = Omit<
   | "brokenReactions"
   | "viewerReactions"
   | "viewerHasSaved"
+  | "lessonCount"
+  | "lessonPreviewTitle"
+  | "lessonPreviewWhatToSteal"
   | "commentCount"
   | "commentPreviews"
 >;
@@ -500,6 +507,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
       and(
         eq(schema.trailSession.visibility, "public"),
         isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
         isNotNull(schema.user.handle),
       ),
     )
@@ -571,6 +579,7 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
         eq(schema.follow.followerId, viewerId),
         eq(schema.trailSession.visibility, "public"),
         isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
         isNotNull(schema.user.handle),
       ),
     )
@@ -600,7 +609,7 @@ async function attachEngagementStats(
 
   const { db, schema } = await import("@/db/client");
   const sessionIds = rows.map((row) => row.id);
-  const [statsRows, commentRows, commentPreviewRows, savedRows] = await Promise.all([
+  const [statsRows, commentRows, commentPreviewRows, savedRows, lessonRows] = await Promise.all([
     db
       .select({
         sessionId: schema.sessionReaction.sessionId,
@@ -655,6 +664,26 @@ async function attachEngagementStats(
             ),
           )
       : Promise.resolve([]),
+    db
+      .select({
+        sessionId: schema.sessionLesson.sessionId,
+        title: schema.sessionLesson.title,
+        whatToSteal: schema.sessionLesson.whatToSteal,
+      })
+      .from(schema.sessionLesson)
+      .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
+      .where(
+        and(
+          inArray(schema.sessionLesson.sessionId, sessionIds),
+          eq(schema.trailSession.visibility, "public"),
+          isNotNull(schema.trailSession.sharedAt),
+          isNull(schema.trailSession.redactedAt),
+        ),
+      )
+      .orderBy(
+        desc(schema.sessionLesson.transferabilityScore),
+        asc(schema.sessionLesson.lessonIndex),
+      ),
   ]);
 
   const statsBySession = new Map<
@@ -692,6 +721,18 @@ async function attachEngagementStats(
     commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
   );
   const savedSessionIds = new Set(savedRows.map((row) => row.sessionId));
+  const lessonsBySession = new Map<
+    string,
+    { count: number; title: string | null; whatToSteal: string | null }
+  >();
+  for (const lesson of lessonRows) {
+    const current = lessonsBySession.get(lesson.sessionId);
+    lessonsBySession.set(lesson.sessionId, {
+      count: (current?.count ?? 0) + 1,
+      title: current?.title ?? lesson.title,
+      whatToSteal: current?.whatToSteal ?? lesson.whatToSteal,
+    });
+  }
   const commentPreviewsBySession = new Map<string, FeedCommentPreview[]>();
   for (const comment of commentPreviewRows) {
     const previews = commentPreviewsBySession.get(comment.sessionId) ?? [];
@@ -721,6 +762,9 @@ async function attachEngagementStats(
     brokenReactions: statsBySession.get(row.id)?.brokenReactions ?? 0,
     viewerReactions: Array.from(statsBySession.get(row.id)?.viewerReactions ?? []),
     viewerHasSaved: savedSessionIds.has(row.id),
+    lessonCount: lessonsBySession.get(row.id)?.count ?? 0,
+    lessonPreviewTitle: lessonsBySession.get(row.id)?.title ?? null,
+    lessonPreviewWhatToSteal: lessonsBySession.get(row.id)?.whatToSteal ?? null,
     commentCount: commentsBySession.get(row.id) ?? 0,
     commentPreviews: commentPreviewsBySession.get(row.id) ?? [],
   }));
@@ -1141,6 +1185,25 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             </div>
           </div>
         </Link>
+
+        {r.lessonCount > 0 ? (
+          <Link
+            href={`${currentReceiptHref}#lessons`}
+            className="mt-3 block rounded-[22px] border border-[#a7f300]/20 bg-[#a7f300]/[0.055] px-4 py-3 transition-[border-color,background-color] hover:border-[#a7f300]/50 hover:bg-[#a7f300]/[0.08]"
+          >
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+              <span>{pluralize(r.lessonCount, "reusable lesson")}</span>
+              {r.lessonPreviewTitle ? (
+                <span className="text-lime-100/45">{r.lessonPreviewTitle}</span>
+              ) : null}
+            </div>
+            {r.lessonPreviewWhatToSteal ? (
+              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-lime-50/75">
+                {r.lessonPreviewWhatToSteal}
+              </p>
+            ) : null}
+          </Link>
+        ) : null}
 
         <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em]">
           <span className="rounded-full border border-[#a7f300]/20 bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">

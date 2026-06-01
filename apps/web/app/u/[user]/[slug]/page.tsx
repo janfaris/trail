@@ -21,7 +21,7 @@ import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
-import { and, asc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -140,10 +140,11 @@ function ReviewRail({
 }) {
   const items = [
     ["#check", "01", "AI check"],
-    ["#outcome", "02", "Outcome"],
-    ["#reuse", "03", "Reuse"],
-    ["#proof", "04", "Proof"],
-    ["#conversation", "05", "Thread"],
+    ["#lessons", "02", "Lessons"],
+    ["#outcome", "03", "Outcome"],
+    ["#reuse", "04", "Reuse"],
+    ["#proof", "05", "Proof"],
+    ["#conversation", "06", "Thread"],
   ] as const;
 
   return (
@@ -305,7 +306,7 @@ export default async function SessionView({
     columns: { slug: true },
   });
 
-  const [commentRows, viewerRow, savedRow] = await Promise.all([
+  const [commentRows, viewerRow, savedRow, lessonRows] = await Promise.all([
     db
       .select({
         id: schema.sessionComment.id,
@@ -339,6 +340,37 @@ export default async function SessionView({
           columns: { id: true },
         })
       : Promise.resolve(null),
+    db
+      .select({
+        id: schema.sessionLesson.id,
+        title: schema.sessionLesson.title,
+        whatToSteal: schema.sessionLesson.whatToSteal,
+        useWhen: schema.sessionLesson.useWhen,
+        promptPattern: schema.sessionLesson.promptPattern,
+        decision: schema.sessionLesson.decision,
+        failureMode: schema.sessionLesson.failureMode,
+        proof: schema.sessionLesson.proof,
+        stack: schema.sessionLesson.stack,
+        tags: schema.sessionLesson.tags,
+        sourceEventIdxs: schema.sessionLesson.sourceEventIdxs,
+        transferabilityScore: schema.sessionLesson.transferabilityScore,
+        confidence: schema.sessionLesson.confidence,
+      })
+      .from(schema.sessionLesson)
+      .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
+      .where(
+        and(
+          eq(schema.sessionLesson.sessionId, sessionRow.id),
+          eq(schema.trailSession.visibility, "public"),
+          isNotNull(schema.trailSession.sharedAt),
+          isNull(schema.trailSession.redactedAt),
+        ),
+      )
+      .orderBy(
+        desc(schema.sessionLesson.transferabilityScore),
+        asc(schema.sessionLesson.lessonIndex),
+      )
+      .limit(5),
   ]);
 
   const comments: ReceiptComment[] = commentRows.map((comment) => {
@@ -487,10 +519,10 @@ export default async function SessionView({
               </div>
               <div className="flex flex-wrap gap-2">
                 <a
-                  href="#check"
+                  href={lessonRows.length > 0 ? "#lessons" : "#check"}
                   className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e]"
                 >
-                  Read verdict
+                  {lessonRows.length > 0 ? "Steal the moves" : "Read verdict"}
                 </a>
                 <a
                   href="#conversation"
@@ -520,8 +552,8 @@ export default async function SessionView({
               <ReviewStep href="#outcome" step="01" title="Read the result">
                 Start with the AI verdict and generated receipt before opening the raw timeline.
               </ReviewStep>
-              <ReviewStep href="#reuse" step="02" title="Reuse the setup">
-                Fork the prompt or recipe into your own AI tool when the work is useful.
+              <ReviewStep href="#lessons" step="02" title="Steal the lesson">
+                Copy the extracted move, prompt pattern, or failure mode before opening proof.
               </ReviewStep>
               <ReviewStep href="#conversation" step="03" title="Join the thread">
                 Save it, ask what broke, or leave a proof check for the builder.
@@ -559,8 +591,132 @@ export default async function SessionView({
             </div>
           </section>
 
+          {lessonRows.length > 0 ? (
+            <section className="mt-10">
+              <SectionHeader id="lessons" eyebrow="02 / lessons" title="What can I steal?">
+                Trail extracted reusable moves from the session. Read these before opening the raw
+                timeline; proof is cited only when you need confidence.
+              </SectionHeader>
+              <div className="grid gap-4">
+                {lessonRows.map((lesson, index) => (
+                  <article
+                    key={lesson.id}
+                    className="overflow-hidden rounded-[1.75rem] border border-[#a7f300]/20 bg-[linear-gradient(135deg,rgba(167,243,0,0.07),transparent_38%),#080908]"
+                  >
+                    <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+                      <div className="p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-[#a7f300]/25 bg-[#a7f300]/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+                            lesson {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-lime-50/55">
+                            {lesson.transferabilityScore}/5 transferable
+                          </span>
+                          <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-lime-50/55">
+                            {lesson.confidence} confidence
+                          </span>
+                        </div>
+                        <h3 className="mt-4 text-2xl font-semibold tracking-[-0.05em] text-white">
+                          {lesson.title}
+                        </h3>
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+                          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+                            What to steal
+                          </div>
+                          <p className="mt-2 text-base leading-7 text-lime-50/85">
+                            {lesson.whatToSteal}
+                          </p>
+                        </div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              Use when
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-zinc-300">{lesson.useWhen}</p>
+                          </div>
+                          {lesson.failureMode ? (
+                            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.045] p-4">
+                              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-amber-100/70">
+                                Watch out
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-amber-50/80">
+                                {lesson.failureMode}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-lime-100/10 bg-black/25 p-5 lg:border-l lg:border-t-0">
+                        {lesson.promptPattern ? (
+                          <div>
+                            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-lime-200/60">
+                              Copy prompt move
+                            </div>
+                            <div className="mt-3 rounded-2xl border border-white/10 bg-black/35 p-3">
+                              <p className="text-sm leading-6 text-lime-50/75">
+                                {lesson.promptPattern}
+                              </p>
+                              <CopyButton
+                                value={lesson.promptPattern}
+                                label="Copy move"
+                                copiedLabel="Copied"
+                                className="mt-3"
+                              />
+                            </div>
+                          </div>
+                        ) : null}
+                        {lesson.decision ? (
+                          <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+                            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                              Decision
+                            </div>
+                            <p className="mt-2 text-sm leading-5 text-zinc-300">
+                              {lesson.decision}
+                            </p>
+                          </div>
+                        ) : null}
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3">
+                          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                            Proof
+                          </div>
+                          <p className="mt-2 text-sm leading-5 text-zinc-300">{lesson.proof}</p>
+                          {lesson.sourceEventIdxs.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {lesson.sourceEventIdxs.slice(0, 3).map((idx) => (
+                                <a
+                                  key={idx}
+                                  href={`#event-${idx}`}
+                                  className="rounded-full border border-lime-200/20 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition hover:border-lime-100/50"
+                                >
+                                  event #{idx}
+                                </a>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-1.5">
+                          {[...(lesson.stack ?? []), ...(lesson.tags ?? [])]
+                            .slice(0, 5)
+                            .map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] text-zinc-500"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="mt-10">
-            <SectionHeader id="outcome" eyebrow="02 / outcome" title="What happened?">
+            <SectionHeader id="outcome" eyebrow="03 / outcome" title="What happened?">
               Start with the generated receipt. It should answer what changed, whether it shipped,
               and which decisions matter before you inspect raw logs.
             </SectionHeader>
@@ -579,7 +735,7 @@ export default async function SessionView({
           </section>
 
           <section className="mt-10">
-            <SectionHeader id="reuse" eyebrow="03 / reuse" title="What can I do with it?">
+            <SectionHeader id="reuse" eyebrow="04 / reuse" title="What can I do with it?">
               If the work is useful, copy the setup or open the recipe in another coding agent
               instead of reverse-engineering the timeline.
             </SectionHeader>
@@ -605,7 +761,7 @@ export default async function SessionView({
           </section>
 
           <section className="mt-10">
-            <SectionHeader id="proof" eyebrow="04 / proof" title="Need more confidence?">
+            <SectionHeader id="proof" eyebrow="05 / proof" title="Need more confidence?">
               Ask Trail to explain the session or open the selected timeline events only after the
               receipt summary leaves a question unanswered.
             </SectionHeader>
@@ -643,10 +799,16 @@ export default async function SessionView({
                   const ev = e.data as EventData;
                   if (ev.kind === "file_diff") {
                     return (
-                      <FileDiff key={e.id} path={ev.path} before={ev.before} after={ev.after} />
+                      <div key={e.id} id={`event-${e.idx}`} className="scroll-mt-28">
+                        <FileDiff path={ev.path} before={ev.before} after={ev.after} />
+                      </div>
                     );
                   }
-                  return <TimelineEvent key={e.id} idx={e.idx} data={ev} />;
+                  return (
+                    <div key={e.id} id={`event-${e.idx}`} className="scroll-mt-28">
+                      <TimelineEvent idx={e.idx} data={ev} />
+                    </div>
+                  );
                 })}
               </div>
             </details>
@@ -685,7 +847,7 @@ export default async function SessionView({
             </details>
           ) : null}
 
-          <div className="mt-10 space-y-6">
+          <div id="conversation" className="mt-10 scroll-mt-28 space-y-6">
             <ReactionBar slug={slug} authorHandle={userRow.handle} />
             <CommentThread
               slug={slug}
