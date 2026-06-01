@@ -2,8 +2,9 @@
 // follow/feed flow can be exercised with a second account. Idempotent.
 // Run: pnpm --filter @trail/web exec tsx scripts/seed-demo-follow.ts
 import { randomUUID } from "node:crypto";
-import { db, schema } from "../db/client";
 import { eq } from "drizzle-orm";
+import { db, schema } from "../db/client";
+import { generateSessionLessons } from "../lib/session-lessons";
 
 const DEMO_HANDLE = "demo.builder";
 const DEMO_EMAIL = "demo.builder@trail.local";
@@ -90,8 +91,9 @@ async function main() {
         outcome: "shipped",
       })
       .onConflictDoNothing({ target: schema.trailSession.id });
+    await generateSessionLessons(`demo_sess_${s.slug}`);
   }
-  console.log(`seeded ${sessions.length} public sessions for @${DEMO_HANDLE}`);
+  console.log(`seeded ${sessions.length} public sessions and demo lessons for @${DEMO_HANDLE}`);
   console.log(`\nVisit:  http://localhost:3000/u/${DEMO_HANDLE}`);
   console.log("Click Follow there, then open http://localhost:3000/feed");
 }

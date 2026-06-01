@@ -1,9 +1,11 @@
 import { CopyButton } from "@/components/copy-button";
 import { RelativeTime } from "@/components/relative-time";
+import { SaveLessonButton } from "@/components/save-lesson-button";
 import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { db, schema } from "@/db/client";
-import { type SQL, and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { type SQL, and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -47,6 +49,11 @@ type LessonRow = {
   receiptStatus: string | null;
   eventCount: number;
   promptCount: number | null;
+  toolCallCount: number;
+  toolResultCount: number;
+  fileDiffCount: number;
+  decisionCount: number;
+  savedCount: number;
   sharedAt: Date | null;
   handle: string;
   name: string | null;
@@ -80,6 +87,11 @@ type LearnData = {
     tags: Facet[];
   };
   patterns: PatternRow[];
+  viewer: {
+    signedIn: boolean;
+    savedLessonIds: Set<string>;
+    personalizedTags: Facet[];
+  };
 };
 
 const emptyStats: LearnStats = {
@@ -95,12 +107,23 @@ const emptyData: LearnData = {
   stats: emptyStats,
   facets: { tools: [], frameworks: [], taskTypes: [], tags: [] },
   patterns: [],
+  viewer: { signedIn: false, savedLessonIds: new Set(), personalizedTags: [] },
 };
 
 function pick(sp: SP, key: string): string | null {
   const value = sp[key];
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function cleanQuery(sp: SP): string | null {
+  const raw = pick(sp, "q");
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/[^\p{L}\p{N}\s._+#/-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned ? cleaned.slice(0, 80) : null;
 }
 
 function toNumber(value: unknown): number {
@@ -145,8 +168,36 @@ function receiptHref(row: Pick<LessonRow, "handle" | "slug">): string {
   return `/u/${row.handle}/${row.slug}`;
 }
 
+function signInHref(callbackURL: string): string {
+  return `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
+function agentPromptForLesson(lesson: LessonRow): string {
+  const move = (lesson.promptPattern ?? lesson.whatToSteal)
+    .replace(/\[path\]/g, "<your-path>")
+    .replace(/\[url\]/g, "<your-url>")
+    .replace(/\[token\]/g, "<your-secret>")
+    .replace(/\[email\]/g, "<your-email>");
+  return [
+    "Use this Trail lesson as a reusable move in my codebase.",
+    "",
+    `Lesson: ${lesson.title}`,
+    `Move: ${lesson.whatToSteal}`,
+    `Use when: ${lesson.useWhen}`,
+    lesson.decision ? `Decision to preserve: ${lesson.decision}` : null,
+    lesson.failureMode ? `Watch out: ${lesson.failureMode}` : null,
+    "",
+    `Agent instruction: ${move}`,
+    "",
+    `Proof receipt: ${receiptHref(lesson)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function selectedSummary(sp: SP): string {
   const parts = [
+    cleanQuery(sp) ? `search "${cleanQuery(sp)}"` : null,
     pick(sp, "tool"),
     pick(sp, "framework"),
     pick(sp, "task_type"),
@@ -158,7 +209,7 @@ function selectedSummary(sp: SP): string {
 
 function buildHref(sp: SP, key: string, value: string | null): string {
   const params = new URLSearchParams();
-  for (const param of ["tool", "framework", "task_type", "tag", "outcome"]) {
+  for (const param of ["q", "tool", "framework", "task_type", "tag", "outcome"]) {
     const current = pick(sp, param);
     if (current) params.set(param, current);
   }
@@ -174,6 +225,7 @@ function publicLessonConditions(sp: SP): SQL[] {
   const taskType = pick(sp, "task_type");
   const tag = pick(sp, "tag");
   const outcome = pick(sp, "outcome") ?? "any";
+  const q = cleanQuery(sp);
 
   const conds: SQL[] = [
     eq(schema.trailSession.visibility, "public"),
@@ -195,6 +247,28 @@ function publicLessonConditions(sp: SP): SQL[] {
         coalesce(${schema.sessionLesson.stack}, '[]'::jsonb)
       ) lesson_tag(tag)
       where lesson_tag.tag = ${tag}
+    )`);
+  }
+  if (q) {
+    const pattern = `%${q}%`;
+    conds.push(sql`(
+      ${schema.sessionLesson.title} ilike ${pattern}
+      or ${schema.sessionLesson.whatToSteal} ilike ${pattern}
+      or ${schema.sessionLesson.useWhen} ilike ${pattern}
+      or coalesce(${schema.sessionLesson.promptPattern}, '') ilike ${pattern}
+      or coalesce(${schema.sessionLesson.decision}, '') ilike ${pattern}
+      or coalesce(${schema.sessionLesson.failureMode}, '') ilike ${pattern}
+      or coalesce(${schema.sessionLesson.proof}, '') ilike ${pattern}
+      or coalesce(${schema.trailSession.title}, '') ilike ${pattern}
+      or coalesce(${schema.trailSession.summary}, '') ilike ${pattern}
+      or exists (
+        select 1
+        from jsonb_array_elements_text(
+          coalesce(${schema.sessionLesson.tags}, '[]'::jsonb) ||
+          coalesce(${schema.sessionLesson.stack}, '[]'::jsonb)
+        ) lesson_search_tag(tag)
+        where lesson_search_tag.tag ilike ${pattern}
+      )
     )`);
   }
   return conds;
@@ -232,6 +306,37 @@ async function loadLessons(sp: SP): Promise<LessonRow[]> {
       receiptStatus: schema.trailSession.receiptStatus,
       eventCount: schema.trailSession.eventCount,
       promptCount: schema.trailSession.promptCount,
+      toolCallCount: sql<number>`(
+        select count(*)::int
+        from event ev
+        where ev.session_id = ${schema.trailSession.id}
+          and ev.kind = 'tool_call'
+      )`,
+      toolResultCount: sql<number>`(
+        select count(*)::int
+        from event ev
+        where ev.session_id = ${schema.trailSession.id}
+          and ev.kind = 'tool_call'
+          and ev.data ? 'result'
+          and coalesce(nullif(ev.data->>'result', ''), '') <> ''
+      )`,
+      fileDiffCount: sql<number>`(
+        select count(*)::int
+        from event ev
+        where ev.session_id = ${schema.trailSession.id}
+          and ev.kind = 'file_diff'
+      )`,
+      decisionCount: sql<number>`(
+        select count(*)::int
+        from event ev
+        where ev.session_id = ${schema.trailSession.id}
+          and ev.kind = 'decision'
+      )`,
+      savedCount: sql<number>`(
+        select count(*)::int
+        from saved_lesson saved
+        where saved.lesson_id = ${schema.sessionLesson.id}
+      )`,
       sharedAt: schema.trailSession.sharedAt,
       handle: schema.user.handle,
       name: schema.user.name,
@@ -392,6 +497,46 @@ async function loadPatterns(): Promise<PatternRow[]> {
   );
 }
 
+async function loadViewerContext(lessonIds: string[]): Promise<LearnData["viewer"]> {
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { signedIn: false, savedLessonIds: new Set(), personalizedTags: [] };
+  }
+
+  const [savedRows, tagRows] = await Promise.all([
+    lessonIds.length > 0
+      ? db
+          .select({ lessonId: schema.savedLesson.lessonId })
+          .from(schema.savedLesson)
+          .where(
+            and(
+              eq(schema.savedLesson.userId, session.user.id),
+              inArray(schema.savedLesson.lessonId, lessonIds),
+            ),
+          )
+      : Promise.resolve([]),
+    db.execute<Facet>(sql`
+      select tag.value, count(*)::int as count
+      from trail_session ts
+      cross join lateral jsonb_array_elements_text(
+        coalesce(ts.frameworks, '[]'::jsonb) ||
+        coalesce(ts.tools_used, '[]'::jsonb)
+      ) tag(value)
+      where ts.user_id = ${session.user.id}
+      group by tag.value
+      order by count desc
+      limit 8
+    `),
+  ]);
+
+  return {
+    signedIn: true,
+    savedLessonIds: new Set(savedRows.map((row) => row.lessonId)),
+    personalizedTags: rowsOf(tagRows),
+  };
+}
+
 async function loadLearnData(sp: SP): Promise<LearnData> {
   const [lessons, stats, facets, patterns] = await Promise.all([
     loadLessons(sp),
@@ -399,7 +544,8 @@ async function loadLearnData(sp: SP): Promise<LearnData> {
     loadFacets(),
     loadPatterns(),
   ]);
-  return { lessons, stats, facets, patterns };
+  const viewer = await loadViewerContext(lessons.map((lesson) => lesson.id));
+  return { lessons, stats, facets, patterns, viewer };
 }
 
 function FacetGroup({
@@ -479,14 +625,38 @@ function SectionHeader({
   );
 }
 
-function LessonCard({ lesson, index }: { lesson: LessonRow; index: number }) {
+function LessonCard({
+  lesson,
+  index,
+  signedIn,
+  saved,
+}: {
+  lesson: LessonRow;
+  index: number;
+  signedIn: boolean;
+  saved: boolean;
+}) {
   const href = receiptHref(lesson);
   const discussHref = `${href}#conversation`;
   const copyValue = lesson.promptPattern ?? lesson.whatToSteal;
   const tags = Array.from(new Set([...lesson.stack, ...lesson.tags])).slice(0, 6);
+  const proofSignals = [
+    `${formatCount(lesson.sourceEventIdxs.length)} cited events`,
+    lesson.toolResultCount > 0
+      ? `${formatCount(lesson.toolResultCount)}/${formatCount(lesson.toolCallCount)} tool results`
+      : lesson.toolCallCount > 0
+        ? `${formatCount(lesson.toolCallCount)} tool calls`
+        : null,
+    lesson.fileDiffCount > 0 ? `${formatCount(lesson.fileDiffCount)} diffs` : null,
+    lesson.decisionCount > 0 ? `${formatCount(lesson.decisionCount)} decisions` : null,
+    lesson.savedCount > 0 ? `${formatCount(lesson.savedCount)} saves` : null,
+  ].filter(Boolean);
 
   return (
-    <article className="group overflow-hidden rounded-[2rem] border border-[#a7f300]/20 bg-[linear-gradient(135deg,rgba(167,243,0,0.075),transparent_38%),#080908] shadow-2xl shadow-black/25 transition hover:-translate-y-0.5 hover:border-[#a7f300]/45">
+    <article
+      id={`lesson-${lesson.id}`}
+      className="group scroll-mt-24 overflow-hidden rounded-[2rem] border border-[#a7f300]/20 bg-[linear-gradient(135deg,rgba(167,243,0,0.075),transparent_38%),#080908] shadow-2xl shadow-black/25 transition hover:-translate-y-0.5 hover:border-[#a7f300]/45"
+    >
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <div className="p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -495,6 +665,9 @@ function LessonCard({ lesson, index }: { lesson: LessonRow; index: number }) {
             </span>
             <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
               {lesson.transferabilityScore}/5 stealable
+            </span>
+            <span className="rounded-full border border-zinc-800 bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+              evidence {lesson.confidence}
             </span>
             <span className="font-mono text-[11px] text-zinc-500">
               @{lesson.handle} - <RelativeTime date={lesson.sharedAt ?? lesson.generatedAt} />
@@ -582,6 +755,18 @@ function LessonCard({ lesson, index }: { lesson: LessonRow; index: number }) {
               <span className="text-[#a7f300] transition group-open:translate-x-0.5">-&gt;</span>
             </summary>
             <p className="mt-3 text-sm leading-6 text-zinc-300">{lesson.proof}</p>
+            {proofSignals.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {proofSignals.map((signal) => (
+                  <span
+                    key={signal}
+                    className="rounded-full border border-zinc-800 bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+                  >
+                    {signal}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             {lesson.sourceEventIdxs.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {lesson.sourceEventIdxs.slice(0, 3).map((idx) => (
@@ -616,6 +801,18 @@ function LessonCard({ lesson, index }: { lesson: LessonRow; index: number }) {
             >
               Open proof
             </Link>
+            <CopyButton
+              value={agentPromptForLesson(lesson)}
+              label="Use in agent"
+              copiedLabel="Copied agent prompt"
+              className="min-h-9 rounded-full px-3 uppercase tracking-[0.12em]"
+            />
+            <SaveLessonButton
+              lessonId={lesson.id}
+              initialSaved={saved}
+              signedIn={signedIn}
+              signInHref={signInHref(`/learn#lesson-${lesson.id}`)}
+            />
             <Link
               href={discussHref}
               className="inline-flex min-h-9 items-center rounded-full border border-zinc-700 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/60 hover:text-[#a7f300]"
@@ -651,6 +848,55 @@ function PatternCard({ pattern }: { pattern: PatternRow }) {
         {formatCount(pattern.avgTransferability)}/5 avg transferability
       </p>
     </Link>
+  );
+}
+
+function SearchBox({ sp }: { sp: SP }) {
+  const q = cleanQuery(sp) ?? "";
+  return (
+    <form action="/learn" className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+      {["tool", "framework", "task_type", "tag", "outcome"].map((key) => {
+        const value = pick(sp, key);
+        return value ? <input key={key} type="hidden" name={key} value={value} /> : null;
+      })}
+      <label className="block">
+        <span className="sr-only">Search Trail lessons</span>
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search prompts, failures, stacks, commands..."
+          className="h-12 w-full rounded-full border border-zinc-800 bg-black/45 px-5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/70"
+        />
+      </label>
+      <button
+        type="submit"
+        className="h-12 rounded-full bg-[#a7f300] px-5 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-950 transition hover:bg-[#c8ff5e]"
+      >
+        Search lessons
+      </button>
+    </form>
+  );
+}
+
+function PersonalizedChips({ tags, sp }: { tags: Facet[]; sp: SP }) {
+  if (tags.length === 0) return null;
+  return (
+    <div className="mt-4 rounded-[1.25rem] border border-lime-300/15 bg-lime-300/[0.04] p-3">
+      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-lime-100/60">
+        From your stack
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {tags.map((tag) => (
+          <Link
+            key={tag.value}
+            href={buildHref(sp, "tag", tag.value)}
+            className="rounded-full border border-lime-300/20 px-2.5 py-1 font-mono text-[11px] text-lime-100/80 transition hover:border-lime-200/60 hover:text-[#a7f300]"
+          >
+            {tag.value}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -763,9 +1009,11 @@ export default async function LearnPage({
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-zinc-500">
-                Filter the playbook
+                Search the playbook
               </div>
-              <p className="mt-1 text-sm text-zinc-400">Currently showing {selectedSummary(sp)}.</p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Type the problem you are facing, then narrow by stack or workflow.
+              </p>
             </div>
             <Link
               href="/learn"
@@ -774,7 +1022,12 @@ export default async function LearnPage({
               Reset filters
             </Link>
           </div>
-          <div className="grid gap-5 lg:grid-cols-5">
+          <SearchBox sp={sp} />
+          <PersonalizedChips tags={data.viewer.personalizedTags} sp={sp} />
+          <div className="mt-5 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+            Showing {selectedSummary(sp)}
+          </div>
+          <div className="mt-4 grid gap-5 lg:grid-cols-5">
             <FacetGroup label="Tool" options={data.facets.tools} paramKey="tool" sp={sp} />
             <FacetGroup
               label="Framework"
@@ -810,13 +1063,20 @@ export default async function LearnPage({
               </SectionHeader>
               {data.lessons.length === 0 ? (
                 <div className="mt-5 rounded-[1.75rem] border border-dashed border-zinc-800 bg-zinc-950/70 p-6 text-sm leading-6 text-zinc-500">
-                  No extracted lessons match these filters yet. Publish or backfill public sessions
-                  so Trail can turn their raw logs into reusable moves.
+                  No extracted lessons match this search yet. Try a broader problem like "lint",
+                  "publish", or "database", or publish/backfill public sessions so Trail can turn
+                  their raw logs into reusable moves.
                 </div>
               ) : (
                 <div className="mt-5 grid gap-4">
                   {data.lessons.map((lesson, index) => (
-                    <LessonCard key={lesson.id} lesson={lesson} index={index} />
+                    <LessonCard
+                      key={lesson.id}
+                      lesson={lesson}
+                      index={index}
+                      signedIn={data.viewer.signedIn}
+                      saved={data.viewer.savedLessonIds.has(lesson.id)}
+                    />
                   ))}
                 </div>
               )}

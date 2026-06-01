@@ -10,6 +10,7 @@ import { ReceiptAiReviewCard } from "@/components/receipt-ai-review-card";
 import { ReceiptBlock } from "@/components/receipt-block";
 import { RecipeCard } from "@/components/recipe-card";
 import { RelativeTime } from "@/components/relative-time";
+import { SaveLessonButton } from "@/components/save-lesson-button";
 import { SaveReceiptButton } from "@/components/save-receipt-button";
 import { SessionCostBlock, SessionCostBlockSkeleton } from "@/components/session-cost-block";
 import { type EventData, TimelineEvent } from "@/components/timeline-event";
@@ -21,7 +22,7 @@ import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
-import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -30,6 +31,34 @@ import { type ReactNode, Suspense } from "react";
 
 function signInHref(callbackURL: string): string {
   return `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
+function agentPromptFromLesson(lesson: {
+  title: string;
+  whatToSteal: string;
+  useWhen: string;
+  promptPattern: string | null;
+  decision: string | null;
+  failureMode: string | null;
+}) {
+  const move = (lesson.promptPattern ?? lesson.whatToSteal)
+    .replace(/\[path\]/g, "<your-path>")
+    .replace(/\[url\]/g, "<your-url>")
+    .replace(/\[token\]/g, "<your-secret>")
+    .replace(/\[email\]/g, "<your-email>");
+  return [
+    "Use this Trail lesson as a reusable move in my codebase.",
+    "",
+    `Lesson: ${lesson.title}`,
+    `Move: ${lesson.whatToSteal}`,
+    `Use when: ${lesson.useWhen}`,
+    lesson.decision ? `Decision to preserve: ${lesson.decision}` : null,
+    lesson.failureMode ? `Watch out: ${lesson.failureMode}` : null,
+    "",
+    `Agent instruction: ${move}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function toIso(value: Date | string): string {
@@ -372,6 +401,25 @@ export default async function SessionView({
       )
       .limit(5),
   ]);
+  const savedLessonIds =
+    viewer?.user?.id && lessonRows.length > 0
+      ? new Set(
+          (
+            await db
+              .select({ lessonId: schema.savedLesson.lessonId })
+              .from(schema.savedLesson)
+              .where(
+                and(
+                  eq(schema.savedLesson.userId, viewer.user.id),
+                  inArray(
+                    schema.savedLesson.lessonId,
+                    lessonRows.map((lesson) => lesson.id),
+                  ),
+                ),
+              )
+          ).map((row) => row.lessonId),
+        )
+      : new Set<string>();
 
   const comments: ReceiptComment[] = commentRows.map((comment) => {
     const deletedAt = comment.deletedAt ? toIso(comment.deletedAt) : null;
@@ -694,6 +742,26 @@ export default async function SessionView({
                               ))}
                             </div>
                           ) : null}
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
+                          <CopyButton
+                            value={agentPromptFromLesson(lesson)}
+                            label="Use in agent"
+                            copiedLabel="Copied agent prompt"
+                            className="min-h-9 rounded-full px-3 uppercase tracking-[0.12em]"
+                          />
+                          <SaveLessonButton
+                            lessonId={lesson.id}
+                            initialSaved={savedLessonIds.has(lesson.id)}
+                            signedIn={Boolean(viewer?.user?.id)}
+                            signInHref={signInHref(`/u/${user}/${slug}#lessons`)}
+                          />
+                          <a
+                            href="#conversation"
+                            className="inline-flex min-h-9 items-center rounded-full border border-zinc-700 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/60 hover:text-[#a7f300]"
+                          >
+                            Discuss lesson
+                          </a>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-1.5">
                           {[...(lesson.stack ?? []), ...(lesson.tags ?? [])]

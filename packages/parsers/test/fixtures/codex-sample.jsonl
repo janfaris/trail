@@ -3,5 +3,6 @@
 {"timestamp":"2026-03-06T02:04:06.416Z","type":"event_msg","payload":{"type":"user_message","message":"analyze my codebase","images":[]}}
 {"timestamp":"2026-03-06T02:04:15.046Z","type":"event_msg","payload":{"type":"agent_message","message":"Reviewing the repo now.","phase":"commentary"}}
 {"timestamp":"2026-03-06T02:04:15.048Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"pwd\",\"workdir\":\"/Users/u/proj\"}","call_id":"call_1"}}
+{"timestamp":"2026-03-06T02:04:16.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_1","output":"/Users/u/proj"}}
 {"timestamp":"2026-03-06T02:04:18.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Here is a summary of the codebase."}]}}
 {"timestamp":"2026-03-06T02:04:19.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"t1"}}

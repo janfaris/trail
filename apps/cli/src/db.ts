@@ -1,12 +1,12 @@
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
 // node:sqlite is built into Node 22+ (stable). We use the synchronous API
 // (DatabaseSync / StatementSync) which uses the same SQLite C library that
 // better-sqlite3 wraps — same engine, same perf, no native module to ship.
 // This removes the prebuild-install footgun that was breaking `npm i -g`
 // for new users on v0.1.0.
 import { DatabaseSync, type StatementSync } from "node:sqlite";
-import { homedir } from "node:os";
-import path from "node:path";
-import { mkdirSync } from "node:fs";
 
 const TRAIL_DIR = path.join(homedir(), ".trail");
 mkdirSync(TRAIL_DIR, { recursive: true });
@@ -92,13 +92,13 @@ const upsertSession: StatementSync = db.prepare(`
     updated_at = datetime('now')
 `);
 
-const deleteEvents: StatementSync = db.prepare(`DELETE FROM events WHERE session_id = ?`);
-const deleteFts: StatementSync = db.prepare(`DELETE FROM events_fts WHERE session_id = ?`);
+const deleteEvents: StatementSync = db.prepare("DELETE FROM events WHERE session_id = ?");
+const deleteFts: StatementSync = db.prepare("DELETE FROM events_fts WHERE session_id = ?");
 const insertEvent: StatementSync = db.prepare(
-  `INSERT INTO events (session_id, at, kind, payload) VALUES (?, ?, ?, ?)`,
+  "INSERT INTO events (session_id, at, kind, payload) VALUES (?, ?, ?, ?)",
 );
 const insertFts: StatementSync = db.prepare(
-  `INSERT INTO events_fts (session_id, payload) VALUES (?, ?)`,
+  "INSERT INTO events_fts (session_id, payload) VALUES (?, ?)",
 );
 
 import { redactSessionForCapture } from "./lib/capture-redact.js";
@@ -107,8 +107,7 @@ export function saveSession(session: Session, sourcePath: string): void {
   // Redact BEFORE any data touches SQLite. Local DB compromise must not
   // expose raw API keys / emails / credential URLs. share.ts keeps a second
   // anonymize() pass as a fallback for legacy rows captured pre-redaction.
-  const { session: redacted, redactedAt, redactionCount } =
-    redactSessionForCapture(session);
+  const { session: redacted, redactedAt, redactionCount } = redactSessionForCapture(session);
   transaction(() => {
     upsertSession.run({
       id: redacted.id,
@@ -131,7 +130,7 @@ export function saveSession(session: Session, sourcePath: string): void {
         ev.kind === "prompt" || ev.kind === "completion"
           ? ev.text
           : ev.kind === "tool_call"
-            ? `${ev.name} ${JSON.stringify(ev.args ?? "")}`
+            ? `${ev.name} ${JSON.stringify(ev.args ?? "")} ${JSON.stringify(ev.result ?? "")}`
             : ev.kind === "decision"
               ? ev.note
               : ev.kind === "file_diff"

@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import type { Session, Event } from "@trail/schema";
+import type { Event, Session } from "@trail/schema";
 
 // Codex CLI rollout JSONL format. Two variants observed in the wild:
 //
@@ -20,9 +20,26 @@ import type { Session, Event } from "@trail/schema";
 // We normalize both into the Trail Event union.
 
 type AnyRec = Record<string, unknown>;
+const MAX_TOOL_RESULT_CHARS = 12_000;
 
 function asObj(v: unknown): AnyRec | undefined {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as AnyRec) : undefined;
+}
+
+function capToolResult(value: string): string {
+  return value.length > MAX_TOOL_RESULT_CHARS
+    ? `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n<truncated:${value.length - MAX_TOOL_RESULT_CHARS} chars>`
+    : value;
+}
+
+function normalizeToolResult(value: unknown): unknown {
+  if (typeof value === "string") return capToolResult(value);
+  if (value == null) return undefined;
+  try {
+    return capToolResult(JSON.stringify(value));
+  } catch {
+    return value;
+  }
 }
 
 function extractContentText(content: unknown): string {
@@ -45,10 +62,7 @@ function extractContentText(content: unknown): string {
     .join("\n");
 }
 
-export async function parseCodexSession(
-  filePath: string,
-  user: string,
-): Promise<Session> {
+export async function parseCodexSession(filePath: string, user: string): Promise<Session> {
   const raw = await readFile(filePath, "utf8");
   const lines = raw.split(/\r?\n/).filter(Boolean);
   const events: Event[] = [];
@@ -60,6 +74,7 @@ export async function parseCodexSession(
   // observation so completion/tool_call events can be tagged with the model
   // that actually produced them (each turn may switch models in some flows).
   let currentModel: string | undefined;
+  const pendingToolCalls = new Map<string, Extract<Event, { kind: "tool_call" }>>();
 
   const noteTime = (at?: string) => {
     if (!at) return;
@@ -78,9 +93,7 @@ export async function parseCodexSession(
       continue;
     }
 
-    const at =
-      (typeof row.timestamp === "string" && row.timestamp) ||
-      undefined;
+    const at = (typeof row.timestamp === "string" && row.timestamp) || undefined;
     noteTime(at);
 
     // Variant A — header line
@@ -197,13 +210,28 @@ export async function parseCodexSession(
             // keep as raw string
           }
         }
-        events.push({
+        const toolCall: Extract<Event, { kind: "tool_call" }> = {
           kind: "tool_call",
           at: ts,
           name,
           args,
           ...(currentModel ? { model: currentModel } : {}),
-        });
+        };
+        events.push(toolCall);
+        const callId =
+          (typeof p.call_id === "string" && p.call_id) ||
+          (typeof p.id === "string" && p.id) ||
+          undefined;
+        if (callId) pendingToolCalls.set(callId, toolCall);
+      } else if (pt === "function_call_output") {
+        const callId =
+          (typeof p.call_id === "string" && p.call_id) ||
+          (typeof p.id === "string" && p.id) ||
+          undefined;
+        const toolCall = callId ? pendingToolCalls.get(callId) : undefined;
+        if (toolCall && toolCall.result === undefined) {
+          toolCall.result = normalizeToolResult(p.output ?? p.content ?? p.result);
+        }
       }
       continue;
     }
@@ -214,8 +242,7 @@ export async function parseCodexSession(
       const text = extractContentText(row.content);
       if (!text.trim()) continue;
       if (role === "user") events.push({ kind: "prompt", at: at ?? "", text });
-      else if (role === "assistant")
-        events.push({ kind: "completion", at: at ?? "", text });
+      else if (role === "assistant") events.push({ kind: "completion", at: at ?? "", text });
     }
   }
 

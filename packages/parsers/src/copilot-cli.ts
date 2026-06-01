@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-import type { Session, Event } from "@trail/schema";
+import type { Event, Session } from "@trail/schema";
 
 // GitHub Copilot CLI session events:
 //   ~/.copilot/session-state/<uuid>/events.jsonl
@@ -20,6 +20,24 @@ import type { Session, Event } from "@trail/schema";
 //   session.shutdown      -> use timestamp as endedAt
 
 type AnyRec = Record<string, unknown>;
+const MAX_TOOL_RESULT_CHARS = 12_000;
+
+function capToolResult(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.length > MAX_TOOL_RESULT_CHARS
+      ? `${value.slice(0, MAX_TOOL_RESULT_CHARS)}\n<truncated:${value.length - MAX_TOOL_RESULT_CHARS} chars>`
+      : value;
+  }
+  if (value == null) return undefined;
+  try {
+    const text = JSON.stringify(value);
+    return text.length > MAX_TOOL_RESULT_CHARS
+      ? `${text.slice(0, MAX_TOOL_RESULT_CHARS)}\n<truncated:${text.length - MAX_TOOL_RESULT_CHARS} chars>`
+      : text;
+  } catch {
+    return value;
+  }
+}
 
 function readWorkspaceYaml(text: string): AnyRec {
   // Trivial flat YAML reader — workspace.yaml is `key: value` lines plus
@@ -35,10 +53,7 @@ function readWorkspaceYaml(text: string): AnyRec {
   return out;
 }
 
-export async function parseCopilotCliSession(
-  filePath: string,
-  user: string,
-): Promise<Session> {
+export async function parseCopilotCliSession(filePath: string, user: string): Promise<Session> {
   const raw = await readFile(filePath, "utf8");
   const events: Event[] = [];
   let startedAt: string | undefined;
@@ -107,7 +122,7 @@ export async function parseCopilotCliSession(
         at,
         name,
         args: data.arguments ?? data.args ?? {},
-        result: data.result ?? data.output ?? data.content,
+        result: capToolResult(data.result ?? data.output ?? data.content),
       });
     }
   }

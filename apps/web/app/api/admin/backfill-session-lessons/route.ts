@@ -17,7 +17,14 @@ export async function POST(req: NextRequest) {
 
   const url = new URL(req.url);
   const apply = url.searchParams.get("apply") === "true";
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "10") || 10, 1), 50);
+  const refresh = url.searchParams.get("refresh") === "true";
+  const requestedSessionId = url.searchParams.get("session");
+  const defaultLimit = refresh ? "3" : "10";
+  const maxLimit = refresh ? 5 : 50;
+  const limit = Math.min(
+    Math.max(Number(url.searchParams.get("limit") ?? defaultLimit) || Number(defaultLimit), 1),
+    maxLimit,
+  );
 
   const { db, schema } = await import("@/db/client");
   const { generateSessionLessons } = await import("@/lib/session-lessons");
@@ -37,11 +44,14 @@ export async function POST(req: NextRequest) {
         isNotNull(schema.trailSession.sharedAt),
         isNull(schema.trailSession.redactedAt),
         isNotNull(schema.user.handle),
-        sql`not exists (
-          select 1
-          from session_lesson sl
-          where sl.session_id = ${schema.trailSession.id}
-        )`,
+        requestedSessionId ? eq(schema.trailSession.id, requestedSessionId) : sql`true`,
+        refresh
+          ? sql`true`
+          : sql`not exists (
+              select 1
+              from session_lesson sl
+              where sl.session_id = ${schema.trailSession.id}
+            )`,
       ),
     )
     .orderBy(desc(schema.trailSession.sharedAt))
@@ -51,6 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       apply: false,
+      refresh,
       total: rows.length,
       rows: rows.map((row) => ({ id: row.id, slug: row.slug, title: row.title })),
     });
@@ -80,6 +91,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     apply: true,
+    refresh,
     total: rows.length,
     succeeded,
     lessons,

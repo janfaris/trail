@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { parseClaudeCodeSession } from "../src/claude-code.js";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeFile, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { describe, expect, it } from "vitest";
+import { parseClaudeCodeSession } from "../src/claude-code.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,6 +48,8 @@ describe("claude-code parser", () => {
     // First prompt should be the actual instruction, not the search dump.
     expect((prompts[0] as { text: string }).text).toMatch(/puerto rico web design/i);
     expect((prompts[1] as { text: string }).text).toMatch(/squarespace/i);
+    const toolCall = session.events.find((e) => e.kind === "tool_call");
+    expect((toolCall as { result?: string } | undefined)?.result).toMatch(/Cuanto cuesta/);
   });
 
   // Week 0 cost-per-PR pivot. Token + model capture must:
@@ -116,8 +118,13 @@ describe("claude-code parser", () => {
 
       // Sum across all events should equal the SUM of message-level usage,
       // not 2× the first message (the double-count footgun).
-      const sum = (key: "inputTokens" | "outputTokens" | "cacheCreationInputTokens" | "cacheReadInputTokens") =>
-        assistantEvents.reduce((a, e) => a + ((e as Record<string, unknown>)[key] as number | null ?? 0), 0);
+      const sum = (
+        key: "inputTokens" | "outputTokens" | "cacheCreationInputTokens" | "cacheReadInputTokens",
+      ) =>
+        assistantEvents.reduce(
+          (a, e) => a + (((e as Record<string, unknown>)[key] as number | null) ?? 0),
+          0,
+        );
       expect(sum("inputTokens")).toBe(120); // 100 + 20
       expect(sum("outputTokens")).toBe(55); // 50 + 5
       expect(sum("cacheCreationInputTokens")).toBe(2000); // 2000 + 0

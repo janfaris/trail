@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { parseCodexSession } from "../src/codex.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { parseCodexSession } from "../src/codex.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,6 +20,7 @@ describe("codex parser", () => {
     const tc = s.events.find((e) => e.kind === "tool_call");
     if (tc && tc.kind === "tool_call") {
       expect(tc.name).toBe("exec_command");
+      expect(tc.result).toContain("/Users/u/proj");
     }
   });
 
