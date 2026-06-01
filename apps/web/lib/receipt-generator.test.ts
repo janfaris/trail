@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
   const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
   const update = vi.fn().mockReturnValue({ set: updateSet });
   const create = vi.fn();
+  const createReview = vi.fn();
   const verifyShipped = vi.fn();
   return {
     findFirst,
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => {
     update,
     updateSet,
     create,
+    createReview,
     verifyShipped,
   };
 });
@@ -53,6 +55,10 @@ vi.mock("./github-verify", () => ({
   verifyShipped: (...args: unknown[]) => mocks.verifyShipped(...args),
 }));
 
+vi.mock("./receipt-ai-review", () => ({
+  createReceiptAiReview: (...args: unknown[]) => mocks.createReview(...args),
+}));
+
 const {
   findFirst,
   accountFindFirst,
@@ -62,6 +68,7 @@ const {
   update,
   updateSet,
   create,
+  createReview,
   verifyShipped,
 } = mocks;
 
@@ -103,11 +110,26 @@ describe("generateReceipt", () => {
     mocks.update.mockClear();
     mocks.updateSet.mockClear();
     mocks.create.mockReset();
+    mocks.createReview.mockReset();
     mocks.verifyShipped.mockReset();
     validateSpy.mockClear();
     // Default owner identity for the commit-linked cases.
     mocks.accountFindFirst.mockResolvedValue({ accessToken: "tok", accountId: "123" });
     mocks.userFindFirst.mockResolvedValue({ handle: "octocat" });
+    mocks.createReview.mockResolvedValue({
+      ok: true,
+      review: {
+        schemaVersion: 1,
+        verdict: "shipped",
+        confidence: "high",
+        headline: "Verified shipped work",
+        summary: "Trail checked the receipt.",
+        evidence: [{ label: "Receipt", detail: "Checkout shipped.", eventIdx: null }],
+        nextSteps: ["Reuse the setup."],
+        questions: ["What broke first?"],
+      },
+      model: "test-model",
+    });
   });
 
   it("runs the validator and persists 'shipped' when GitHub confirms merge", async () => {
@@ -137,6 +159,7 @@ describe("generateReceipt", () => {
     expect(update).toHaveBeenCalledOnce();
     const persisted = updateSet.mock.calls[0][0];
     expect(persisted.receiptStatus).toBe("shipped");
+    expect(persisted.receiptAiReview?.headline).toBe("Verified shipped work");
     expect(persisted.receiptOutcome).toContain("Stripe");
     expect(persisted.receiptDecisionSummary).toHaveLength(3);
     // The owner's token + identity must be threaded into verification.

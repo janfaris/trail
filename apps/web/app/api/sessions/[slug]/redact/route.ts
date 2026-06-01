@@ -1,12 +1,12 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db, schema } from "@/db/client";
-import { eq, and } from "drizzle-orm";
-import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Retroactive redaction endpoint. Owner-only. Two modes:
 //   1) substring  — replace literal substring across all events.data text fields.
@@ -16,14 +16,9 @@ import { revalidatePath } from "next/cache";
 // Visibility is preserved (a public session stays public after a redaction).
 // Use the separate "set visibility" flow for hide/show.
 
-type Body =
-  | { substring: string; replacement?: string }
-  | { eventIdx: number };
+type Body = { substring: string; replacement?: string } | { eventIdx: number };
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const sess = await auth.api.getSession({ headers: await headers() });
   if (!sess?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -48,10 +43,7 @@ export async function POST(
   if ("eventIdx" in body) {
     const idx = body.eventIdx;
     const existing = await db.query.event.findFirst({
-      where: and(
-        eq(schema.event.sessionId, row.id),
-        eq(schema.event.idx, idx),
-      ),
+      where: and(eq(schema.event.sessionId, row.id), eq(schema.event.idx, idx)),
     });
     if (!existing) {
       return NextResponse.json({ error: "event not found" }, { status: 404 });
@@ -67,12 +59,13 @@ export async function POST(
       })
       .where(eq(schema.event.id, existing.id));
     applied = 1;
-  } else if ("substring" in body && typeof body.substring === "string" && body.substring.length >= 3) {
+  } else if (
+    "substring" in body &&
+    typeof body.substring === "string" &&
+    body.substring.length >= 3
+  ) {
     const replacement = body.replacement ?? "<redacted>";
-    const events = await db
-      .select()
-      .from(schema.event)
-      .where(eq(schema.event.sessionId, row.id));
+    const events = await db.select().from(schema.event).where(eq(schema.event.sessionId, row.id));
     for (const e of events) {
       const serialized = JSON.stringify(e.data);
       if (!serialized.includes(body.substring)) continue;
@@ -81,10 +74,7 @@ export async function POST(
       const updated = serialized.split(body.substring).join(replacement);
       try {
         const parsed = JSON.parse(updated);
-        await db
-          .update(schema.event)
-          .set({ data: parsed })
-          .where(eq(schema.event.id, e.id));
+        await db.update(schema.event).set({ data: parsed }).where(eq(schema.event.id, e.id));
         applied += 1;
       } catch (err) {
         // If parsing the rewritten JSON fails (substring crossed a string
@@ -113,7 +103,13 @@ export async function POST(
 
   await db
     .update(schema.trailSession)
-    .set({ redactedAt: new Date() })
+    .set({
+      redactedAt: new Date(),
+      receiptAiReview: null,
+      receiptAiReviewGeneratedAt: null,
+      receiptAiReviewModel: null,
+      receiptAiReviewError: "cleared-after-redaction",
+    })
     .where(eq(schema.trailSession.id, row.id));
 
   // Owner page + public page both need invalidation.

@@ -34,6 +34,7 @@ type CommentThreadProps = {
   initialComments: ReceiptComment[];
   viewer: CommentViewer | null;
   signInHref: string;
+  threadStarters?: string[] | null;
 };
 
 const MAX_COMMENT_LENGTH = 1600;
@@ -84,6 +85,7 @@ export function CommentThread({
   initialComments,
   viewer,
   signInHref,
+  threadStarters,
 }: CommentThreadProps) {
   const [comments, setComments] = useState(() => sortComments(initialComments));
   const [draft, setDraft] = useState("");
@@ -132,6 +134,7 @@ export function CommentThread({
   const visibleReplies = comments.filter(
     (comment) => comment.parentId && !comment.deletedAt,
   ).length;
+  const starterPrompts = threadStarters?.length ? threadStarters.slice(0, 3) : THREAD_STARTERS;
 
   function useThreadStarter(prompt: string) {
     if (!viewer) {
@@ -377,7 +380,7 @@ export function CommentThread({
               <SubmitButton pending={pendingTarget === "root"}>Post comment</SubmitButton>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {THREAD_STARTERS.map((prompt) => (
+              {starterPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
@@ -421,7 +424,7 @@ export function CommentThread({
                 fork.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {THREAD_STARTERS.map((prompt) => (
+                {starterPrompts.map((prompt) => (
                   <button
                     key={prompt}
                     type="button"

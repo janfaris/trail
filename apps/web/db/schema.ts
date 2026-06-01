@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
+import type { ReceiptAiReview } from "../lib/receipt-ai-review-types";
 
 // better-auth core tables (per https://better-auth.com/docs/concepts/database#core-schema)
 export const user = pgTable(
@@ -164,6 +165,10 @@ export const trailSession = pgTable(
     receiptGeneratedAt: timestamp("receipt_generated_at"),
     // 'shipped' | 'draft' | 'unverified'. Mirrors verifyShipped() output.
     receiptStatus: text("receipt_status"),
+    receiptAiReview: jsonb("receipt_ai_review").$type<ReceiptAiReview>(),
+    receiptAiReviewGeneratedAt: timestamp("receipt_ai_review_generated_at"),
+    receiptAiReviewModel: text("receipt_ai_review_model"),
+    receiptAiReviewError: text("receipt_ai_review_error"),
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
     cachedTokens: integer("cached_tokens"),
