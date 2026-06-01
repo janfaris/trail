@@ -6,6 +6,7 @@ import { createReceiptAiReview } from "./receipt-ai-review";
 import { buildTranscript, parseLlmReceipt } from "./receipt-parse";
 import { buildReceiptSystemPrompt, loadToneSpec } from "./receipt-prompt";
 import { type ReceiptDraft, validateReceipt } from "./receipt-validator";
+import { generateSessionLessons } from "./session-lessons";
 
 export const RECEIPT_STATUS = {
   Shipped: "shipped",
@@ -200,6 +201,14 @@ export async function generateReceipt(sessionId: string): Promise<ReceiptGenerat
         recipeKeyPromptIdxs: llm.keyPromptIdxs.length > 0 ? llm.keyPromptIdxs : null,
       })
       .where(eq(schema.trailSession.id, sessionId));
+
+    const lessons = await generateSessionLessons(sessionId);
+    if (!lessons.ok && lessons.reason !== "not-public") {
+      console.warn(
+        `[session-lessons] generation failed for ${sessionId}:`,
+        lessons.message ?? lessons.reason,
+      );
+    }
 
     return { ok: true, sessionId, status, warnings };
   } catch (err) {

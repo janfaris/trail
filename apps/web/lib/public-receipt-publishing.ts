@@ -75,6 +75,21 @@ export async function promoteSessionToPublicReceipt(args: {
 
   const published = publishedRows[0] as { handle: string; slug: string } | undefined;
   if (!published) return { published: false };
+  try {
+    const { generateSessionLessons } = await import("@/lib/session-lessons");
+    const result = await generateSessionLessons(args.sessionId);
+    if (!result.ok) {
+      console.warn(
+        `[session-lessons] generation failed after publish for ${args.sessionId}:`,
+        result.message ?? result.reason,
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[session-lessons] generation threw after publish for ${args.sessionId}:`,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
   return {
     published: true,
     handle: published.handle,

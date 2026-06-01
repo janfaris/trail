@@ -215,6 +215,57 @@ export const event = pgTable(
   }),
 );
 
+// Extracted learning objects. Raw events remain evidence; /learn and social
+// surfaces read these normalized lessons so builders know what to steal without
+// reading logs cold. Visibility is intentionally not denormalized here: all
+// public reads join trail_session and re-check visibility/shared/redaction.
+export const sessionLesson = pgTable(
+  "session_lesson",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    lessonIndex: integer("lesson_index").notNull(),
+    title: text("title").notNull(),
+    whatToSteal: text("what_to_steal").notNull(),
+    useWhen: text("use_when").notNull(),
+    promptPattern: text("prompt_pattern"),
+    decision: text("decision"),
+    failureMode: text("failure_mode"),
+    proof: text("proof").notNull(),
+    stack: jsonb("stack").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    sourceEventIdxs: jsonb("source_event_idxs")
+      .$type<number[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    transferabilityScore: integer("transferability_score").notNull().default(3),
+    confidence: text("confidence").notNull().default("medium"),
+    model: text("model"),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionLessonIdx: uniqueIndex("session_lesson_session_lesson_idx").on(
+      t.sessionId,
+      t.lessonIndex,
+    ),
+    sessionIdx: index("session_lesson_session_idx").on(t.sessionId, t.lessonIndex),
+    scoreIdx: index("session_lesson_score_idx").on(t.transferabilityScore, t.generatedAt),
+    transferabilityCheck: check(
+      "session_lesson_transferability_check",
+      sql`${t.transferabilityScore} BETWEEN 1 AND 5`,
+    ),
+    confidenceCheck: check(
+      "session_lesson_confidence_check",
+      sql`${t.confidence} IN ('high', 'medium', 'low')`,
+    ),
+    lessonIndexCheck: check("session_lesson_lesson_index_check", sql`${t.lessonIndex} >= 0`),
+  }),
+);
+
 // Materialized trending feed. Refreshed nightly by /api/cron/discover.
 // Score formula lives in the cron route, not here — this table is just the
 // rendered output (rank + score + slug). FK cascade handles row deletes.
