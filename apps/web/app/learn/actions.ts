@@ -67,7 +67,6 @@ export async function setSavedLesson(lessonId: string, saved: boolean) {
   revalidatePath(`/u/${lesson.authorHandle}/${lesson.slug}`);
   return { ok: true, saved: true };
 }
-
 async function loadPublicLesson(lessonId: string) {
   const rows = await db
     .select({
