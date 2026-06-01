@@ -1,10 +1,11 @@
-import { eq, asc, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/client";
 import { aiClient, textModel } from "./ai-client";
-import { validateReceipt, type ReceiptDraft } from "./receipt-validator";
 import { verifyShipped } from "./github-verify";
-import { buildReceiptSystemPrompt, loadToneSpec } from "./receipt-prompt";
+import { createReceiptAiReview } from "./receipt-ai-review";
 import { buildTranscript, parseLlmReceipt } from "./receipt-parse";
+import { buildReceiptSystemPrompt, loadToneSpec } from "./receipt-prompt";
+import { type ReceiptDraft, validateReceipt } from "./receipt-validator";
 
 export const RECEIPT_STATUS = {
   Shipped: "shipped",
@@ -154,26 +155,49 @@ export async function generateReceipt(sessionId: string): Promise<ReceiptGenerat
       };
     }
     const status = classifyStatus(row.linkedCommitSha, shipped);
+    const aiReview = await createReceiptAiReview({
+      title: row.title || row.slug,
+      summary: row.summary,
+      tool: row.tool,
+      repo: row.repo,
+      linkedRepo: row.linkedRepo,
+      linkedCommitSha: row.linkedCommitSha,
+      receiptStatus: status,
+      receiptOutcome: llm.outcome || null,
+      receiptTldr: llm.tldr || null,
+      receiptDecisionSummary: llm.decisionSummary.length > 0 ? llm.decisionSummary : null,
+      receiptChangedFiles: llm.changedFiles.length > 0 ? llm.changedFiles : null,
+      receiptVerification: verification,
+      events,
+    });
+
+    if (!aiReview.ok) {
+      console.warn(
+        `[receipt-ai-review] generation failed for ${sessionId}:`,
+        aiReview.message ?? aiReview.reason,
+      );
+    }
 
     await db
       .update(schema.trailSession)
       .set({
         receiptOutcome: llm.outcome || null,
         receiptTldr: llm.tldr || null,
-        receiptDecisionSummary:
-          llm.decisionSummary.length > 0 ? llm.decisionSummary : null,
-        receiptChangedFiles:
-          llm.changedFiles.length > 0 ? llm.changedFiles : null,
+        receiptDecisionSummary: llm.decisionSummary.length > 0 ? llm.decisionSummary : null,
+        receiptChangedFiles: llm.changedFiles.length > 0 ? llm.changedFiles : null,
         receiptVerification: verification,
         receiptValidatorWarnings: warnings.length > 0 ? warnings : null,
         receiptStatus: status,
+        receiptAiReview: aiReview.ok ? aiReview.review : null,
+        receiptAiReviewGeneratedAt: aiReview.ok ? sql`NOW()` : null,
+        receiptAiReviewModel: aiReview.ok ? aiReview.model : (aiReview.model ?? null),
+        receiptAiReviewError: aiReview.ok ? null : (aiReview.message ?? aiReview.reason),
         receiptGeneratedAt: sql`NOW()`,
         receiptVerifiedAt: shipped ? sql`NOW()` : null,
         receiptVerifiedSha: shipped ? row.linkedCommitSha : null,
         recipeOutcome: llm.outcome || null,
         recipeTldr: llm.tldr || null,
-        recipeKeyPromptIdxs:
-          llm.keyPromptIdxs.length > 0 ? llm.keyPromptIdxs : null,
+        recipeKeyPromptIdxs: llm.keyPromptIdxs.length > 0 ? llm.keyPromptIdxs : null,
       })
       .where(eq(schema.trailSession.id, sessionId));
 
@@ -189,9 +213,7 @@ export async function generateReceipt(sessionId: string): Promise<ReceiptGenerat
  * Idempotent: skips generation if a receipt already exists. Used by the
  * share/upload flow so re-uploads don't burn tokens.
  */
-export async function ensureReceipt(
-  sessionId: string,
-): Promise<ReceiptGenerationResult | null> {
+export async function ensureReceipt(sessionId: string): Promise<ReceiptGenerationResult | null> {
   const row = await db.query.trailSession.findFirst({
     where: eq(schema.trailSession.id, sessionId),
     columns: { receiptGeneratedAt: true },

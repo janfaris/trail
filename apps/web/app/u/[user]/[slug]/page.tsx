@@ -6,6 +6,7 @@ import { ForkButton } from "@/components/fork-button";
 import { ForkButtons } from "@/components/fork-buttons";
 import { ReactionBar } from "@/components/reaction-bar";
 import { ReceiptActions } from "@/components/receipt-actions";
+import { ReceiptAiReviewCard } from "@/components/receipt-ai-review-card";
 import { ReceiptBlock } from "@/components/receipt-block";
 import { RecipeCard } from "@/components/recipe-card";
 import { RelativeTime } from "@/components/relative-time";
@@ -17,6 +18,7 @@ import { ToolIcon } from "@/components/tool-icon";
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { deriveTitle } from "@/lib/derive-title";
+import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
@@ -137,10 +139,11 @@ function ReviewRail({
   sharedAt: Date | null;
 }) {
   const items = [
-    ["#outcome", "01", "Outcome"],
-    ["#reuse", "02", "Reuse"],
-    ["#proof", "03", "Proof"],
-    ["#conversation", "04", "Thread"],
+    ["#check", "01", "AI check"],
+    ["#outcome", "02", "Outcome"],
+    ["#reuse", "03", "Reuse"],
+    ["#proof", "04", "Proof"],
+    ["#conversation", "05", "Thread"],
   ] as const;
 
   return (
@@ -376,6 +379,10 @@ export default async function SessionView({
     sessionRow.receiptTldr ??
     sessionRow.summary ??
     "Skim the outcome, inspect the proof, then decide whether to save, fork, share, or ask the builder a question.";
+  const aiReview =
+    !sessionRow.redactedAt && isReceiptAiReview(sessionRow.receiptAiReview)
+      ? sessionRow.receiptAiReview
+      : null;
 
   const keyPromptIdxs = sessionRow.recipeKeyPromptIdxs ?? [];
   const keyPrompts =
@@ -471,16 +478,19 @@ export default async function SessionView({
             <div className="mt-3 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <div>
                 <h2 className="text-2xl font-semibold tracking-[-0.05em] text-white">
-                  Review this receipt in 60 seconds.
+                  Let Trail do the first proof check.
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-lime-50/70">{readerTakeaway}</p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-lime-50/70">
+                  GPT-5.4 mini turns the raw session into a verdict, cited evidence, and better
+                  questions so you do not have to inspect every event first.
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <a
-                  href="#outcome"
+                  href="#check"
                   className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e]"
                 >
-                  Start review
+                  Read verdict
                 </a>
                 <a
                   href="#conversation"
@@ -491,9 +501,24 @@ export default async function SessionView({
               </div>
             </div>
 
+            <div id="check" className="mt-5 scroll-mt-28">
+              <ReceiptAiReviewCard
+                sessionId={sessionRow.id}
+                pathToRevalidate={`/u/${user}/${slug}`}
+                initialReview={aiReview}
+                canGenerate={
+                  isOwner &&
+                  !aiReview &&
+                  !sessionRow.redactedAt &&
+                  sessionRow.visibility !== "redacted"
+                }
+                fallbackSummary={readerTakeaway}
+              />
+            </div>
+
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <ReviewStep href="#outcome" step="01" title="Read the result">
-                Decide if this shipped, stalled, or needs proof before opening the raw timeline.
+                Start with the AI verdict and generated receipt before opening the raw timeline.
               </ReviewStep>
               <ReviewStep href="#reuse" step="02" title="Reuse the setup">
                 Fork the prompt or recipe into your own AI tool when the work is useful.
@@ -535,7 +560,7 @@ export default async function SessionView({
           </section>
 
           <section className="mt-10">
-            <SectionHeader id="outcome" eyebrow="01 / outcome" title="What happened?">
+            <SectionHeader id="outcome" eyebrow="02 / outcome" title="What happened?">
               Start with the generated receipt. It should answer what changed, whether it shipped,
               and which decisions matter before you inspect raw logs.
             </SectionHeader>
@@ -554,7 +579,7 @@ export default async function SessionView({
           </section>
 
           <section className="mt-10">
-            <SectionHeader id="reuse" eyebrow="02 / reuse" title="What can I do with it?">
+            <SectionHeader id="reuse" eyebrow="03 / reuse" title="What can I do with it?">
               If the work is useful, copy the setup or open the recipe in another coding agent
               instead of reverse-engineering the timeline.
             </SectionHeader>
@@ -580,7 +605,7 @@ export default async function SessionView({
           </section>
 
           <section className="mt-10">
-            <SectionHeader id="proof" eyebrow="03 / proof" title="Need more confidence?">
+            <SectionHeader id="proof" eyebrow="04 / proof" title="Need more confidence?">
               Ask Trail to explain the session or open the selected timeline events only after the
               receipt summary leaves a question unanswered.
             </SectionHeader>
@@ -596,7 +621,10 @@ export default async function SessionView({
               <TimelineToggle totalEvents={events.length} highlightCount={highlightIdxs.length} />
             ) : null}
 
-            <details className="group mt-6 rounded-[1.5rem] border border-zinc-900 bg-zinc-950/70 p-4">
+            <details
+              data-timeline-details
+              className="group mt-6 rounded-[1.5rem] border border-zinc-900 bg-zinc-950/70 p-4"
+            >
               <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-sm font-mono text-zinc-400 transition-colors hover:text-zinc-100">
                 <span
                   className="inline-block transition-transform group-open:rotate-90"
@@ -666,6 +694,7 @@ export default async function SessionView({
               initialComments={comments}
               viewer={viewerRow ?? null}
               signInHref={signInHref(`/u/${user}/${slug}#conversation`)}
+              threadStarters={aiReview?.questions}
             />
           </div>
         </div>

@@ -9,6 +9,7 @@
     "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
+    "receipt-checks:backfill": "tsx scripts/backfill-receipt-checks.ts",
     "recipes:backfill": "tsx scripts/backfill-recipes.ts",
     "tags:backfill": "tsx scripts/backfill-session-tags.ts"
   },
