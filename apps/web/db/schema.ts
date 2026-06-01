@@ -291,6 +291,32 @@ export const savedLesson = pgTable(
   }),
 );
 
+// Lesson reuse is an explicit social signal: a signed-in builder says a public
+// lesson made it into their own work. Reads still join trail_session for current
+// visibility because public lessons can later be unpublished or redacted.
+export const lessonReuse = pgTable(
+  "lesson_reuse",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    lessonId: text("lesson_id")
+      .notNull()
+      .references(() => sessionLesson.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pairIdx: uniqueIndex("lesson_reuse_user_lesson_idx").on(t.userId, t.lessonId),
+    userCreatedIdx: index("lesson_reuse_user_created_idx").on(t.userId, t.createdAt),
+    lessonIdx: index("lesson_reuse_lesson_idx").on(t.lessonId, t.createdAt),
+    sessionIdx: index("lesson_reuse_session_idx").on(t.sessionId, t.createdAt),
+  }),
+);
+
 // Materialized trending feed. Refreshed nightly by /api/cron/discover.
 // Score formula lives in the cron route, not here — this table is just the
 // rendered output (rank + score + slug). FK cascade handles row deletes.
@@ -399,6 +425,9 @@ export const notification = pgTable(
     commentId: text("comment_id").references(() => sessionComment.id, {
       onDelete: "set null",
     }),
+    lessonId: text("lesson_id").references(() => sessionLesson.id, {
+      onDelete: "cascade",
+    }),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -409,12 +438,16 @@ export const notification = pgTable(
       t.createdAt,
     ),
     sessionIdx: index("notification_session_idx").on(t.sessionId, t.createdAt),
+    lessonIdx: index("notification_lesson_idx").on(t.lessonId, t.createdAt),
     reactionActivityUniq: uniqueIndex("notification_reaction_activity_uniq")
       .on(t.userId, t.actorId, t.sessionId, t.type)
       .where(sql`${t.type} = 'session_reaction'`),
     followActivityUniq: uniqueIndex("notification_follow_activity_uniq")
       .on(t.userId, t.actorId, t.type)
       .where(sql`${t.type} = 'follow'`),
+    lessonReuseActivityUniq: uniqueIndex("notification_lesson_reuse_activity_uniq")
+      .on(t.userId, t.actorId, t.lessonId, t.type)
+      .where(sql`${t.type} = 'lesson_reuse'`),
   }),
 );
 

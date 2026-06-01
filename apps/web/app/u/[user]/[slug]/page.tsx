@@ -16,13 +16,14 @@ import { SessionCostBlock, SessionCostBlockSkeleton } from "@/components/session
 import { type EventData, TimelineEvent } from "@/components/timeline-event";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import { ToolIcon } from "@/components/tool-icon";
+import { UseLessonButton } from "@/components/use-lesson-button";
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -384,6 +385,11 @@ export default async function SessionView({
         sourceEventIdxs: schema.sessionLesson.sourceEventIdxs,
         transferabilityScore: schema.sessionLesson.transferabilityScore,
         confidence: schema.sessionLesson.confidence,
+        reuseCount: sql<number>`(
+          select count(*)::int
+          from lesson_reuse used
+          where used.lesson_id = ${schema.sessionLesson.id}
+        )`,
       })
       .from(schema.sessionLesson)
       .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
@@ -401,25 +407,37 @@ export default async function SessionView({
       )
       .limit(5),
   ]);
-  const savedLessonIds =
+  const [savedLessonIds, usedLessonIds] =
     viewer?.user?.id && lessonRows.length > 0
-      ? new Set(
-          (
-            await db
-              .select({ lessonId: schema.savedLesson.lessonId })
-              .from(schema.savedLesson)
-              .where(
-                and(
-                  eq(schema.savedLesson.userId, viewer.user.id),
-                  inArray(
-                    schema.savedLesson.lessonId,
-                    lessonRows.map((lesson) => lesson.id),
-                  ),
+      ? await Promise.all([
+          db
+            .select({ lessonId: schema.savedLesson.lessonId })
+            .from(schema.savedLesson)
+            .where(
+              and(
+                eq(schema.savedLesson.userId, viewer.user.id),
+                inArray(
+                  schema.savedLesson.lessonId,
+                  lessonRows.map((lesson) => lesson.id),
                 ),
-              )
-          ).map((row) => row.lessonId),
-        )
-      : new Set<string>();
+              ),
+            )
+            .then((rows) => new Set(rows.map((row) => row.lessonId))),
+          db
+            .select({ lessonId: schema.lessonReuse.lessonId })
+            .from(schema.lessonReuse)
+            .where(
+              and(
+                eq(schema.lessonReuse.userId, viewer.user.id),
+                inArray(
+                  schema.lessonReuse.lessonId,
+                  lessonRows.map((lesson) => lesson.id),
+                ),
+              ),
+            )
+            .then((rows) => new Set(rows.map((row) => row.lessonId))),
+        ])
+      : [new Set<string>(), new Set<string>()];
 
   const comments: ReceiptComment[] = commentRows.map((comment) => {
     const deletedAt = comment.deletedAt ? toIso(comment.deletedAt) : null;
@@ -663,6 +681,11 @@ export default async function SessionView({
                           <span className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-lime-50/55">
                             {lesson.confidence} confidence
                           </span>
+                          <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100/75">
+                            {Number(lesson.reuseCount) > 0
+                              ? `${formatCount(Number(lesson.reuseCount))} used`
+                              : "ready to use"}
+                          </span>
                         </div>
                         <h3 className="mt-4 text-2xl font-semibold tracking-[-0.05em] text-white">
                           {lesson.title}
@@ -753,6 +776,12 @@ export default async function SessionView({
                           <SaveLessonButton
                             lessonId={lesson.id}
                             initialSaved={savedLessonIds.has(lesson.id)}
+                            signedIn={Boolean(viewer?.user?.id)}
+                            signInHref={signInHref(`/u/${user}/${slug}#lessons`)}
+                          />
+                          <UseLessonButton
+                            lessonId={lesson.id}
+                            initialUsed={usedLessonIds.has(lesson.id)}
                             signedIn={Boolean(viewer?.user?.id)}
                             signInHref={signInHref(`/u/${user}/${slug}#lessons`)}
                           />
