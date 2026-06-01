@@ -147,6 +147,32 @@ function stackChips(row: BaseFeedRow): string[] {
   return Array.from(new Set(values)).slice(0, 5);
 }
 
+function normalizeTag(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function rowInterestTags(row: BaseFeedRow): Array<{ key: string; label: string }> {
+  const tags = [
+    { key: normalizeTag(row.tool), label: formatToolName(row.tool) },
+    ...(row.frameworks ?? []).map((tag) => ({ key: normalizeTag(tag), label: tag })),
+    ...(row.toolsUsed ?? []).map((tag) => ({ key: normalizeTag(tag), label: formatToolName(tag) })),
+  ];
+  const seen = new Set<string>();
+  return tags.filter((tag) => {
+    if (!tag.key || seen.has(tag.key)) return false;
+    seen.add(tag.key);
+    return true;
+  });
+}
+
+function matchedViewerStackLabels(row: BaseFeedRow, viewerTags: Set<string>): string[] {
+  if (viewerTags.size === 0) return [];
+  return rowInterestTags(row)
+    .filter((tag) => viewerTags.has(tag.key))
+    .map((tag) => tag.label)
+    .slice(0, 2);
+}
+
 function timelineMetrics(row: BaseFeedRow): Array<{ label: string; value: string }> {
   const metrics = [{ label: "Events", value: `${row.eventCount} ev` }];
   const duration = formatDuration(row.durationSeconds);
@@ -178,9 +204,12 @@ function reactionSummary(row: BaseFeedRow): string {
   return `${row.positiveReactions} worked / ${row.negativeReactions} needs tweak`;
 }
 
-function feedReason(row: BaseFeedRow): string {
+function feedReason(row: FeedRow): string {
   if ("isFollowing" in row && row.isFollowing && row.handle)
     return `Because you follow @${row.handle}`;
+  if (row.viewerStackMatches.length > 0) {
+    return `Because you ship with ${row.viewerStackMatches.join(" + ")}`;
+  }
   if (row.commentCount > 0 && row.positiveReactions + row.negativeReactions > 0) {
     return `${pluralize(row.commentCount, "reply", "replies")} and ${reactionSummary(row).toLowerCase()}`;
   }
@@ -246,6 +275,7 @@ interface BaseFeedRow extends RankableSession {
 
 interface FeedRow extends BaseFeedRow {
   isFollowing: boolean;
+  viewerStackMatches: string[];
 }
 
 type FeedRowWithoutStats = Omit<
@@ -364,6 +394,27 @@ interface DailyBuilderBriefData {
   followingReceipts: number;
   reputation: BuilderReputation;
   lessons: DailyBriefLesson[];
+}
+
+interface FeedPersonalization {
+  followingCount: number;
+  publicReceiptCount: number;
+  usedLessonCount: number;
+  unreadNotifications: number;
+  topTags: string[];
+}
+
+interface FeedPersonalizationSummaryRaw {
+  [key: string]: unknown;
+  followingCount: unknown;
+  publicReceiptCount: unknown;
+  usedLessonCount: unknown;
+  unreadNotifications: unknown;
+}
+
+interface FeedPersonalizationTagRaw {
+  [key: string]: unknown;
+  tag: string;
 }
 
 interface FeedStatsRaw {
@@ -527,6 +578,89 @@ async function loadComposerDrafts(viewerId: string | null): Promise<FeedComposer
     }));
 }
 
+async function loadViewerInterestTags(viewerId: string): Promise<string[]> {
+  const { db } = await import("@/db/client");
+  const rows = await db.execute<FeedPersonalizationTagRaw>(sql`
+    SELECT tag
+    FROM (
+      SELECT ts.tool AS tag, count(*)::int AS weight
+      FROM trail_session ts
+      WHERE ts.user_id = ${viewerId}
+        AND ts.tool IS NOT NULL
+      GROUP BY ts.tool
+
+      UNION ALL
+
+      SELECT framework.value AS tag, count(*)::int AS weight
+      FROM trail_session ts
+      CROSS JOIN LATERAL jsonb_array_elements_text(coalesce(ts.frameworks, '[]'::jsonb)) framework(value)
+      WHERE ts.user_id = ${viewerId}
+      GROUP BY framework.value
+
+      UNION ALL
+
+      SELECT tool.value AS tag, count(*)::int AS weight
+      FROM trail_session ts
+      CROSS JOIN LATERAL jsonb_array_elements_text(coalesce(ts.tools_used, '[]'::jsonb)) tool(value)
+      WHERE ts.user_id = ${viewerId}
+      GROUP BY tool.value
+    ) tags
+    WHERE coalesce(nullif(tag, ''), '') <> ''
+    GROUP BY tag
+    ORDER BY sum(weight) DESC, tag ASC
+    LIMIT 8
+  `);
+
+  return rowsOf<FeedPersonalizationTagRaw>(rows).map((row) => row.tag);
+}
+
+async function loadFeedPersonalization(viewerId: string | null): Promise<FeedPersonalization> {
+  if (!viewerId) {
+    return {
+      followingCount: 0,
+      publicReceiptCount: 0,
+      usedLessonCount: 0,
+      unreadNotifications: 0,
+      topTags: [],
+    };
+  }
+
+  const { db } = await import("@/db/client");
+  const [summaryRes, topTags] = await Promise.all([
+    db.execute<FeedPersonalizationSummaryRaw>(sql`
+      SELECT
+        (SELECT count(*)::int FROM "follow" f WHERE f.follower_id = ${viewerId})
+          AS "followingCount",
+        (
+          SELECT count(*)::int
+          FROM trail_session ts
+          WHERE ts.user_id = ${viewerId}
+            AND ts.visibility = 'public'
+            AND ts.shared_at IS NOT NULL
+            AND ts.redacted_at IS NULL
+        ) AS "publicReceiptCount",
+        (SELECT count(*)::int FROM lesson_reuse lr WHERE lr.user_id = ${viewerId})
+          AS "usedLessonCount",
+        (
+          SELECT count(*)::int
+          FROM notification n
+          WHERE n.user_id = ${viewerId}
+            AND n.read_at IS NULL
+        ) AS "unreadNotifications"
+    `),
+    loadViewerInterestTags(viewerId),
+  ]);
+  const summary = rowsOf<FeedPersonalizationSummaryRaw>(summaryRes)[0];
+
+  return {
+    followingCount: toCount(summary?.followingCount),
+    publicReceiptCount: toCount(summary?.publicReceiptCount),
+    usedLessonCount: toCount(summary?.usedLessonCount),
+    unreadNotifications: toCount(summary?.unreadNotifications),
+    topTags,
+  };
+}
+
 async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
   const { db, schema } = await import("@/db/client");
   const rows = await db
@@ -573,27 +707,37 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
 
   const ranked = await attachEngagementStats(rankFeed(rows), viewerId);
   if (!viewerId || ranked.length === 0) {
-    return ranked.map((row) => ({ ...row, isFollowing: false }));
+    return ranked.map((row) => ({ ...row, isFollowing: false, viewerStackMatches: [] }));
   }
 
   const authorIds = Array.from(
     new Set(ranked.map((row) => row.authorId).filter((authorId) => authorId !== viewerId)),
   );
   if (authorIds.length === 0) {
-    return ranked.map((row) => ({ ...row, isFollowing: false }));
+    const viewerTags = new Set((await loadViewerInterestTags(viewerId)).map(normalizeTag));
+    return ranked.map((row) => ({
+      ...row,
+      isFollowing: false,
+      viewerStackMatches: matchedViewerStackLabels(row, viewerTags),
+    }));
   }
 
-  const followingRows = await db
-    .select({ followingId: schema.follow.followingId })
-    .from(schema.follow)
-    .where(
-      and(eq(schema.follow.followerId, viewerId), inArray(schema.follow.followingId, authorIds)),
-    );
+  const [followingRows, interestTags] = await Promise.all([
+    db
+      .select({ followingId: schema.follow.followingId })
+      .from(schema.follow)
+      .where(
+        and(eq(schema.follow.followerId, viewerId), inArray(schema.follow.followingId, authorIds)),
+      ),
+    loadViewerInterestTags(viewerId),
+  ]);
   const followingIds = new Set(followingRows.map((row) => row.followingId));
+  const viewerTags = new Set(interestTags.map(normalizeTag));
 
   return ranked.map((row) => ({
     ...row,
     isFollowing: row.authorId !== viewerId && followingIds.has(row.authorId),
+    viewerStackMatches: matchedViewerStackLabels(row, viewerTags),
   }));
 }
 
@@ -645,9 +789,16 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
 
   // rankFeed re-applies the visibility filter + ordering so the tested helper
   // runs in prod and the page stays correct even if the query drifts.
-  return (await attachEngagementStats(rankFeed(rows), viewerId)).map((row) => ({
+  const [rankedRows, interestTags] = await Promise.all([
+    attachEngagementStats(rankFeed(rows), viewerId),
+    loadViewerInterestTags(viewerId),
+  ]);
+  const viewerTags = new Set(interestTags.map(normalizeTag));
+
+  return rankedRows.map((row) => ({
     ...row,
     isFollowing: row.authorId !== viewerId,
+    viewerStackMatches: matchedViewerStackLabels(row, viewerTags),
   }));
 }
 
@@ -1240,7 +1391,7 @@ async function DailyBuilderBrief({
   const stats = [
     { label: "Ship", value: formatCount(data.draftCount), detail: "ready drafts" },
     { label: "Read", value: formatCount(data.followingReceipts), detail: "followed this week" },
-    { label: "Inbox", value: formatCount(data.unreadNotifications), detail: "unread" },
+    { label: "Notifications", value: formatCount(data.unreadNotifications), detail: "unread" },
     { label: "Signal", value: formatCount(data.reputation.score), detail: data.reputation.label },
   ];
 
@@ -1835,61 +1986,177 @@ function EmptyTimeline({
 
 function PersonalizationNudge({
   builders,
+  stacks,
   viewerId,
+  personalization,
+  draftCount,
 }: {
   builders: BuilderRecommendation[];
+  stacks: TrendingStack[];
   viewerId: string | null;
+  personalization: FeedPersonalization;
+  draftCount: number;
 }) {
   if (!viewerId) return null;
   const recommendations = builders.filter((builder) => !builder.isFollowing).slice(0, 3);
-  if (recommendations.length === 0) return null;
+  const stackSuggestions = stacks.slice(0, 5);
+  const needsSetup =
+    personalization.followingCount < 3 ||
+    personalization.publicReceiptCount === 0 ||
+    personalization.usedLessonCount === 0 ||
+    personalization.topTags.length === 0 ||
+    personalization.unreadNotifications > 0;
+  if (!needsSetup && recommendations.length === 0 && stackSuggestions.length === 0) return null;
+
+  const setupItems = [
+    {
+      label: "Follow",
+      value: `${Math.min(personalization.followingCount, 3)}/3`,
+      body: "seed your graph",
+      done: personalization.followingCount >= 3,
+      href: "/discover",
+    },
+    {
+      label: "Stacks",
+      value:
+        personalization.topTags.length > 0
+          ? personalization.topTags.slice(0, 2).map(formatToolName).join(" + ")
+          : "pick one",
+      body: "teach For you",
+      done: personalization.topTags.length > 0,
+      href: stackSuggestions[0] ? stackHref(stackSuggestions[0]) : "/tools",
+    },
+    {
+      label: "Lessons",
+      value:
+        personalization.usedLessonCount > 0
+          ? `${formatCount(personalization.usedLessonCount)} used`
+          : "0 used",
+      body: "steal a move",
+      done: personalization.usedLessonCount > 0,
+      href: "/learn",
+    },
+    {
+      label: "Proof",
+      value:
+        personalization.publicReceiptCount > 0
+          ? `${formatCount(personalization.publicReceiptCount)} live`
+          : draftCount > 0
+            ? `${formatCount(draftCount)} draft`
+            : "publish",
+      body: "ship receipt",
+      done: personalization.publicReceiptCount > 0,
+      href: draftCount > 0 ? "#feed-composer" : "/install",
+    },
+    {
+      label: "Notifications",
+      value:
+        personalization.unreadNotifications > 0
+          ? `${formatCount(personalization.unreadNotifications)} unread`
+          : "clear",
+      body: "answer signals",
+      done: personalization.unreadNotifications === 0,
+      href: "/notifications",
+    },
+  ];
 
   return (
     <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
       <div className="overflow-hidden rounded-[26px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b]">
         <div className="border-b border-zinc-900 px-4 py-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
-            Tune your feed
+            Personalize Trail
           </div>
           <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
-            Follow builders so Following feels alive.
+            Make the daily feed feel like it was built for you.
           </h2>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
-            Start with people already publishing receipts in public. Trail will use your graph to
-            make the feed feel more like your network.
+            Trail learns from who you follow, what stacks you ship with, lessons you reuse, and
+            notifications you answer. Your notifications live in the top nav and at{" "}
+            <Link href="/notifications" className="text-[#a7f300] hover:underline">
+              /notifications
+            </Link>
+            .
           </p>
         </div>
-        <div className="grid divide-y divide-zinc-900 md:grid-cols-3 md:divide-x md:divide-y-0">
-          {recommendations.map((builder) => (
-            <div className="p-4" key={builder.id}>
-              <Link className="flex items-center gap-3" href={`/u/${builder.handle}`}>
-                <Avatar
-                  src={builder.image ?? githubAvatar(builder.handle)}
-                  alt={builder.name}
-                  fallback={builder.handle}
-                  className="h-10 w-10 rounded-full"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-zinc-100">
-                    {builder.name}
-                  </span>
-                  <span className="block truncate font-mono text-[11px] text-zinc-600">
-                    @{builder.handle}
-                  </span>
-                </span>
-              </Link>
-              <div className="mt-3 text-[12px] leading-5 text-zinc-500">
-                {formatCount(builder.shippedCount)} shipped receipts ·{" "}
-                {formatCount(builder.followerCount)} followers
+        <div className="grid gap-px bg-zinc-900 md:grid-cols-5">
+          {setupItems.map((item) => (
+            <Link
+              href={item.href}
+              key={item.label}
+              className="group bg-black/65 p-4 transition-colors hover:bg-zinc-950"
+            >
+              <div
+                className={`inline-flex min-h-6 items-center rounded-full px-2 font-mono text-[10px] uppercase tracking-[0.12em] ${
+                  item.done ? "bg-[#a7f300] text-black" : "bg-zinc-900 text-zinc-500"
+                }`}
+              >
+                {item.done ? "done" : "next"}
               </div>
-              <FollowButton
-                targetUserId={builder.id}
-                initialFollowing={builder.isFollowing}
-                className="mt-3 h-8 px-3 text-[10px]"
-              />
-            </div>
+              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+                {item.label}
+              </div>
+              <div className="mt-1 truncate text-[15px] font-semibold tracking-[-0.03em] text-zinc-100 group-hover:text-[#a7f300]">
+                {item.value}
+              </div>
+              <div className="mt-1 text-[12px] leading-5 text-zinc-500">{item.body}</div>
+            </Link>
           ))}
         </div>
+
+        {recommendations.length > 0 ? (
+          <div className="grid divide-y divide-zinc-900 md:grid-cols-3 md:divide-x md:divide-y-0">
+            {recommendations.map((builder) => (
+              <div className="p-4" key={builder.id}>
+                <Link className="flex items-center gap-3" href={`/u/${builder.handle}`}>
+                  <Avatar
+                    src={builder.image ?? githubAvatar(builder.handle)}
+                    alt={builder.name}
+                    fallback={builder.handle}
+                    className="h-10 w-10 rounded-full"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-zinc-100">
+                      {builder.name}
+                    </span>
+                    <span className="block truncate font-mono text-[11px] text-zinc-600">
+                      @{builder.handle}
+                    </span>
+                  </span>
+                </Link>
+                <div className="mt-3 text-[12px] leading-5 text-zinc-500">
+                  {formatCount(builder.shippedCount)} shipped receipts ·{" "}
+                  {formatCount(builder.followerCount)} followers
+                </div>
+                <FollowButton
+                  targetUserId={builder.id}
+                  initialFollowing={builder.isFollowing}
+                  className="mt-3 h-8 px-3 text-[10px]"
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {stackSuggestions.length > 0 ? (
+          <div className="border-t border-zinc-900 px-4 py-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+              Browse stacks to follow the work you care about
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {stackSuggestions.map((stack) => (
+                <Link
+                  href={stackHref(stack)}
+                  key={`${stack.kind}:${stack.tag}`}
+                  className="inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/60 hover:text-[#a7f300]"
+                >
+                  {stack.label}
+                  <span className="ml-2 text-zinc-600">{formatCount(stack.receiptCount)}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -2085,21 +2352,24 @@ export default async function FeedPage({
   let rows: FeedRow[];
   let discovery: FeedDiscovery;
   let composerDrafts: FeedComposerDraft[];
+  let personalization: FeedPersonalization;
 
   const viewer = await loadViewer();
   const viewerId = viewer?.id ?? null;
   if (view === "following") {
     if (!viewerId) redirect(FOLLOWING_SIGN_IN_HREF);
-    [rows, discovery, composerDrafts] = await Promise.all([
+    [rows, discovery, composerDrafts, personalization] = await Promise.all([
       loadFollowingFeed(viewerId),
       loadFeedDiscovery(viewerId),
       loadComposerDrafts(viewerId),
+      loadFeedPersonalization(viewerId),
     ]);
   } else {
-    [rows, discovery, composerDrafts] = await Promise.all([
+    [rows, discovery, composerDrafts, personalization] = await Promise.all([
       loadPublicFeed(viewerId),
       loadFeedDiscovery(viewerId),
       loadComposerDrafts(viewerId),
+      loadFeedPersonalization(viewerId),
     ]);
   }
 
@@ -2157,7 +2427,13 @@ export default async function FeedPage({
             ) : null}
 
             {!isFollowingView ? (
-              <PersonalizationNudge builders={discovery.builders} viewerId={viewerId} />
+              <PersonalizationNudge
+                builders={discovery.builders}
+                stacks={discovery.stacks}
+                viewerId={viewerId}
+                personalization={personalization}
+                draftCount={composerDrafts.length}
+              />
             ) : null}
 
             {!viewerId && !isFollowingView ? (

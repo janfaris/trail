@@ -17,7 +17,7 @@ const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/saved", label: "Saved" },
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
-  { href: "/notifications", label: "Inbox" },
+  { href: "/notifications", label: "Notifications" },
   { href: "/dashboard", label: "Studio" },
 ];
 
