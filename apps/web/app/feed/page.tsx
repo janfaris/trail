@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { UseLessonButton } from "@/components/use-lesson-button";
 import { type BuilderReputation, computeBuilderReputation } from "@/lib/builder-reputation";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
+import { type RadarCategory, radarCategoryLabel } from "@/lib/radar-sources";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
@@ -28,6 +29,11 @@ const PUBLIC_APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.ver
 );
 
 const discoveryLinks = [
+  {
+    href: "/radar",
+    label: "AI Radar",
+    detail: "Track fresh model, tool, benchmark, and leak signals that need proof receipts.",
+  },
   {
     href: "/tools",
     label: "AI tools",
@@ -339,6 +345,16 @@ interface FeedDiscovery {
   stats: FeedStats;
   builders: BuilderRecommendation[];
   stacks: TrendingStack[];
+}
+
+interface FeedRadarSignal {
+  [key: string]: unknown;
+  id: string;
+  title: string;
+  category: RadarCategory;
+  sourceHandle: string;
+  score: unknown;
+  publishedAt: Date | string;
 }
 
 interface DailyBriefSummaryRaw {
@@ -1093,6 +1109,31 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
   return { stats, builders, stacks };
 }
 
+async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
+  if (!process.env.DATABASE_URL) return [];
+
+  try {
+    const { db } = await import("@/db/client");
+    const rows = await db.execute<FeedRadarSignal>(sql`
+      SELECT
+        id,
+        title,
+        category,
+        source_handle AS "sourceHandle",
+        score,
+        published_at AS "publishedAt"
+      FROM radar_signal
+      WHERE status <> 'dismissed'
+      ORDER BY score DESC, published_at DESC
+      LIMIT 3
+    `);
+    return rowsOf<FeedRadarSignal>(rows);
+  } catch (error) {
+    console.error("Failed to load feed radar signals", error);
+    return [];
+  }
+}
+
 async function loadDailyBuilderBrief(
   viewerId: string,
   draftCount: number,
@@ -1524,6 +1565,12 @@ function FeedNavRail({
       label: "Following",
       detail: "Builders you track",
       active: isFollowingView,
+    },
+    {
+      href: "/radar",
+      label: "Radar",
+      detail: "AI signals to test",
+      active: false,
     },
     {
       href: notificationsHref,
@@ -2164,9 +2211,11 @@ function PersonalizationNudge({
 
 function FeedDiscoveryPanel({
   discovery,
+  radarSignals,
   viewerId,
 }: {
   discovery: FeedDiscovery;
+  radarSignals: FeedRadarSignal[];
   viewerId: string | null;
 }) {
   return (
@@ -2184,6 +2233,63 @@ function FeedDiscoveryPanel({
       </Link>
 
       <NetworkPulse stats={discovery.stats} />
+
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+        <div className="flex items-center justify-between gap-4 border-b border-zinc-900 px-4 py-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+              AI Radar
+            </div>
+            <h3 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+              Signals to test
+            </h3>
+          </div>
+          <Link
+            href="/radar"
+            className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition-colors hover:text-[#c8ff5e]"
+          >
+            Open
+          </Link>
+        </div>
+
+        {radarSignals.length === 0 ? (
+          <div className="px-4 py-5">
+            <p className="text-sm leading-6 text-zinc-500">
+              Radar fills from curated X sources via the local xurl fetcher. No pasted URLs needed.
+            </p>
+            <Link
+              href="/radar"
+              className="mt-3 inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+            >
+              View radar
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-900">
+            {radarSignals.map((signal) => (
+              <Link
+                key={signal.id}
+                href={`/radar?category=${signal.category}`}
+                className="group block px-4 py-4 transition-colors hover:bg-black/45"
+              >
+                <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+                  <span className="text-[#a7f300]">{radarCategoryLabel(signal.category)}</span>
+                  <span>@{signal.sourceHandle}</span>
+                  <span>
+                    <RelativeTime date={signal.publishedAt} />
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-3 text-sm font-medium leading-5 text-zinc-200 group-hover:text-white">
+                  {signal.title}
+                </p>
+                <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-amber-100/60">
+                  Needs Trail receipts
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
         <div className="border-b border-zinc-900 px-4 py-4">
@@ -2351,6 +2457,7 @@ export default async function FeedPage({
 
   let rows: FeedRow[];
   let discovery: FeedDiscovery;
+  let radarSignals: FeedRadarSignal[];
   let composerDrafts: FeedComposerDraft[];
   let personalization: FeedPersonalization;
 
@@ -2358,16 +2465,18 @@ export default async function FeedPage({
   const viewerId = viewer?.id ?? null;
   if (view === "following") {
     if (!viewerId) redirect(FOLLOWING_SIGN_IN_HREF);
-    [rows, discovery, composerDrafts, personalization] = await Promise.all([
+    [rows, discovery, radarSignals, composerDrafts, personalization] = await Promise.all([
       loadFollowingFeed(viewerId),
       loadFeedDiscovery(viewerId),
+      loadFeedRadarSignals(),
       loadComposerDrafts(viewerId),
       loadFeedPersonalization(viewerId),
     ]);
   } else {
-    [rows, discovery, composerDrafts, personalization] = await Promise.all([
+    [rows, discovery, radarSignals, composerDrafts, personalization] = await Promise.all([
       loadPublicFeed(viewerId),
       loadFeedDiscovery(viewerId),
+      loadFeedRadarSignals(),
       loadComposerDrafts(viewerId),
       loadFeedPersonalization(viewerId),
     ]);
@@ -2484,12 +2593,20 @@ export default async function FeedPage({
 
           <aside className="hidden xl:block">
             <div className="sticky top-20 py-6">
-              <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+              <FeedDiscoveryPanel
+                discovery={discovery}
+                radarSignals={radarSignals}
+                viewerId={viewerId}
+              />
             </div>
           </aside>
 
           <div className="px-3 py-6 lg:col-start-2 xl:hidden">
-            <FeedDiscoveryPanel discovery={discovery} viewerId={viewerId} />
+            <FeedDiscoveryPanel
+              discovery={discovery}
+              radarSignals={radarSignals}
+              viewerId={viewerId}
+            />
           </div>
         </div>
       </main>

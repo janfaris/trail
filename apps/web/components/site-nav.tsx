@@ -7,6 +7,7 @@ type NavLink = { href: string; label: string; external?: boolean };
 
 const PRIMARY_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
+  { href: "/radar", label: "Radar" },
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
   { href: "https://github.com/janfaris/trail", label: "GitHub", external: true },
@@ -14,6 +15,7 @@ const PRIMARY_LINKS: NavLink[] = [
 
 const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
+  { href: "/radar", label: "Radar" },
   { href: "/saved", label: "Saved" },
   { href: "/tools", label: "Tools" },
   { href: "/install", label: "Install" },
