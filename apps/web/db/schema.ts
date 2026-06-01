@@ -15,6 +15,15 @@ import {
 } from "drizzle-orm/pg-core";
 import type { ReceiptAiReview } from "../lib/receipt-ai-review-types";
 
+export type RadarSignalMetrics = {
+  retweet_count?: number;
+  reply_count?: number;
+  like_count?: number;
+  quote_count?: number;
+  bookmark_count?: number;
+  impression_count?: number;
+};
+
 // better-auth core tables (per https://better-auth.com/docs/concepts/database#core-schema)
 export const user = pgTable(
   "user",
@@ -212,6 +221,58 @@ export const event = pgTable(
   },
   (t) => ({
     sessionIdx: index("event_session_idx").on(t.sessionId, t.idx),
+  }),
+);
+
+// AI Builder Radar turns curated X/news signals into claims the Trail network can
+// verify with public receipts. Signals stay explicitly unverified until linked to proof.
+export const radarSignal = pgTable(
+  "radar_signal",
+  {
+    id: text("id").primaryKey(),
+    source: text("source").notNull().default("x"),
+    sourceHandle: text("source_handle").notNull(),
+    sourceName: text("source_name"),
+    externalId: text("external_id").notNull(),
+    url: text("url").notNull(),
+    text: text("text").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    whyBuildersCare: text("why_builders_care").notNull(),
+    testPrompt: text("test_prompt").notNull(),
+    category: text("category").notNull().default("other"),
+    status: text("status").notNull().default("unverified"),
+    score: numeric("score", { precision: 10, scale: 2 }).notNull().default(sql`0`),
+    metrics: jsonb("metrics").$type<RadarSignalMetrics>().notNull().default(sql`'{}'::jsonb`),
+    entities: jsonb("entities")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    externalIdx: uniqueIndex("radar_signal_source_external_idx").on(t.source, t.externalId),
+    publishedIdx: index("radar_signal_published_idx").on(t.publishedAt),
+    categoryPublishedIdx: index("radar_signal_category_published_idx").on(
+      t.category,
+      t.publishedAt,
+    ),
+    sourcePublishedIdx: index("radar_signal_source_published_idx").on(
+      t.sourceHandle,
+      t.publishedAt,
+    ),
+    scorePublishedIdx: index("radar_signal_score_published_idx").on(t.score, t.publishedAt),
+    categoryCheck: check(
+      "radar_signal_category_check",
+      sql`${t.category} IN ('model_release', 'benchmark', 'framework_update', 'tool_workflow', 'rumor', 'security', 'research', 'funding', 'tutorial', 'other')`,
+    ),
+    statusCheck: check(
+      "radar_signal_status_check",
+      sql`${t.status} IN ('unverified', 'verified', 'dismissed')`,
+    ),
   }),
 );
 
