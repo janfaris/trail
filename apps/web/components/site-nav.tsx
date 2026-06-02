@@ -72,6 +72,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
   let handle: string | null = null;
   let name: string | null = null;
   let image: string | null = null;
+  let isAdmin = false;
   let unreadNotifications = 0;
 
   if (process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET) {
@@ -103,6 +104,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
       handle = userRow?.handle ?? null;
       name = userRow?.name ?? null;
       image = userRow?.image ?? null;
+      isAdmin = userRow?.role === "admin";
       unreadNotifications = unreadRows.length;
     }
   }
@@ -136,7 +138,13 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
                   badge={link.href === "/notifications" ? notificationBadge : null}
                 />
               ))}
-              <ProfileMenu handle={handle} name={name} image={image} signOut={<SignOutButton />} />
+              <ProfileMenu
+                handle={handle}
+                name={name}
+                image={image}
+                isAdmin={isAdmin}
+                signOut={<SignOutButton />}
+              />
             </div>
           ) : (
             <a

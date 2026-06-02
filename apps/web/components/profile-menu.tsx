@@ -16,11 +16,13 @@ export function ProfileMenu({
   handle,
   name,
   image,
+  isAdmin = false,
   signOut,
 }: {
   handle: string;
   name?: string | null;
   image?: string | null;
+  isAdmin?: boolean;
   signOut: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -106,6 +108,16 @@ export function ProfileMenu({
           >
             Settings
           </Link>
+          {isAdmin ? (
+            <Link
+              href="/admin/radar"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="block rounded-md px-3 py-2 text-[13px] text-[#a7f300] hover:bg-zinc-900 transition-colors"
+            >
+              Radar admin
+            </Link>
+          ) : null}
           <div className="my-1 h-px bg-zinc-800" />
           <div className="px-3 py-2 text-[13px]">{signOut}</div>
         </div>

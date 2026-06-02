@@ -1,22 +1,19 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+import { isAdminSession } from "@/lib/admin-auth";
 import { authorizeRadarCronRequest } from "@/lib/radar-cron-auth";
 import { RADAR_FETCH_SCHEDULE, nextCronRunAfter } from "@/lib/radar-cron-schedule";
 import { NextResponse } from "next/server";
 
-// Admin status endpoint for the Radar ingestion cron. Same secret-based auth as
-// the cron route (RADAR_CRON_SECRET or CRON_SECRET). Returns the recent run log,
-// signal totals, and the next scheduled run so an admin UI can render it.
+// Admin status endpoint for the Radar ingestion cron. Authorized either by a
+// logged-in admin session (cookie) or the cron secret bearer
+// (RADAR_CRON_SECRET / CRON_SECRET). Returns the recent run log, signal totals,
+// and the next scheduled run so the admin UI can render it.
 export async function GET(req: Request) {
-  const auth = authorizeRadarCronRequest(req.headers);
-  if (!auth.ok) {
-    if (auth.reason === "not-configured") {
-      return NextResponse.json(
-        { error: "RADAR_CRON_SECRET or CRON_SECRET not configured" },
-        { status: 500 },
-      );
-    }
+  const secretAuth = authorizeRadarCronRequest(req.headers);
+  const authorized = secretAuth.ok || (await isAdminSession(req.headers));
+  if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
