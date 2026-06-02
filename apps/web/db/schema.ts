@@ -24,6 +24,13 @@ export type RadarSignalMetrics = {
   impression_count?: number;
 };
 
+export type RadarFetchRunFailure = {
+  sourceHandle?: string;
+  message: string;
+  status?: number;
+  retryAfterSeconds?: number;
+};
+
 // better-auth core tables (per https://better-auth.com/docs/concepts/database#core-schema)
 export const user = pgTable(
   "user",
@@ -272,6 +279,33 @@ export const radarSignal = pgTable(
     statusCheck: check(
       "radar_signal_status_check",
       sql`${t.status} IN ('unverified', 'verified', 'dismissed')`,
+    ),
+  }),
+);
+
+export const radarFetchRun = pgTable(
+  "radar_fetch_run",
+  {
+    id: text("id").primaryKey(),
+    source: text("source").notNull().default("x"),
+    trigger: text("trigger").notNull().default("cron"),
+    status: text("status").notNull().default("running"),
+    sourcesCount: integer("sources_count").notNull().default(0),
+    fetchedCount: integer("fetched_count").notNull().default(0),
+    storedCount: integer("stored_count").notNull().default(0),
+    failureCount: integer("failure_count").notNull().default(0),
+    failures: jsonb("failures").$type<RadarFetchRunFailure[]>().notNull().default(sql`'[]'::jsonb`),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusStartedIdx: index("radar_fetch_run_status_started_idx").on(t.status, t.startedAt),
+    startedIdx: index("radar_fetch_run_started_idx").on(t.startedAt),
+    statusCheck: check(
+      "radar_fetch_run_status_check",
+      sql`${t.status} IN ('running', 'success', 'partial', 'failure')`,
     ),
   }),
 );
