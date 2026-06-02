@@ -10,7 +10,12 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
-import { classifyRadarSignal } from "../lib/radar-classifier";
+import {
+  type RawRadarTweet,
+  buildRadarSignalWrite,
+  normalizeRadarTweet,
+  radarSignalUpdateValues,
+} from "../lib/radar-ingestion";
 import { RADAR_X_SOURCES, type RadarSource, buildRadarSourceQuery } from "../lib/radar-sources";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,28 +28,8 @@ if (!process.env.DATABASE_URL) {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-type XUrlTweet = {
-  id?: unknown;
-  author_id?: unknown;
-  text?: unknown;
-  created_at?: unknown;
-  public_metrics?: unknown;
-  entities?: unknown;
-  conversation_id?: unknown;
-};
-
 type XUrlResponse = {
   data?: unknown;
-};
-
-type NormalizedTweet = {
-  id: string;
-  authorId: string | null;
-  text: string;
-  createdAt: Date;
-  metrics: Record<string, number>;
-  entities: Record<string, unknown>;
-  conversationId: string | null;
 };
 
 function optionValue(name: string, fallback: string): string {
@@ -97,57 +82,10 @@ function assertXurlReady() {
   }
 }
 
-function asMetrics(value: unknown): Record<string, number> {
-  if (!value || typeof value !== "object") return {};
-  const metrics: Record<string, number> = {};
-  for (const [key, raw] of Object.entries(value)) {
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed)) metrics[key] = parsed;
-  }
-  return metrics;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function normalizeTweet(raw: XUrlTweet, source: RadarSource): NormalizedTweet {
-  if (typeof raw.id !== "string" || raw.id.length === 0) {
-    throw new Error(`xurl returned a ${source.handle} tweet without id`);
-  }
-  if (typeof raw.text !== "string" || raw.text.trim().length === 0) {
-    throw new Error(`xurl returned tweet ${raw.id} without text`);
-  }
-  if (typeof raw.created_at !== "string") {
-    throw new Error(`xurl returned tweet ${raw.id} without created_at`);
-  }
-
-  const createdAt = new Date(raw.created_at);
-  if (Number.isNaN(createdAt.getTime())) {
-    throw new Error(`xurl returned tweet ${raw.id} with invalid created_at`);
-  }
-
-  return {
-    id: raw.id,
-    authorId: typeof raw.author_id === "string" ? raw.author_id : null,
-    text: raw.text.trim(),
-    createdAt,
-    metrics: asMetrics(raw.public_metrics),
-    entities: asRecord(raw.entities),
-    conversationId: typeof raw.conversation_id === "string" ? raw.conversation_id : null,
-  };
-}
-
-function parseXurlTweets(stdout: string, source: RadarSource): NormalizedTweet[] {
+function parseXurlTweets(stdout: string, source: RadarSource) {
   const parsed = JSON.parse(stdout) as XUrlResponse;
   const data = Array.isArray(parsed.data) ? parsed.data : [];
-  return data.map((item) => normalizeTweet(item as XUrlTweet, source));
-}
-
-function tweetUrl(source: RadarSource, tweetId: string): string {
-  return `https://x.com/${source.handle}/status/${tweetId}`;
+  return data.map((item) => normalizeRadarTweet(item as RawRadarTweet, source, "xurl"));
 }
 
 async function main() {
@@ -190,16 +128,11 @@ async function main() {
       console.log(`[radar:fetch] @${source.handle}: ${tweets.length} signals`);
 
       for (const tweet of tweets) {
-        const classification = classifyRadarSignal({
-          text: tweet.text,
-          metrics: tweet.metrics,
-        });
-        const id = `x_${tweet.id}`;
-        const url = tweetUrl(source, tweet.id);
+        const values = buildRadarSignalWrite(source, tweet);
 
         if (!apply) {
           console.log(
-            `[radar:fetch] would store ${classification.category} @${source.handle}: ${classification.title}`,
+            `[radar:fetch] would store ${values.category} @${source.handle}: ${values.title}`,
           );
           continue;
         }
@@ -207,57 +140,10 @@ async function main() {
         if (!db || !schema) throw new Error("Database client was not initialized");
         await db
           .insert(schema.radarSignal)
-          .values({
-            id,
-            source: "x",
-            sourceHandle: source.handle,
-            sourceName: source.name,
-            externalId: tweet.id,
-            url,
-            text: tweet.text,
-            title: classification.title,
-            summary: classification.summary,
-            whyBuildersCare: classification.whyBuildersCare,
-            testPrompt: classification.testPrompt,
-            category: classification.category,
-            status: "unverified",
-            score: classification.score.toFixed(2),
-            metrics: tweet.metrics,
-            entities: {
-              ...tweet.entities,
-              author_id: tweet.authorId,
-              conversation_id: tweet.conversationId,
-            },
-            tags: classification.tags,
-            publishedAt: tweet.createdAt,
-            fetchedAt: new Date(),
-            updatedAt: new Date(),
-          })
+          .values(values)
           .onConflictDoUpdate({
             target: schema.radarSignal.id,
-            set: {
-              sourceHandle: source.handle,
-              sourceName: source.name,
-              url,
-              text: tweet.text,
-              title: classification.title,
-              summary: classification.summary,
-              whyBuildersCare: classification.whyBuildersCare,
-              testPrompt: classification.testPrompt,
-              category: classification.category,
-              status: "unverified",
-              score: classification.score.toFixed(2),
-              metrics: tweet.metrics,
-              entities: {
-                ...tweet.entities,
-                author_id: tweet.authorId,
-                conversation_id: tweet.conversationId,
-              },
-              tags: classification.tags,
-              publishedAt: tweet.createdAt,
-              fetchedAt: new Date(),
-              updatedAt: new Date(),
-            },
+            set: radarSignalUpdateValues(values),
           });
         stored += 1;
       }
