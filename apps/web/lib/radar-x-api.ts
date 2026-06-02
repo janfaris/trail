@@ -3,7 +3,12 @@ import {
   type RawRadarTweet,
   normalizeRadarTweet,
 } from "./radar-ingestion";
-import { RADAR_X_SOURCES, type RadarSource, buildRadarSourceQuery } from "./radar-sources";
+import {
+  RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE,
+  type RadarSource,
+  activeRadarSources,
+  buildRadarSourceQuery,
+} from "./radar-sources";
 
 const DEFAULT_X_API_BASE_URL = "https://api.x.com/2";
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
@@ -58,8 +63,8 @@ export class RadarXApiError extends Error {
 }
 
 function boundedLimit(value: number | undefined): number {
-  if (!Number.isFinite(value)) return 20;
-  return Math.min(Math.max(Math.floor(value ?? 20), 10), 100);
+  if (!Number.isFinite(value)) return RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE;
+  return Math.min(Math.max(Math.floor(value ?? RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE), 10), 100);
 }
 
 function normalizedBaseUrl(apiBaseUrl: string | undefined): string {
@@ -180,5 +185,5 @@ export async function fetchRadarTweetsForSource({
 }
 
 export function defaultRadarSources(): RadarSource[] {
-  return RADAR_X_SOURCES;
+  return activeRadarSources();
 }

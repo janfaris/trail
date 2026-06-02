@@ -4,7 +4,7 @@
 //   pnpm -F @trail/web run radar:fetch
 //
 // Apply:
-//   pnpm -F @trail/web run radar:fetch -- --apply --limit=20
+//   pnpm -F @trail/web run radar:fetch -- --apply --limit=10
 
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -16,7 +16,13 @@ import {
   normalizeRadarTweet,
   radarSignalUpdateValues,
 } from "../lib/radar-ingestion";
-import { RADAR_X_SOURCES, type RadarSource, buildRadarSourceQuery } from "../lib/radar-sources";
+import {
+  RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE,
+  RADAR_X_SOURCES,
+  type RadarSource,
+  activeRadarSources,
+  buildRadarSourceQuery,
+} from "../lib/radar-sources";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,7 +52,7 @@ function numberOption(name: string, fallback: number, min: number, max: number):
 
 function selectedSources(): RadarSource[] {
   const raw = optionValue("--sources", "").trim();
-  if (!raw) return RADAR_X_SOURCES;
+  if (!raw) return activeRadarSources();
 
   const wanted = new Set(
     raw
@@ -90,7 +96,7 @@ function parseXurlTweets(stdout: string, source: RadarSource) {
 
 async function main() {
   const apply = process.argv.includes("--apply");
-  const limit = numberOption("--limit", 20, 10, 100);
+  const limit = numberOption("--limit", RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE, 10, 100);
   const pauseMs = numberOption("--pause-ms", 1100, 0, 10_000);
   const sources = selectedSources();
 

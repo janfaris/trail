@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { isAdminSession } from "@/lib/admin-auth";
 import { authorizeRadarCronRequest } from "@/lib/radar-cron-auth";
+import { RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE } from "@/lib/radar-sources";
 import { NextResponse } from "next/server";
 
 function numberParam(url: URL, name: string, fallback: number, min: number, max: number): number {
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   const url = new URL(req.url);
-  const limit = numberParam(url, "limit", 20, 10, 100);
+  const limit = numberParam(url, "limit", RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE, 10, 100);
   const pauseMs = numberParam(url, "pauseMs", 1100, 0, 10_000);
 
   const [{ db, schema }, { runRadarCronIngestion }] = await Promise.all([
