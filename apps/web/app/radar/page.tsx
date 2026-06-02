@@ -4,6 +4,7 @@ import {
   RADAR_CATEGORIES,
   RADAR_X_SOURCES,
   type RadarCategory,
+  isActiveRadarSource,
   radarCategoryLabel,
 } from "@/lib/radar-sources";
 import { sql } from "drizzle-orm";
@@ -215,7 +216,7 @@ async function loadRadarData(
         WHERE status <> 'dismissed'
           ${categoryFilter}
           ${sourceFilter}
-        ORDER BY score DESC, published_at DESC
+        ORDER BY published_at DESC, fetched_at DESC
         LIMIT 36
       `),
     ]);
@@ -259,48 +260,39 @@ export default async function RadarPage({
   const activeSource = normalizeSource(sp.source);
   const data = await loadRadarData(activeCategory, activeSource);
   const featuredSignal = data.signals[0];
+  const orderedSources = [...RADAR_X_SOURCES].sort(
+    (a, b) =>
+      Number(isActiveRadarSource(b.handle)) - Number(isActiveRadarSource(a.handle)) ||
+      a.priority - b.priority ||
+      a.handle.localeCompare(b.handle),
+  );
 
   return (
     <div className="min-h-screen bg-black text-zinc-50">
       <SiteNav currentPath="/radar" />
 
-      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.12),transparent_30%),radial-gradient(circle_at_86%_10%,rgba(59,130,246,0.12),transparent_28%),#000]">
-        <section className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8 lg:py-10">
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-[32px] border border-zinc-800 bg-zinc-950/86 shadow-[0_34px_120px_rgba(0,0,0,0.48)]">
-              <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-end">
+      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.08),transparent_28%),#000]">
+        <section className="mx-auto grid max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,760px)_300px] lg:px-8 lg:py-6">
+          <div className="space-y-4">
+            <section className="rounded-[24px] border border-zinc-800 bg-zinc-950/88 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.42)] sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#a7f300]/30 bg-[#a7f300]/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
-                    Curated X signal
+                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+                    Radar feed
                   </div>
-                  <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.065em] text-white sm:text-6xl">
-                    AI Builder Radar
+                  <h1 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white sm:text-3xl">
+                    Fresh AI builder claims
                   </h1>
-                  <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-zinc-300">
-                    Trail watches trusted AI-builder sources, turns noisy X posts into testable
-                    claims, and points builders toward proof receipts instead of endless scrolling.
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                    Newest posts first. Use Radar to spot a claim, test it, then publish the receipt
+                    as proof.
                   </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <Link
-                      href="/feed#feed-composer"
-                      className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition hover:bg-[#c8ff5e]"
-                    >
-                      Publish proof
-                    </Link>
-                    <Link
-                      href="/learn"
-                      className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 bg-black/40 px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200 transition hover:border-[#a7f300]/40 hover:text-[#a7f300]"
-                    >
-                      Read lessons
-                    </Link>
-                  </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[360px]">
                   <StatCard label="signals" value={formatCount(data.stats.total)} />
                   <StatCard label="today" value={formatCount(data.stats.lastDay)} />
                   <StatCard label="sources" value={formatCount(data.stats.sources)} />
-                  <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
                     <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
                       refreshed
                     </div>
@@ -314,38 +306,44 @@ export default async function RadarPage({
                   </div>
                 </div>
               </div>
+            </section>
 
-              <div className="border-t border-zinc-900 bg-black/35 p-3">
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  <FilterPill href={filterHref({ source: activeSource })} active={!activeCategory}>
-                    All
-                  </FilterPill>
-                  {RADAR_CATEGORIES.map((category) => (
-                    <FilterPill
-                      key={category.id}
-                      href={filterHref({ category: category.id, source: activeSource })}
-                      active={activeCategory === category.id}
-                    >
-                      {category.shortLabel}
-                      <span className="ml-2 text-zinc-600">
-                        {formatCount(data.categoryCounts.get(category.id) ?? 0)}
-                      </span>
-                    </FilterPill>
-                  ))}
-                </div>
+            <section className="rounded-[22px] border border-zinc-800 bg-zinc-950/78 p-3">
+              <div className="mb-2 px-1 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                Filter by category
               </div>
-            </div>
+              <div className="flex flex-wrap gap-2">
+                <FilterPill href={filterHref({ source: activeSource })} active={!activeCategory}>
+                  All
+                </FilterPill>
+                {RADAR_CATEGORIES.map((category) => (
+                  <FilterPill
+                    key={category.id}
+                    href={filterHref({ category: category.id, source: activeSource })}
+                    active={activeCategory === category.id}
+                  >
+                    {category.shortLabel}
+                    <span className="ml-2 text-zinc-600">
+                      {formatCount(data.categoryCounts.get(category.id) ?? 0)}
+                    </span>
+                  </FilterPill>
+                ))}
+              </div>
+            </section>
 
             {featuredSignal ? (
               <section className="grid gap-4">
                 <div className="flex items-end justify-between gap-4 px-1">
                   <div>
                     <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
-                      Signals worth testing
+                      Latest pulls
                     </p>
                     <h2 className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-zinc-50">
-                      Latest claims from the AI builder graph
+                      Newest claims from curated X sources
                     </h2>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Sorted by tweet publish time, not engagement score.
+                    </p>
                   </div>
                   <Link
                     href="/feed"
@@ -365,46 +363,39 @@ export default async function RadarPage({
             )}
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-            <section className="rounded-[28px] border border-zinc-800 bg-zinc-950/88 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
-                Proof loop
-              </div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.045em] text-white">
-                X finds the claim. Trail verifies it with builders.
-              </h2>
-              <div className="mt-5 space-y-3 text-sm leading-6 text-zinc-400">
-                <p>1. Curated sources surface model, tool, benchmark, and leak signals.</p>
-                <p>2. Radar labels every signal unverified until a builder tests it.</p>
-                <p>3. Public receipts become the proof artifact other builders can reuse.</p>
-              </div>
-            </section>
-
-            <section className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950/88">
-              <div className="border-b border-zinc-900 px-5 py-4">
-                <h2 className="text-xl font-semibold tracking-[-0.04em] text-zinc-50">
-                  Curated sources
-                </h2>
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+            <section className="overflow-hidden rounded-[24px] border border-zinc-800 bg-zinc-950/88">
+              <div className="border-b border-zinc-900 px-4 py-4">
+                <h2 className="text-lg font-semibold tracking-[-0.04em] text-zinc-50">Sources</h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Seeded from the usableai AI-builder source list.
+                  Active sources are pulled every 6 hours. Paused sources remain filterable for
+                  older signals.
                 </p>
               </div>
               <div className="divide-y divide-zinc-900">
-                {RADAR_X_SOURCES.map((source) => {
+                {orderedSources.map((source) => {
                   const count = toNumber(data.sourceCounts.get(source.handle)?.count);
+                  const active = isActiveRadarSource(source.handle);
                   return (
                     <Link
                       href={filterHref({ category: activeCategory, source: source.handle })}
                       key={source.handle}
-                      className={`block px-5 py-4 transition hover:bg-black/45 ${
+                      className={`block px-4 py-3 transition hover:bg-black/45 ${
                         activeSource === source.handle ? "bg-[#a7f300]/[0.07]" : ""
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="font-semibold text-zinc-100">@{source.handle}</div>
-                        <span className="rounded-full border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500">
-                          {formatCount(count)}
-                        </span>
+                        <div>
+                          <div className="font-semibold text-zinc-100">@{source.handle}</div>
+                          <div className="mt-1 text-[11px] text-zinc-600">
+                            {active ? "active" : "paused"}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="rounded-full border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500">
+                            {formatCount(count)}
+                          </span>
+                        </div>
                       </div>
                       <p className="mt-1 text-[12px] leading-5 text-zinc-500">{source.role}</p>
                     </Link>
@@ -413,20 +404,13 @@ export default async function RadarPage({
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-[#a7f300]/30 bg-[#a7f300] p-5 text-zinc-950">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-700">
-                Local ingestion
+            <section className="rounded-[24px] border border-[#a7f300]/25 bg-[#a7f300]/10 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
+                How to use it
               </div>
-              <h2 className="mt-3 text-2xl font-black tracking-[-0.055em]">
-                No URL pasting required.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-800">
-                Run the local fetcher with your authenticated xurl session. Trail classifies and
-                stores the signals for this page.
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                Open a fresh claim, test it with your stack, then publish the receipt back to Trail.
               </p>
-              <code className="mt-4 block rounded-2xl bg-zinc-950 p-3 font-mono text-[11px] leading-5 text-[#a7f300]">
-                pnpm -F @trail/web run radar:fetch -- --apply --limit=20
-              </code>
             </section>
           </aside>
         </section>
@@ -480,7 +464,13 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
             </span>
             <span className="text-zinc-600">@{signal.sourceHandle}</span>
             <span className="text-zinc-700">·</span>
-            <RelativeTime date={signal.publishedAt} className="text-zinc-600" />
+            <span className="text-zinc-600">
+              posted <RelativeTime date={signal.publishedAt} />
+            </span>
+            <span className="text-zinc-700">·</span>
+            <span className="text-zinc-600">
+              pulled <RelativeTime date={signal.fetchedAt} />
+            </span>
             <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-amber-100/80">
               Unverified
             </span>
@@ -524,8 +514,8 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
 
         <div className="bg-black/72 p-5">
           <div className="grid grid-cols-2 gap-2">
-            <MiniMetric label="score" value={toNumber(signal.score).toFixed(1)} />
-            <MiniMetric label="signals" value={formatCount(engagement)} />
+            <MiniMetric label="radar score" value={toNumber(signal.score).toFixed(1)} />
+            <MiniMetric label="engagement" value={formatCount(engagement)} />
             <MiniMetric
               label="replies"
               value={formatCount(metricNumber(signal.metrics, "reply_count"))}
@@ -588,7 +578,7 @@ function EmptyRadarState({ tableAvailable }: { tableAvailable: boolean }) {
           your machine because that is where xurl is authenticated.
         </p>
         <code className="mt-5 block rounded-2xl bg-black p-4 text-left font-mono text-[12px] leading-6 text-[#a7f300]">
-          pnpm -F @trail/web run radar:fetch -- --apply --limit=20
+          pnpm -F @trail/web run radar:fetch -- --apply --limit=10
         </code>
       </div>
     </section>
