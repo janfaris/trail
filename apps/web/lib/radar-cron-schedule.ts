@@ -1,11 +1,12 @@
 // The radar fetch cron schedule, kept in sync with apps/web/vercel.json.
-// Vercel cron expressions are UTC. Radar runs hourly at minute 30.
-export const RADAR_FETCH_SCHEDULE = "30 * * * *";
+// Vercel cron expressions are UTC. Radar runs every 6 hours at minute 30.
+export const RADAR_FETCH_SCHEDULE = "30 */6 * * *";
+export const RADAR_FETCH_RUNS_PER_DAY = 4;
 
 // Minimal next-run resolver for the cron shapes Radar uses: a fixed minute with
-// an hourly ("*") or fixed hour. Returns the next UTC instant strictly after
-// `from`. Throws on unsupported expressions so callers fail loudly rather than
-// silently reporting a wrong time.
+// an hourly ("*"), every-n-hours ("*/6"), or fixed-hour schedule. Returns the
+// next UTC instant strictly after `from`. Throws on unsupported expressions so
+// callers fail loudly rather than silently reporting a wrong time.
 export function nextCronRunAfter(schedule: string, from: Date = new Date()): Date {
   const parts = schedule.trim().split(/\s+/);
   if (parts.length !== 5) {
@@ -21,14 +22,20 @@ export function nextCronRunAfter(schedule: string, from: Date = new Date()): Dat
     throw new Error(`Unsupported cron minute: ${minuteField}`);
   }
 
-  const hourlyAnyHour = hourField === "*";
+  const everyHour = hourField === "*";
+  const everyNthHour = hourField.match(/^\*\/(\d+)$/);
   let fixedHour: number | null = null;
-  if (!hourlyAnyHour) {
-    const parsedHour = Number(hourField);
-    if (!Number.isInteger(parsedHour) || parsedHour < 0 || parsedHour > 23) {
+  let stepHour: number | null = null;
+  if (everyNthHour) {
+    stepHour = Number(everyNthHour[1] ?? Number.NaN);
+    if (!Number.isInteger(stepHour) || stepHour < 1 || stepHour > 23) {
       throw new Error(`Unsupported cron hour: ${hourField}`);
     }
-    fixedHour = parsedHour;
+  } else if (!everyHour) {
+    fixedHour = Number(hourField);
+    if (!Number.isInteger(fixedHour) || fixedHour < 0 || fixedHour > 23) {
+      throw new Error(`Unsupported cron hour: ${hourField}`);
+    }
   }
 
   const next = new Date(from.getTime());
@@ -37,11 +44,12 @@ export function nextCronRunAfter(schedule: string, from: Date = new Date()): Dat
   if (next <= from) {
     next.setUTCHours(next.getUTCHours() + 1);
   }
-  if (!hourlyAnyHour) {
-    // Advance hour-by-hour until we land on the fixed hour. Bounded to 24 steps.
-    for (let i = 0; i < 24 && next.getUTCHours() !== fixedHour; i++) {
-      next.setUTCHours(next.getUTCHours() + 1);
+  for (let i = 0; i < 48; i++) {
+    const hour = next.getUTCHours();
+    if (everyHour || hour === fixedHour || (stepHour !== null && hour % stepHour === 0)) {
+      return next;
     }
+    next.setUTCHours(next.getUTCHours() + 1);
   }
-  return next;
+  throw new Error(`Unable to resolve next run for cron expression: ${schedule}`);
 }

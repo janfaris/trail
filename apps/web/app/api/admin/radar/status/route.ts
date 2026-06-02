@@ -3,12 +3,18 @@ export const dynamic = "force-dynamic";
 
 import { isAdminSession } from "@/lib/admin-auth";
 import { authorizeRadarCronRequest } from "@/lib/radar-cron-auth";
-import { RADAR_FETCH_SCHEDULE, nextCronRunAfter } from "@/lib/radar-cron-schedule";
-import { RADAR_X_SOURCES } from "@/lib/radar-sources";
+import {
+  RADAR_FETCH_RUNS_PER_DAY,
+  RADAR_FETCH_SCHEDULE,
+  nextCronRunAfter,
+} from "@/lib/radar-cron-schedule";
+import {
+  RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE,
+  RADAR_X_SOURCES,
+  activeRadarSources,
+  isActiveRadarSource,
+} from "@/lib/radar-sources";
 import { NextResponse } from "next/server";
-
-const SCHEDULED_RUNS_PER_DAY = 24;
-const DEFAULT_MAX_RESULTS_PER_SOURCE = 20;
 
 // Admin status endpoint for the Radar ingestion cron. Authorized either by a
 // logged-in admin session (cookie) or the cron secret bearer
@@ -83,6 +89,7 @@ export async function GET(req: Request) {
         name: source.name,
         role: source.role,
         priority: source.priority,
+        active: isActiveRadarSource(source.handle),
         total: stats?.total ?? 0,
         pulledToday: stats?.pulledToday ?? 0,
         newestPublishedAt: stats?.newestPublishedAt ?? null,
@@ -96,18 +103,23 @@ export async function GET(req: Request) {
         name: row.sourceName ?? row.sourceHandle,
         role: "Previously ingested source",
         priority: 99,
+        active: false,
         total: row.total,
         pulledToday: row.pulledToday,
         newestPublishedAt: row.newestPublishedAt,
         lastFetchedAt: row.lastFetchedAt,
       })),
   ].sort(
-    (a, b) => a.priority - b.priority || b.total - a.total || a.handle.localeCompare(b.handle),
+    (a, b) =>
+      Number(b.active) - Number(a.active) ||
+      a.priority - b.priority ||
+      b.total - a.total ||
+      a.handle.localeCompare(b.handle),
   );
 
-  const sourceCount = RADAR_X_SOURCES.length;
+  const sourceCount = activeRadarSources().length;
   const scheduledRequestsPerRun = sourceCount;
-  const scheduledRequestsPerDay = scheduledRequestsPerRun * SCHEDULED_RUNS_PER_DAY;
+  const scheduledRequestsPerDay = scheduledRequestsPerRun * RADAR_FETCH_RUNS_PER_DAY;
 
   return NextResponse.json({
     ok: true,
@@ -120,11 +132,11 @@ export async function GET(req: Request) {
     sourceBreakdown,
     xApiUsage: {
       sourceCount,
-      scheduledRunsPerDay: SCHEDULED_RUNS_PER_DAY,
+      scheduledRunsPerDay: RADAR_FETCH_RUNS_PER_DAY,
       scheduledRequestsPerRun,
       scheduledRequestsPerDay,
-      maxResultsPerSource: DEFAULT_MAX_RESULTS_PER_SOURCE,
-      maxPostReadsPerDay: scheduledRequestsPerDay * DEFAULT_MAX_RESULTS_PER_SOURCE,
+      maxResultsPerSource: RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE,
+      maxPostReadsPerDay: scheduledRequestsPerDay * RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE,
       manualRunRequests: sourceCount,
     },
     runs,

@@ -17,6 +17,17 @@ export type RadarSource = {
   priority: number;
 };
 
+export const RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE = 10;
+
+const RADAR_ACTIVE_X_SOURCE_HANDLES = new Set([
+  "swyx",
+  "simonw",
+  "bindureddy",
+  "testingcatalog",
+  "kimmonismus",
+  "chetaslua",
+]);
+
 export const RADAR_X_SOURCES: RadarSource[] = [
   { handle: "swyx", name: "swyx", role: "AI engineering + agents", priority: 1 },
   { handle: "karpathy", name: "Andrej Karpathy", role: "models + AI education", priority: 1 },
@@ -26,7 +37,16 @@ export const RADAR_X_SOURCES: RadarSource[] = [
   { handle: "testingcatalog", name: "TestingCatalog", role: "AI product releases", priority: 2 },
   { handle: "markgurman", name: "Mark Gurman", role: "platform + Apple AI", priority: 3 },
   { handle: "kimmonismus", name: "Chubby", role: "model leaks + benchmarks", priority: 2 },
+  { handle: "chetaslua", name: "Chetas Lua", role: "AI agents + product demos", priority: 2 },
 ];
+
+export function activeRadarSources(): RadarSource[] {
+  return RADAR_X_SOURCES.filter((source) => RADAR_ACTIVE_X_SOURCE_HANDLES.has(source.handle));
+}
+
+export function isActiveRadarSource(handle: string): boolean {
+  return RADAR_ACTIVE_X_SOURCE_HANDLES.has(handle.toLowerCase());
+}
 
 export const RADAR_QUERY_KEYWORDS = [
   "AI",

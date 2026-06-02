@@ -34,6 +34,7 @@ type StatusResponse = {
     name: string;
     role: string;
     priority: number;
+    active: boolean;
     total: number;
     pulledToday: number;
     newestPublishedAt: string | null;
@@ -102,7 +103,7 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [runLog, setRunLog] = useState<string | null>(null);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
@@ -216,8 +217,8 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                       X API estimate
                     </h2>
                     <p className="mt-1 text-sm text-zinc-400">
-                      Current cron: {data.xApiUsage.sourceCount} sources ×{" "}
-                      {data.xApiUsage.scheduledRunsPerDay} hourly runs.
+                      Current cron: {data.xApiUsage.sourceCount} active sources ×{" "}
+                      {data.xApiUsage.scheduledRunsPerDay} scheduled runs/day.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[#a7f300]/30 bg-[#a7f300]/10 px-3 py-2 text-right">
@@ -306,6 +307,7 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
               <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
                 <tr>
                   <th className="px-3 py-2">Source</th>
+                  <th className="px-3 py-2">Mode</th>
                   <th className="px-3 py-2 text-right">Pulled today</th>
                   <th className="px-3 py-2 text-right">Total stored</th>
                   <th className="px-3 py-2">Latest pull</th>
@@ -321,6 +323,17 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                       <div className="max-w-[260px] truncate text-xs text-zinc-500">
                         {source.name} · {source.role}
                       </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                          source.active
+                            ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]"
+                            : "border-zinc-700 bg-zinc-800/70 text-zinc-500"
+                        }`}
+                      >
+                        {source.active ? "active" : "paused"}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right">{int(source.pulledToday)}</td>
                     <td className="px-3 py-2 text-right">{int(source.total)}</td>

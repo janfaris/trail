@@ -6,7 +6,7 @@ import {
   radarSignalUpdateValues,
   trimRadarFailureMessage,
 } from "./radar-ingestion";
-import type { RadarSource } from "./radar-sources";
+import { RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE, type RadarSource } from "./radar-sources";
 import { RadarXApiError, defaultRadarSources, fetchRadarTweetsForSource } from "./radar-x-api";
 
 type DbClient = typeof import("@/db/client").db;
@@ -45,8 +45,8 @@ function sleep(ms: number) {
 }
 
 function boundedLimit(value: number | undefined): number {
-  if (!Number.isFinite(value)) return 20;
-  return Math.min(Math.max(Math.floor(value ?? 20), 10), 100);
+  if (!Number.isFinite(value)) return RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE;
+  return Math.min(Math.max(Math.floor(value ?? RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE), 10), 100);
 }
 
 function boundedPauseMs(value: number | undefined): number {
