@@ -60,6 +60,9 @@ export const user = pgTable(
     // anonymized first. Default false on every user — Pro plan alone is not
     // consent.
     spendAuditOptIn: boolean("spend_audit_opt_in").notNull().default(false),
+    // Privileged role for internal tooling (e.g. /admin/radar). 'user' for
+    // everyone by default; set to 'admin' manually for trusted operators.
+    role: text("role").notNull().default("user"),
   },
   (t) => ({
     handleIdx: uniqueIndex("user_handle_idx").on(t.handle),
