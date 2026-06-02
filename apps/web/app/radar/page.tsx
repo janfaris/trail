@@ -15,9 +15,9 @@ import type { ReactNode } from "react";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "AI Builder Radar | Trail",
+  title: "Radar Feed | Trail",
   description:
-    "Curated X signals for AI builders, ranked as things to test and verify with public Trail receipts.",
+    "Fresh X signals for AI builders, sorted as claims to test and verify with public Trail receipts.",
   alternates: {
     canonical: "/radar",
   },
