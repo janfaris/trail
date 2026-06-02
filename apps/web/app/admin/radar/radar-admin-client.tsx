@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type RunRow = {
@@ -28,8 +29,41 @@ type StatusResponse = {
     newestPublishedAt: string | null;
     lastFetchedAt: string | null;
   };
+  sourceBreakdown: Array<{
+    handle: string;
+    name: string;
+    role: string;
+    priority: number;
+    total: number;
+    pulledToday: number;
+    newestPublishedAt: string | null;
+    lastFetchedAt: string | null;
+  }>;
+  xApiUsage: {
+    sourceCount: number;
+    scheduledRunsPerDay: number;
+    scheduledRequestsPerRun: number;
+    scheduledRequestsPerDay: number;
+    maxResultsPerSource: number;
+    maxPostReadsPerDay: number;
+    manualRunRequests: number;
+  };
   runs: RunRow[];
 };
+
+const X_POST_READ_USD = 0.005;
+
+function money(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value >= 10 ? 0 : 2,
+  }).format(value);
+}
+
+function int(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
 
 function rel(iso: string | null, now = Date.now()): string {
   if (!iso) return "—";
@@ -114,6 +148,19 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
   }, [limit, loadStatus]);
 
   const nextRunRel = useMemo(() => (data ? rel(data.nextRun) : "—"), [data]);
+  const apiCost = useMemo(() => {
+    if (!data) return null;
+    const pulledToday = data.sourceBreakdown.reduce((sum, source) => sum + source.pulledToday, 0);
+    const manualMaxPostReads =
+      data.xApiUsage.manualRunRequests * data.xApiUsage.maxResultsPerSource;
+    return {
+      pulledToday,
+      observedToday: pulledToday * X_POST_READ_USD,
+      scheduledMax: data.xApiUsage.maxPostReadsPerDay * X_POST_READ_USD,
+      manualMax: manualMaxPostReads * X_POST_READ_USD,
+      manualMaxPostReads,
+    };
+  }, [data]);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 text-zinc-200">
@@ -150,8 +197,8 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
             <Stat label="Last run" value={rel(data.lastRunAt)} sub={data.schedule} />
             <Stat
               label="Signals"
-              value={String(data.totals.total)}
-              sub={`${data.totals.today} today`}
+              value={int(data.totals.total)}
+              sub={`${int(data.totals.today)} today`}
             />
             <Stat
               label="Newest tweet"
@@ -159,6 +206,70 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
               sub="by publish time"
             />
           </div>
+
+          {apiCost && (
+            <div className="mb-8 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+              <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                      X API estimate
+                    </h2>
+                    <p className="mt-1 text-sm text-zinc-400">
+                      Current cron: {data.xApiUsage.sourceCount} sources ×{" "}
+                      {data.xApiUsage.scheduledRunsPerDay} hourly runs.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[#a7f300]/30 bg-[#a7f300]/10 px-3 py-2 text-right">
+                    <div className="text-xs uppercase tracking-wide text-[#a7f300]">
+                      Scheduled requests/day
+                    </div>
+                    <div className="mt-0.5 text-lg font-semibold text-zinc-100">
+                      {int(data.xApiUsage.scheduledRequestsPerDay)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <Stat
+                    label="Per run"
+                    value={`${int(data.xApiUsage.scheduledRequestsPerRun)} requests`}
+                    sub="1 recent-search call per source"
+                  />
+                  <Stat
+                    label="Max post reads"
+                    value={int(data.xApiUsage.maxPostReadsPerDay)}
+                    sub={`${data.xApiUsage.maxResultsPerSource} max results/request`}
+                  />
+                  <Stat
+                    label="Manual run adds"
+                    value={`${int(apiCost.manualMaxPostReads)} max reads`}
+                    sub={`${money(apiCost.manualMax)} max`}
+                  />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-zinc-500">
+                  X charges read operations per Post resource returned, not simply per request.
+                  Using the current posted rate of {money(X_POST_READ_USD)} per Post read:{" "}
+                  <span className="text-zinc-300">{money(apiCost.scheduledMax)} per day max</span>{" "}
+                  if every scheduled request returns {data.xApiUsage.maxResultsPerSource} new or
+                  non-deduped posts. Confirm exact rates in your X billing dashboard.
+                </p>
+              </section>
+              <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                  Estimated cost today
+                </h2>
+                <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100">
+                  {money(apiCost.observedToday)}
+                  <span className="ml-1 text-sm font-normal text-zinc-500">so far</span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  Based on {int(apiCost.pulledToday)} unique stored posts fetched today. X says
+                  duplicate reads of the same resource are deduplicated within a 24-hour UTC window,
+                  so actual billed reads should track unique posts more closely than raw requests.
+                </p>
+              </section>
+            </div>
+          )}
 
           <div className="mb-8 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
             <div className="flex items-center gap-2">
@@ -185,6 +296,52 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
               {running ? "Running…" : "Run fetch now"}
             </button>
             {runLog && <span className="text-sm text-zinc-400">{runLog}</span>}
+          </div>
+
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Pulled tweets by source
+          </h2>
+          <div className="mb-8 overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2">Source</th>
+                  <th className="px-3 py-2 text-right">Pulled today</th>
+                  <th className="px-3 py-2 text-right">Total stored</th>
+                  <th className="px-3 py-2">Latest pull</th>
+                  <th className="px-3 py-2">Newest tweet</th>
+                  <th className="px-3 py-2 text-right">Tweets</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {data.sourceBreakdown.map((source) => (
+                  <tr key={source.handle} className="text-zinc-300">
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-zinc-100">@{source.handle}</div>
+                      <div className="max-w-[260px] truncate text-xs text-zinc-500">
+                        {source.name} · {source.role}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-right">{int(source.pulledToday)}</td>
+                    <td className="px-3 py-2 text-right">{int(source.total)}</td>
+                    <td className="px-3 py-2" title={source.lastFetchedAt ?? ""}>
+                      {rel(source.lastFetchedAt)}
+                    </td>
+                    <td className="px-3 py-2" title={source.newestPublishedAt ?? ""}>
+                      {rel(source.newestPublishedAt)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Link
+                        href={`/radar?source=${encodeURIComponent(source.handle)}`}
+                        className="text-[#a7f300] hover:text-[#c8ff4d]"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">

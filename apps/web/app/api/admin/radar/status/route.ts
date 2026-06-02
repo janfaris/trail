@@ -4,7 +4,11 @@ export const dynamic = "force-dynamic";
 import { isAdminSession } from "@/lib/admin-auth";
 import { authorizeRadarCronRequest } from "@/lib/radar-cron-auth";
 import { RADAR_FETCH_SCHEDULE, nextCronRunAfter } from "@/lib/radar-cron-schedule";
+import { RADAR_X_SOURCES } from "@/lib/radar-sources";
 import { NextResponse } from "next/server";
+
+const SCHEDULED_RUNS_PER_DAY = 24;
+const DEFAULT_MAX_RESULTS_PER_SOURCE = 20;
 
 // Admin status endpoint for the Radar ingestion cron. Authorized either by a
 // logged-in admin session (cookie) or the cron secret bearer
@@ -23,7 +27,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "20"), 1), 100);
 
-  const [runs, totalsRows] = await Promise.all([
+  const [runs, totalsRows, sourceRows] = await Promise.all([
     db
       .select({
         id: schema.radarFetchRun.id,
@@ -48,6 +52,17 @@ export async function GET(req: Request) {
         lastFetchedAt: sql<Date | null>`max(${schema.radarSignal.fetchedAt})`,
       })
       .from(schema.radarSignal),
+    db
+      .select({
+        sourceHandle: schema.radarSignal.sourceHandle,
+        sourceName: sql<string | null>`max(${schema.radarSignal.sourceName})`,
+        total: sql<number>`count(*)::int`,
+        pulledToday: sql<number>`count(*) filter (where ${schema.radarSignal.fetchedAt} >= date_trunc('day', now()))::int`,
+        newestPublishedAt: sql<Date | null>`max(${schema.radarSignal.publishedAt})`,
+        lastFetchedAt: sql<Date | null>`max(${schema.radarSignal.fetchedAt})`,
+      })
+      .from(schema.radarSignal)
+      .groupBy(schema.radarSignal.sourceHandle),
   ]);
 
   const totals = totalsRows[0] ?? {
@@ -58,6 +73,41 @@ export async function GET(req: Request) {
   };
 
   const lastSuccess = runs.find((r) => r.status === "success" || r.status === "partial") ?? null;
+  const sourceStats = new Map(sourceRows.map((row) => [row.sourceHandle.toLowerCase(), row]));
+  const configuredHandles = new Set(RADAR_X_SOURCES.map((source) => source.handle.toLowerCase()));
+  const sourceBreakdown = [
+    ...RADAR_X_SOURCES.map((source) => {
+      const stats = sourceStats.get(source.handle.toLowerCase());
+      return {
+        handle: source.handle,
+        name: source.name,
+        role: source.role,
+        priority: source.priority,
+        total: stats?.total ?? 0,
+        pulledToday: stats?.pulledToday ?? 0,
+        newestPublishedAt: stats?.newestPublishedAt ?? null,
+        lastFetchedAt: stats?.lastFetchedAt ?? null,
+      };
+    }),
+    ...sourceRows
+      .filter((row) => !configuredHandles.has(row.sourceHandle.toLowerCase()))
+      .map((row) => ({
+        handle: row.sourceHandle,
+        name: row.sourceName ?? row.sourceHandle,
+        role: "Previously ingested source",
+        priority: 99,
+        total: row.total,
+        pulledToday: row.pulledToday,
+        newestPublishedAt: row.newestPublishedAt,
+        lastFetchedAt: row.lastFetchedAt,
+      })),
+  ].sort(
+    (a, b) => a.priority - b.priority || b.total - a.total || a.handle.localeCompare(b.handle),
+  );
+
+  const sourceCount = RADAR_X_SOURCES.length;
+  const scheduledRequestsPerRun = sourceCount;
+  const scheduledRequestsPerDay = scheduledRequestsPerRun * SCHEDULED_RUNS_PER_DAY;
 
   return NextResponse.json({
     ok: true,
@@ -67,6 +117,16 @@ export async function GET(req: Request) {
     lastRunAt: runs[0]?.startedAt ?? null,
     lastSuccessAt: lastSuccess?.startedAt ?? null,
     totals,
+    sourceBreakdown,
+    xApiUsage: {
+      sourceCount,
+      scheduledRunsPerDay: SCHEDULED_RUNS_PER_DAY,
+      scheduledRequestsPerRun,
+      scheduledRequestsPerDay,
+      maxResultsPerSource: DEFAULT_MAX_RESULTS_PER_SOURCE,
+      maxPostReadsPerDay: scheduledRequestsPerDay * DEFAULT_MAX_RESULTS_PER_SOURCE,
+      manualRunRequests: sourceCount,
+    },
     runs,
   });
 }
