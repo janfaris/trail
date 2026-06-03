@@ -9,10 +9,31 @@ export type RawRadarTweet = {
   created_at?: unknown;
   public_metrics?: unknown;
   entities?: unknown;
+  attachments?: unknown;
   conversation_id?: unknown;
   referenced_tweets?: unknown;
   lang?: unknown;
   possibly_sensitive?: unknown;
+};
+
+export type RawRadarTweetMedia = {
+  media_key?: unknown;
+  type?: unknown;
+  url?: unknown;
+  preview_image_url?: unknown;
+  width?: unknown;
+  height?: unknown;
+  alt_text?: unknown;
+};
+
+export type RadarTweetMedia = {
+  mediaKey: string;
+  type: string;
+  url: string;
+  previewImageUrl?: string;
+  width?: number;
+  height?: number;
+  altText?: string;
 };
 
 export type NormalizedRadarTweet = {
@@ -64,10 +85,53 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function optionalNumber(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function normalizeMedia(media: RawRadarTweetMedia | undefined): RadarTweetMedia | null {
+  if (!media || typeof media.media_key !== "string") return null;
+  const type = typeof media.type === "string" ? media.type : "unknown";
+  const url =
+    typeof media.url === "string"
+      ? media.url
+      : typeof media.preview_image_url === "string"
+        ? media.preview_image_url
+        : null;
+  if (!url) return null;
+
+  return {
+    mediaKey: media.media_key,
+    type,
+    url,
+    previewImageUrl:
+      typeof media.preview_image_url === "string" ? media.preview_image_url : undefined,
+    width: optionalNumber(media.width),
+    height: optionalNumber(media.height),
+    altText: typeof media.alt_text === "string" ? media.alt_text : undefined,
+  };
+}
+
+function mediaKeys(raw: RawRadarTweet): string[] {
+  const keys = asRecord(raw.attachments).media_keys;
+  return Array.isArray(keys) ? keys.filter((key): key is string => typeof key === "string") : [];
+}
+
+function normalizeTweetMedia(
+  raw: RawRadarTweet,
+  mediaByKey: ReadonlyMap<string, RawRadarTweetMedia> | undefined,
+): RadarTweetMedia[] {
+  return mediaKeys(raw)
+    .map((key) => normalizeMedia(mediaByKey?.get(key)))
+    .filter((media): media is RadarTweetMedia => media !== null);
+}
+
 export function normalizeRadarTweet(
   raw: RawRadarTweet,
   source: RadarSource,
   providerLabel = "X API",
+  mediaByKey?: ReadonlyMap<string, RawRadarTweetMedia>,
 ): NormalizedRadarTweet {
   if (typeof raw.id !== "string" || raw.id.length === 0) {
     throw new Error(`${providerLabel} returned a ${source.handle} tweet without id`);
@@ -92,6 +156,8 @@ export function normalizeRadarTweet(
     metrics: asMetrics(raw.public_metrics),
     entities: {
       ...asRecord(raw.entities),
+      media: normalizeTweetMedia(raw, mediaByKey),
+      attachments: asRecord(raw.attachments),
       referenced_tweets: Array.isArray(raw.referenced_tweets) ? raw.referenced_tweets : undefined,
       lang: typeof raw.lang === "string" ? raw.lang : undefined,
       possibly_sensitive:
