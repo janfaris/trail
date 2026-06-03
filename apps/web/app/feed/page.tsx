@@ -1459,19 +1459,13 @@ async function DailyBuilderBrief({
               </Link>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
               {stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border border-white/10 bg-black/30 p-3"
-                >
-                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+                <div key={stat.label} className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-lg text-zinc-100 tabular-nums">{stat.value}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
                     {stat.label}
-                  </div>
-                  <div className="mt-1 font-mono text-lg text-zinc-100 tabular-nums">
-                    {stat.value}
-                  </div>
-                  <div className="mt-0.5 truncate text-[11px] text-zinc-500">{stat.detail}</div>
+                  </span>
                 </div>
               ))}
             </div>
@@ -1650,16 +1644,16 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
       <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
         Network pulse
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <dl className="mt-3 space-y-2">
         {items.map(([label, value]) => (
-          <div key={label} className="rounded-2xl bg-black/55 px-3 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
+          <div key={label} className="flex items-baseline justify-between gap-3">
+            <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
               {label}
-            </div>
-            <div className="mt-1 font-mono text-sm text-zinc-100 tabular-nums">{value}</div>
+            </dt>
+            <dd className="font-mono text-sm text-zinc-100 tabular-nums">{value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
     </section>
   );
 }
