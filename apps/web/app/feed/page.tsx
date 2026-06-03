@@ -1826,12 +1826,14 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               copiedLabel="Copied"
               className="min-h-8 rounded-full border-transparent bg-transparent px-2.5 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-200"
             />
-            <Link
-              href={forkHref}
-              className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
-            >
-              Fork
-            </Link>
+            {!manualPost ? (
+              <Link
+                href={forkHref}
+                className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
+              >
+                Fork
+              </Link>
+            ) : null}
             <a
               href={tweetHref}
               target="_blank"
