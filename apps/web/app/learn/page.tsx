@@ -698,25 +698,27 @@ function LessonCard({
     >
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <div className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-black/30 px-2.5 py-1 font-mono text-[10px] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
-              #{String(index + 1).padStart(2, "0")}
-            </span>
-            <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px]">
+            <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 uppercase tracking-[0.14em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
               {lesson.transferabilityScore}/5 stealable
             </span>
-            <span className="rounded-full bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+            <span className="text-zinc-500">#{String(index + 1).padStart(2, "0")}</span>
+            <span className="text-zinc-700">·</span>
+            <span className="uppercase tracking-[0.14em] text-zinc-500">
               evidence {lesson.confidence}
             </span>
-            <span className="rounded-full bg-amber-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-100/75 shadow-[0_0_0_1px_rgba(252,211,77,0.16)]">
-              {lesson.reuseCount > 0 ? `${formatCount(lesson.reuseCount)} used` : "ready to use"}
-            </span>
-            <span className="font-mono text-[11px] text-zinc-500">
-              @{lesson.handle} - <RelativeTime date={lesson.sharedAt ?? lesson.generatedAt} />
-            </span>
+            <span className="text-zinc-700">·</span>
+            <span className="text-zinc-500">@{lesson.handle}</span>
+            <span className="text-zinc-700">·</span>
+            <RelativeTime date={lesson.sharedAt ?? lesson.generatedAt} className="text-zinc-600" />
+            {lesson.reuseCount > 0 ? (
+              <span className="ml-auto text-amber-100/70">
+                {formatCount(lesson.reuseCount)} used
+              </span>
+            ) : null}
           </div>
 
-          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-black/25 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.02] p-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-950 text-[#a7f300] shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
               <ToolIcon name={lesson.tool} size={18} />
             </div>
@@ -744,15 +746,15 @@ function LessonCard({
             <p className="mt-2 text-base leading-7 text-lime-50/85">{lesson.whatToSteal}</p>
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl bg-black/25 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+          <div className="mt-3 grid gap-px overflow-hidden rounded-2xl bg-white/[0.05] md:grid-cols-2">
+            <div className="bg-[#080908] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
                 Use when
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-300">{lesson.useWhen}</p>
             </div>
             {lesson.failureMode ? (
-              <div className="rounded-2xl bg-amber-300/[0.045] p-4 shadow-[0_0_0_1px_rgba(252,211,77,0.14)]">
+              <div className="bg-amber-300/[0.045] p-4">
                 <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-100/70">
                   Watch out
                 </div>
@@ -802,7 +804,7 @@ function LessonCard({
                 {proofSignals.map((signal) => (
                   <span
                     key={signal}
-                    className="rounded-full bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                    className="rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300"
                   >
                     {signal}
                   </span>
@@ -829,7 +831,7 @@ function LessonCard({
               <Link
                 key={tag}
                 href={buildHref({}, "tag", tag)}
-                className="rounded-full px-2 py-0.5 font-mono text-[10px] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+                className="rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] text-zinc-400 transition-[background-color,color] hover:bg-white/[0.08] hover:text-[#a7f300]"
               >
                 {tag}
               </Link>
@@ -960,7 +962,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
 
   return (
     <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-      <section className="rounded-[1.75rem] border border-zinc-800 bg-zinc-950/90 p-5">
+      <section className="rounded-[1.75rem] bg-zinc-950/90 p-5 shadow-[var(--trail-shadow-border)]">
         <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#a7f300]">
           Prompt moves
         </div>
@@ -974,7 +976,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
           ).map((move) => (
             <div
               key={move}
-              className="rounded-2xl border border-zinc-900 bg-black/30 p-3 text-sm leading-5 text-zinc-300"
+              className="rounded-2xl bg-white/[0.02] p-3 text-sm leading-5 text-zinc-300"
             >
               {move}
             </div>
@@ -982,7 +984,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
         </div>
       </section>
 
-      <section className="rounded-[1.75rem] border border-zinc-800 bg-zinc-950/90 p-5">
+      <section className="rounded-[1.75rem] bg-zinc-950/90 p-5 shadow-[var(--trail-shadow-border)]">
         <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#a7f300]">
           Failure modes
         </div>
@@ -996,7 +998,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
           ).map((mode) => (
             <div
               key={mode}
-              className="rounded-2xl border border-zinc-900 bg-black/30 p-3 text-sm leading-5 text-zinc-300"
+              className="rounded-2xl bg-white/[0.02] p-3 text-sm leading-5 text-zinc-300"
             >
               {mode}
             </div>

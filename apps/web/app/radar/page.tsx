@@ -491,22 +491,16 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
     <article className="overflow-hidden rounded-[28px] bg-zinc-950/84 shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]">
       <div className="grid gap-px bg-zinc-900/55 lg:grid-cols-[minmax(0,1fr)_238px]">
         <div className="bg-zinc-950/96 p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em]">
             <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">
               {radarCategoryLabel(signal.category)}
             </span>
-            <span className="text-zinc-600">@{signal.sourceHandle}</span>
+            <span className="text-zinc-500">@{signal.sourceHandle}</span>
             <span className="text-zinc-700">·</span>
             <span className="text-zinc-600">
-              posted <RelativeTime date={signal.publishedAt} />
+              <RelativeTime date={signal.publishedAt} />
             </span>
-            <span className="text-zinc-700">·</span>
-            <span className="text-zinc-600">
-              pulled <RelativeTime date={signal.fetchedAt} />
-            </span>
-            <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-amber-100/80">
-              Unverified
-            </span>
+            <span className="ml-auto text-amber-100/70">Unverified</span>
           </div>
 
           <a href={signal.url} target="_blank" rel="noreferrer" className="mt-4 block">
@@ -526,14 +520,14 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
             </div>
           ) : null}
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-black/28 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+          <div className="mt-5 grid gap-px overflow-hidden rounded-2xl bg-white/[0.05] sm:grid-cols-2">
+            <div className="bg-zinc-950/90 p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                 Why builders care
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">{signal.whyBuildersCare}</p>
             </div>
-            <div className="rounded-2xl bg-black/28 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+            <div className="bg-zinc-950/90 p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                 How to verify
               </div>
@@ -546,7 +540,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
               {signal.tags.slice(0, 6).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-black/35 px-2.5 py-1 font-mono text-[10px] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                  className="rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] text-zinc-300"
                 >
                   {tag}
                 </span>
@@ -555,19 +549,19 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
           ) : null}
         </div>
 
-        <div className="bg-black/58 p-5">
-          <div className="grid grid-cols-2 gap-2">
-            <MiniMetric label="radar score" value={toNumber(signal.score).toFixed(1)} />
-            <MiniMetric label="engagement" value={formatCount(engagement)} />
-            <MiniMetric
+        <div className="bg-black/40 p-5">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <RadarStat label="radar score" value={toNumber(signal.score).toFixed(1)} />
+            <RadarStat label="engagement" value={formatCount(engagement)} />
+            <RadarStat
               label="replies"
               value={formatCount(metricNumber(signal.metrics, "reply_count"))}
             />
-            <MiniMetric
+            <RadarStat
               label="bookmarks"
               value={formatCount(metricNumber(signal.metrics, "bookmark_count"))}
             />
-          </div>
+          </dl>
 
           <div className="mt-5 space-y-2">
             <a
@@ -580,13 +574,13 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
             </a>
             <Link
               href="/feed#feed-composer"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)] active:scale-[0.96]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-[#a7f300] active:scale-[0.96]"
             >
               Publish proof
             </Link>
             <Link
               href={`/learn?q=${encodeURIComponent(signal.category.replace(/_/g, " "))}`}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-950 hover:text-zinc-100 active:scale-[0.96]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-zinc-200 active:scale-[0.96]"
             >
               Find lessons
             </Link>
@@ -597,11 +591,11 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string }) {
+function RadarStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-zinc-950/76 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.055)]">
-      <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">{label}</div>
-      <div className="mt-1 font-mono text-sm text-zinc-100 tabular-nums">{value}</div>
+    <div className="flex flex-col gap-1">
+      <dt className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">{label}</dt>
+      <dd className="font-mono text-[15px] text-zinc-100 tabular-nums">{value}</dd>
     </div>
   );
 }
