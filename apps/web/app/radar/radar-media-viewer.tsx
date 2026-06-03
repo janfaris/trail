@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type RadarMediaPreview = {
   mediaKey: string;
@@ -30,10 +31,17 @@ function mediaLabel(item: RadarMediaPreview): string {
 
 export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const activeMedia = activeIndex === null ? null : (media[activeIndex] ?? null);
   const activePosition = activeIndex === null ? 0 : activeIndex + 1;
+  const lightboxOpen = activeMedia !== null;
   const visible = media.slice(0, 4);
   const extraCount = Math.max(media.length - visible.length, 0);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!activeMedia) return;
@@ -57,6 +65,16 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [activeMedia, media.length]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!lightboxOpen || !dialog) return;
+
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [lightboxOpen]);
 
   if (media.length === 0) return null;
 
@@ -106,110 +124,117 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
         </div>
       </div>
 
-      {activeMedia ? (
-        <dialog
-          open
-          aria-label={`Expanded media from @${sourceHandle}`}
-          className="fixed inset-0 z-50 m-0 h-screen max-h-none w-screen max-w-none bg-black/92 p-3 text-zinc-100 backdrop:bg-black/80 backdrop-blur-xl sm:p-6"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(167,243,0,0.18),transparent_30%),radial-gradient(circle_at_80%_100%,rgba(245,158,11,0.12),transparent_28%)]" />
-          <button
-            type="button"
-            aria-label="Close expanded media"
-            onClick={() => setActiveIndex(null)}
-            className="absolute inset-0 cursor-zoom-out"
-          />
-          <div className="relative mx-auto flex h-full max-w-6xl flex-col">
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-zinc-950/82 px-3 py-2 shadow-[0_18px_80px_rgba(0,0,0,0.5)]">
-              <div className="min-w-0">
-                <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
-                  @{sourceHandle} visual proof
-                </div>
-                <div className="mt-0.5 text-xs text-zinc-500">
-                  {activePosition} / {media.length} - Esc to close
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <a
-                  href={signalUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden rounded-full border border-zinc-700 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300] sm:inline-flex"
-                >
-                  Open X post
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setActiveIndex(null)}
-                  className="rounded-full bg-zinc-100 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-black transition hover:bg-[#a7f300]"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="relative grid min-h-0 flex-1 place-items-center overflow-hidden rounded-[30px] border border-white/10 bg-zinc-950/88 p-2 shadow-[0_28px_100px_rgba(0,0,0,0.62)] sm:p-4">
-              <img
-                src={activeMedia.url}
-                alt={activeMedia.altText || `Expanded media from @${sourceHandle}'s X signal`}
-                width={activeMedia.width}
-                height={activeMedia.height}
-                className="max-h-full w-full rounded-[22px] object-contain"
+      {mounted && activeMedia
+        ? createPortal(
+            <dialog
+              ref={dialogRef}
+              onCancel={() => setActiveIndex(null)}
+              onClose={() => setActiveIndex(null)}
+              aria-label={`Expanded media from @${sourceHandle}`}
+              className="fixed inset-0 z-[2147483647] m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-black/94 p-3 text-zinc-100 backdrop:bg-black/82 backdrop:backdrop-blur-xl sm:p-5"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_4%,rgba(167,243,0,0.13),transparent_28%),radial-gradient(circle_at_84%_92%,rgba(245,158,11,0.1),transparent_24%)]" />
+              <button
+                type="button"
+                aria-label="Close expanded media"
+                onClick={() => setActiveIndex(null)}
+                className="absolute inset-0 cursor-zoom-out"
               />
+              <div className="relative mx-auto flex h-full max-w-[min(94vw,1180px)] flex-col">
+                <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-950/92 px-3 py-2 shadow-[0_18px_80px_rgba(0,0,0,0.5)] sm:rounded-full">
+                  <div className="min-w-0">
+                    <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+                      @{sourceHandle} visual proof
+                    </div>
+                    <div className="mt-0.5 text-xs text-zinc-500">
+                      {activePosition} / {media.length} - Esc to close
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <a
+                      href={signalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hidden rounded-full border border-zinc-700 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300] sm:inline-flex"
+                    >
+                      Open X post
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setActiveIndex(null)}
+                      className="rounded-full bg-zinc-100 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-black transition hover:bg-[#a7f300]"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
 
-              {media.length > 1 ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveIndex((index) =>
-                        index === null ? 0 : (index - 1 + media.length) % media.length,
-                      )
-                    }
-                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveIndex((index) => (index === null ? 0 : (index + 1) % media.length))
-                    }
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
-                  >
-                    Next
-                  </button>
-                </>
-              ) : null}
-            </div>
+                <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-zinc-950/88 p-2 shadow-[0_28px_100px_rgba(0,0,0,0.62)] sm:rounded-[30px] sm:p-4">
+                  <img
+                    src={activeMedia.url}
+                    alt={activeMedia.altText || `Expanded media from @${sourceHandle}'s X signal`}
+                    width={activeMedia.width}
+                    height={activeMedia.height}
+                    className="h-auto max-h-[calc(100dvh-170px)] w-auto max-w-full rounded-[18px] object-contain shadow-[0_18px_70px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-190px)] sm:rounded-[22px]"
+                  />
 
-            {media.length > 1 ? (
-              <div className="mt-3 flex gap-2 overflow-x-auto rounded-full border border-white/10 bg-zinc-950/82 p-2">
-                {media.map((item, index) => (
-                  <button
-                    key={item.mediaKey}
-                    type="button"
-                    onClick={() => setActiveIndex(index)}
-                    aria-label={`Show media ${index + 1}`}
-                    className={`h-12 w-16 shrink-0 overflow-hidden rounded-full border transition ${
-                      index === activeIndex
-                        ? "border-[#a7f300] ring-2 ring-[#a7f300]/25"
-                        : "border-white/10 opacity-55 hover:opacity-100"
-                    }`}
-                  >
-                    <img
-                      src={item.url}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
-                ))}
+                  {media.length > 1 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveIndex((index) =>
+                            index === null ? 0 : (index - 1 + media.length) % media.length,
+                          )
+                        }
+                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveIndex((index) =>
+                            index === null ? 0 : (index + 1) % media.length,
+                          )
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                      >
+                        Next
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+
+                {media.length > 1 ? (
+                  <div className="mt-3 flex gap-2 overflow-x-auto rounded-full border border-white/10 bg-zinc-950/82 p-2">
+                    {media.map((item, index) => (
+                      <button
+                        key={item.mediaKey}
+                        type="button"
+                        onClick={() => setActiveIndex(index)}
+                        aria-label={`Show media ${index + 1}`}
+                        className={`h-12 w-16 shrink-0 overflow-hidden rounded-full border transition ${
+                          index === activeIndex
+                            ? "border-[#a7f300] ring-2 ring-[#a7f300]/25"
+                            : "border-white/10 opacity-55 hover:opacity-100"
+                        }`}
+                      >
+                        <img
+                          src={item.url}
+                          alt=""
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </dialog>
-      ) : null}
+            </dialog>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
