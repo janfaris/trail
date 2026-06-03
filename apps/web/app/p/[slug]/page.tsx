@@ -1,7 +1,6 @@
 import { RelativeTime } from "@/components/relative-time";
+import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
-import { db, schema } from "@/db/client";
-import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +12,10 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
+  const [{ eq }, { db, schema }] = await Promise.all([
+    import("drizzle-orm"),
+    import("@/db/client"),
+  ]);
   const p = await db.query.playlist.findFirst({
     where: eq(schema.playlist.slug, slug),
   });
@@ -21,6 +24,10 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PlaylistPage({ params }: Props) {
   const { slug } = await params;
+  const [{ asc, eq }, { db, schema }] = await Promise.all([
+    import("drizzle-orm"),
+    import("@/db/client"),
+  ]);
   const p = await db.query.playlist.findFirst({
     where: eq(schema.playlist.slug, slug),
   });
@@ -56,63 +63,55 @@ export default async function PlaylistPage({ params }: Props) {
   });
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-4xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/learn" className="text-zinc-400 hover:text-zinc-100">
-              Learn
-            </Link>
-            <Link href="/discover" className="text-zinc-400 hover:text-zinc-100">
-              Discover
-            </Link>
-            <Link href="/search" className="text-zinc-400 hover:text-zinc-100">
-              Search
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+      <SiteNav currentPath="/p" />
 
-      <main className="max-w-4xl mx-auto px-6 py-10 w-full">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-zinc-500">
-          <span>Playlist</span>
-          {p.isOfficial && <span className="text-[#a7f300]">· Curated by Trail</span>}
-        </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-2">{p.title}</h1>
-        {p.description && (
-          <p className="text-zinc-400 max-w-2xl leading-relaxed mb-2">{p.description}</p>
-        )}
-        <div className="text-xs font-mono text-zinc-500 mb-8">
-          {publicItems.length} {publicItems.length === 1 ? "trail" : "trails"}
-          {curator?.handle && (
-            <>
-              {" · curated by "}
-              <Link href={`/u/${curator.handle}`} className="text-zinc-300 hover:text-[#a7f300]">
-                @{curator.handle}
-              </Link>
-            </>
+      <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-8 sm:px-6">
+        <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
+          <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[#a7f300]">
+            <span>Playlist</span>
+            {p.isOfficial && <span>· Curated by Trail</span>}
+          </div>
+          <h1 className="text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
+            {p.title}
+          </h1>
+          {p.description && (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">{p.description}</p>
           )}
-        </div>
+          <div className="mt-5 font-mono text-xs text-zinc-500">
+            {publicItems.length} {publicItems.length === 1 ? "trail" : "trails"}
+            {curator?.handle && (
+              <>
+                {" · curated by "}
+                <Link href={`/u/${curator.handle}`} className="text-zinc-300 hover:text-[#a7f300]">
+                  @{curator.handle}
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
 
         {publicItems.length === 0 ? (
-          <div className="text-zinc-500 text-sm font-mono">No trails in this playlist yet.</div>
+          <div className="rounded-[1.5rem] border border-dashed border-zinc-800/80 p-8 text-center font-mono text-sm text-zinc-500">
+            No trails in this playlist yet.
+          </div>
         ) : (
-          <ol className="space-y-5">
+          <ol className="space-y-4">
             {publicItems.map((it, i) => (
-              <li key={it.sessionSlug} className="flex gap-4">
-                <div className="text-2xl font-mono text-zinc-700 tabular-nums leading-tight w-10 text-right">
+              <li
+                key={it.sessionSlug}
+                className="flex gap-4 rounded-[1.5rem] bg-zinc-950/70 p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)]"
+              >
+                <div className="w-10 text-right font-mono text-2xl leading-tight tabular-nums text-zinc-700">
                   {String(i + 1).padStart(2, "0")}
                 </div>
-                <div className="flex-1 border-b border-zinc-900 pb-5">
+                <div className="flex-1">
                   <Link
                     href={it.handle ? `/u/${it.handle}/${it.sessionSlug}` : "#"}
-                    className="block group"
+                    className="group block"
                   >
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
-                      <ToolIcon name={it.tool} className="w-3 h-3" />
+                    <div className="mb-1 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
+                      <ToolIcon name={it.tool} className="h-3 w-3" />
                       <span>{it.tool}</span>
                       {it.taskType && (
                         <>
@@ -135,13 +134,15 @@ export default async function PlaylistPage({ params }: Props) {
                         </>
                       )}
                     </div>
-                    <h3 className="text-base font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors">
+                    <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[#a7f300]">
                       {it.title ?? it.sessionSlug}
                     </h3>
-                    {it.summary && <p className="text-sm text-zinc-400 mt-0.5">{it.summary}</p>}
+                    {it.summary && (
+                      <p className="mt-1 text-sm leading-6 text-zinc-400">{it.summary}</p>
+                    )}
                   </Link>
                   {it.note && (
-                    <p className="text-sm text-zinc-300 mt-2 pl-3 border-l-2 border-[#a7f300]/40 italic">
+                    <p className="mt-3 border-l-2 border-[#a7f300]/40 pl-3 text-sm italic text-zinc-300">
                       {it.note}
                     </p>
                   )}

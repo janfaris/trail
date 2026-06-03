@@ -1,6 +1,5 @@
+import { SiteNav } from "@/components/site-nav";
 import Link from "next/link";
-import { desc, eq, sql } from "drizzle-orm";
-import { db, schema } from "@/db/client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Playlists — Trail" };
@@ -15,6 +14,10 @@ export default async function PlaylistsIndex() {
     itemCount: number;
   }[] = [];
   try {
+    const [{ desc, eq, sql }, { db, schema }] = await Promise.all([
+      import("drizzle-orm"),
+      import("@/db/client"),
+    ]);
     rows = (await db
       .select({
         slug: schema.playlist.slug,
@@ -33,51 +36,45 @@ export default async function PlaylistsIndex() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-900">
-        <div className="max-w-4xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
-            <span className="text-[#a7f300]">/</span>trail
-          </Link>
-          <nav className="flex items-center gap-5 text-sm">
-            <Link href="/learn" className="text-zinc-400 hover:text-zinc-100">Learn</Link>
-            <Link href="/discover" className="text-zinc-400 hover:text-zinc-100">Discover</Link>
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+      <SiteNav currentPath="/p" />
 
-      <main className="max-w-4xl mx-auto px-6 py-10 w-full">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-2">
-          Playlists
-        </h1>
-        <p className="text-zinc-500 mb-8 text-sm font-mono">
-          Curated trail collections
-        </p>
+      <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-8 sm:px-6">
+        <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
+          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+            Curated proof
+          </div>
+          <h1 className="mt-4 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
+            Playlists
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+            Curated Trail collections for studying how builders ship with agents.
+          </p>
+        </section>
 
         {rows.length === 0 ? (
-          <div className="text-zinc-500 text-sm font-mono">
+          <div className="rounded-[1.5rem] border border-dashed border-zinc-800/80 p-8 text-center font-mono text-sm text-zinc-500">
             No playlists yet. Curators can create them via POST /api/playlists.
           </div>
         ) : (
-          <ul className="divide-y divide-zinc-900">
+          <ul className="grid gap-4">
             {rows.map((r) => (
-              <li key={r.slug} className="py-4">
-                <Link href={`/p/${r.slug}`} className="block group">
-                  <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 mb-1">
-                    {r.isOfficial && (
-                      <span className="text-[#a7f300]">curated by Trail</span>
-                    )}
-                    {!r.isOfficial && r.curatorHandle && (
-                      <span>@{r.curatorHandle}</span>
-                    )}
+              <li
+                key={r.slug}
+                className="rounded-[1.5rem] bg-zinc-950/70 p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)]"
+              >
+                <Link href={`/p/${r.slug}`} className="group block">
+                  <div className="mb-1 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
+                    {r.isOfficial && <span className="text-[#a7f300]">curated by Trail</span>}
+                    {!r.isOfficial && r.curatorHandle && <span>@{r.curatorHandle}</span>}
                     <span>·</span>
                     <span>{r.itemCount} trails</span>
                   </div>
-                  <h3 className="text-base font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors">
+                  <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[#a7f300]">
                     {r.title}
                   </h3>
                   {r.description && (
-                    <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">
+                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-400">
                       {r.description}
                     </p>
                   )}

@@ -107,11 +107,11 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_14%_0%,rgba(167,243,0,0.11),transparent_26rem),linear-gradient(180deg,#050505,#09090b_38%,#050505)] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_14%_0%,rgba(167,243,0,0.08),transparent_26rem),linear-gradient(180deg,#050505,#09090b_38%,#050505)] text-zinc-100">
       <SiteNav currentPath="/dashboard" />
 
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-zinc-800 bg-black/45 shadow-2xl shadow-black/50">
+        <div className="mb-8 overflow-hidden rounded-[2rem] bg-black/45 shadow-[var(--trail-shadow-border)]">
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
@@ -127,13 +127,13 @@ export default async function DashboardPage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link
                   href="/feed"
-                  className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e]"
+                  className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
                 >
                   Open feed
                 </Link>
                 <Link
                   href={me.handle ? `/u/${me.handle}` : "/dashboard"}
-                  className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition hover:border-zinc-600 hover:text-white"
+                  className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
                 >
                   Preview profile
                 </Link>
@@ -186,7 +186,7 @@ function Stat({
   tone?: "lime" | "amber";
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-950/75 px-4 py-4">
+    <div className="rounded-[1.35rem] bg-zinc-950/75 px-4 py-4 shadow-[var(--trail-shadow-border)]">
       <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">{label}</div>
       <div
         className={`mt-1 text-3xl font-semibold tabular-nums ${

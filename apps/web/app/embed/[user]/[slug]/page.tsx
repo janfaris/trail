@@ -1,6 +1,4 @@
 import { ToolIcon } from "@/components/tool-icon";
-import { db, schema } from "@/db/client";
-import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +24,10 @@ export const viewport = { themeColor: "#08090a" };
 const BASE = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
 
 export default async function Embed({ params }: Props) {
+  const [{ and, eq }, { db, schema }] = await Promise.all([
+    import("drizzle-orm"),
+    import("@/db/client"),
+  ]);
   const { user, slug } = await params;
   const userRow = await db.query.user.findFirst({
     where: eq(schema.user.handle, user),

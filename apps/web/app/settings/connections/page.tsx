@@ -1,16 +1,15 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { db, schema } from "@/db/client";
-import {
-  ConnectionsClient,
-  type ConnectionRow,
-} from "./ConnectionsClient";
+import { type ConnectionRow, ConnectionsClient } from "./ConnectionsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConnectionsSettingsPage() {
+  const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
+    import("next/headers"),
+    import("drizzle-orm"),
+    import("@/lib/auth"),
+    import("@/db/client"),
+  ]);
   // BetterAuth can throw on preview branches where the origin isn't on the
   // trustedOrigins list, instead of returning null. Treat any throw or null
   // session as unauthenticated and bounce to home.

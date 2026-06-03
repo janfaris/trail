@@ -1,6 +1,6 @@
-import { Suspense } from "react";
 import { SearchBox } from "@/components/search-box";
 import { SiteNav } from "@/components/site-nav";
+import { Suspense } from "react";
 
 export const metadata = { title: "Search — Trail" };
 
@@ -8,16 +8,21 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen">
       <SiteNav currentPath="/search" />
-      <main className="max-w-3xl mx-auto px-6 pt-16 pb-24">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 mb-2">
-          Search trails
-        </h1>
-        <p className="text-zinc-500 mb-8 text-sm font-mono">
-          semantic search across every public session
-        </p>
-        <Suspense fallback={<div className="text-zinc-500 font-mono text-sm">loading…</div>}>
-          <SearchBox />
-        </Suspense>
+      <main className="mx-auto max-w-3xl px-6 pt-16 pb-24">
+        <section className="rounded-[2rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] sm:p-7">
+          <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.22em] text-[#a7f300]">
+            Public proof search
+          </div>
+          <h1 className="mb-2 text-3xl font-semibold tracking-[-0.05em] text-zinc-50">
+            Search trails
+          </h1>
+          <p className="mb-8 text-sm leading-6 text-zinc-500">
+            Semantic search across public sessions, receipts, stacks, and decisions.
+          </p>
+          <Suspense fallback={<div className="font-mono text-sm text-zinc-500">loading...</div>}>
+            <SearchBox />
+          </Suspense>
+        </section>
       </main>
     </div>
   );

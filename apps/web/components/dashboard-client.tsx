@@ -229,7 +229,7 @@ function filterMatches(filter: Filter, row: SessionRow, lifecycle: Lifecycle): b
 
 function CardMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-zinc-900 bg-black/35 px-3 py-2">
+    <div className="rounded-2xl bg-black/35 px-3 py-2 shadow-[var(--trail-shadow-border)]">
       <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-600">{label}</div>
       <div className="mt-0.5 font-mono text-xs text-zinc-200">{value}</div>
     </div>
@@ -399,14 +399,14 @@ export function DashboardClient({
         <CardMetric label="Social proof" value={engagementCount} />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-zinc-900 bg-black/45 p-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-black/45 p-2 shadow-[var(--trail-shadow-border)]">
         <div className="flex flex-wrap items-center gap-1 font-mono text-[11px]">
           {(["queue", "live", "private", "blocked", "featured", "all"] as const).map((value) => (
             <button
               type="button"
               key={value}
               onClick={() => setFilter(value)}
-              className={`rounded-full px-3 py-2 uppercase tracking-[0.12em] transition ${
+              className={`rounded-full px-3 py-2 uppercase tracking-[0.12em] transition-[background-color,color,transform] active:scale-[0.97] ${
                 filter === value
                   ? "bg-zinc-100 text-zinc-950"
                   : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
@@ -422,13 +422,13 @@ export function DashboardClient({
       </div>
 
       {flash && (
-        <div className="rounded-2xl border border-[#a7f300]/30 bg-[#a7f300]/5 px-4 py-3 font-mono text-xs text-[#a7f300]">
+        <div className="rounded-2xl bg-[#a7f300]/5 px-4 py-3 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
           {flash}
         </div>
       )}
 
       {hasSelection && (
-        <div className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#a7f300]/25 bg-zinc-950/95 px-4 py-3 shadow-2xl shadow-black/60 backdrop-blur">
+        <div className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-zinc-950/95 px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.25),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur">
           <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#a7f300]">
             {ids.length} selected
             {mutableIds.length !== ids.length ? ` · ${ids.length - mutableIds.length} locked` : ""}
@@ -440,7 +440,7 @@ export function DashboardClient({
               onClick={() =>
                 run("Published", mutableIds, () => bulkSetVisibility(mutableIds, "public"))
               }
-              className="rounded-full bg-[#a7f300] px-3 py-2 font-mono font-semibold uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-[#c8ff5e] disabled:bg-zinc-800 disabled:text-zinc-500"
+              className="min-h-10 rounded-full bg-[#a7f300] px-3 font-mono font-semibold uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
             >
               Publish
             </button>
@@ -450,7 +450,7 @@ export function DashboardClient({
               onClick={() =>
                 run("Made private", mutableIds, () => bulkSetVisibility(mutableIds, "private"))
               }
-              className="rounded-full border border-zinc-800 px-3 py-2 font-mono uppercase tracking-[0.12em] text-zinc-300 transition hover:border-zinc-600 disabled:opacity-35"
+              className="min-h-10 rounded-full bg-zinc-950 px-3 font-mono uppercase tracking-[0.12em] text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
             >
               Make private
             </button>
@@ -460,7 +460,7 @@ export function DashboardClient({
               onClick={() =>
                 run("Marked shipped", mutableIds, () => bulkSetOutcome(mutableIds, "shipped"))
               }
-              className="rounded-full border border-zinc-800 px-3 py-2 font-mono uppercase tracking-[0.12em] text-zinc-300 transition hover:border-zinc-600 disabled:opacity-35"
+              className="min-h-10 rounded-full bg-zinc-950 px-3 font-mono uppercase tracking-[0.12em] text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
             >
               Mark shipped
             </button>
@@ -470,7 +470,7 @@ export function DashboardClient({
               onClick={() =>
                 run("Cleared outcome", mutableIds, () => bulkSetOutcome(mutableIds, null))
               }
-              className="rounded-full border border-zinc-800 px-3 py-2 font-mono uppercase tracking-[0.12em] text-zinc-500 transition hover:border-zinc-600 disabled:opacity-35"
+              className="min-h-10 rounded-full bg-zinc-950 px-3 font-mono uppercase tracking-[0.12em] text-zinc-500 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-zinc-200 hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
             >
               Clear outcome
             </button>
@@ -478,7 +478,7 @@ export function DashboardClient({
               type="button"
               disabled={pending}
               onClick={runDelete}
-              className="rounded-full border border-rose-500/40 px-3 py-2 font-mono uppercase tracking-[0.12em] text-rose-300 transition hover:border-rose-500/70 hover:bg-rose-500/10 disabled:opacity-35"
+              className="min-h-10 rounded-full bg-rose-500/5 px-3 font-mono uppercase tracking-[0.12em] text-rose-300 shadow-[0_0_0_1px_rgba(244,63,94,0.35)] transition-[background-color,box-shadow,transform] hover:bg-rose-500/10 hover:shadow-[0_0_0_1px_rgba(244,63,94,0.55)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
               title="Permanently delete the selected sessions"
             >
               Delete
@@ -515,7 +515,7 @@ export function DashboardClient({
         </div>
       )}
 
-      <details className="rounded-[1.5rem] border border-zinc-900 bg-black/35">
+      <details className="rounded-[1.5rem] bg-black/35 shadow-[var(--trail-shadow-border)]">
         <summary className="cursor-pointer px-4 py-3 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500 hover:text-zinc-300">
           Advanced batch table
         </summary>
@@ -640,8 +640,8 @@ function StudioCard({
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-[2rem] border bg-zinc-950/82 p-5 shadow-xl shadow-black/30 transition hover:-translate-y-0.5 hover:border-zinc-700 ${
-        selected ? "border-[#a7f300]/45 ring-1 ring-[#a7f300]/25" : "border-zinc-900"
+      className={`group relative overflow-hidden rounded-[2rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)] ${
+        selected ? "ring-1 ring-[#a7f300]/35" : ""
       }`}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-500/40 to-transparent" />
@@ -706,14 +706,14 @@ function StudioCard({
             type="button"
             disabled={pending || locked}
             onClick={onPublish}
-            className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e] disabled:bg-zinc-800 disabled:text-zinc-500"
+            className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
           >
             Publish receipt
           </button>
         ) : (
           <Link
             href={receiptHref}
-            className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-white"
+            className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.97]"
           >
             {lifecycle.key === "live" ? "Open thread" : "Review receipt"}
           </Link>
@@ -723,7 +723,7 @@ function StudioCard({
             type="button"
             disabled={pending || locked}
             onClick={onMakePrivate}
-            className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-100 disabled:opacity-35"
+            className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
           >
             Unpublish
           </button>
@@ -733,7 +733,7 @@ function StudioCard({
             type="button"
             disabled={pending || locked}
             onClick={onFeature}
-            className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-100 disabled:opacity-35"
+            className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
           >
             {session.isFeatured ? "Unpin" : "Pin proof"}
           </button>
@@ -743,7 +743,7 @@ function StudioCard({
             <button
               type="button"
               onClick={onCopyLink}
-              className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-100"
+              className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
             >
               Copy link
             </button>
@@ -759,7 +759,7 @@ function StudioCard({
                   "noopener,noreferrer",
                 );
               }}
-              className="inline-flex min-h-10 items-center rounded-full border border-zinc-800 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-100"
+              className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
             >
               Share on X
             </button>

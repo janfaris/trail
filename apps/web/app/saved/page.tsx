@@ -110,11 +110,11 @@ export default async function SavedReceiptsPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.12),transparent_24rem),#050505] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
       <SiteNav currentPath="/saved" />
 
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
-        <section className="overflow-hidden rounded-[2rem] border border-zinc-800 bg-black/55 p-6 shadow-2xl shadow-black/50 sm:p-8">
+        <section className="overflow-hidden rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
           <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
             Private collection
           </div>
@@ -128,7 +128,7 @@ export default async function SavedReceiptsPage() {
                 only public receipts stay visible here.
               </p>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="rounded-2xl bg-zinc-950/85 px-4 py-3 shadow-[var(--trail-shadow-border)]">
               <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
                 saved
               </div>
@@ -140,7 +140,7 @@ export default async function SavedReceiptsPage() {
         </section>
 
         {lessonRows.length === 0 && receiptRows.length === 0 ? (
-          <section className="mt-6 rounded-[2rem] border border-dashed border-zinc-800 bg-zinc-950/70 p-10 text-center">
+          <section className="mt-6 rounded-[2rem] border border-dashed border-zinc-800/80 bg-zinc-950/70 p-10 text-center">
             <div className="font-mono text-sm text-zinc-400">No saved lessons or receipts yet.</div>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
               Save lessons from /learn or receipts from the feed when you find a build worth
@@ -149,13 +149,13 @@ export default async function SavedReceiptsPage() {
             <div className="mt-5 flex justify-center gap-2">
               <Link
                 href="/feed"
-                className="rounded-full bg-[#a7f300] px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-[#c8ff5e]"
+                className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
               >
                 Browse feed
               </Link>
               <Link
                 href="/learn"
-                className="rounded-full border border-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:border-zinc-600 hover:text-white"
+                className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
               >
                 Browse lessons
               </Link>
@@ -177,7 +177,7 @@ export default async function SavedReceiptsPage() {
                     return (
                       <article
                         key={lesson.id}
-                        className="group rounded-[1.75rem] border border-[#a7f300]/20 bg-[linear-gradient(135deg,rgba(167,243,0,0.07),transparent_38%),#080908] p-5 transition hover:-translate-y-0.5 hover:border-[#a7f300]/45"
+                        className="group rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(167,243,0,0.07),transparent_38%),#080908] p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)]"
                       >
                         <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                           <Link href={`/u/${authorHandle}`} className="font-semibold text-zinc-300">
@@ -202,7 +202,7 @@ export default async function SavedReceiptsPage() {
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <Link
                             href={`${href}#lessons`}
-                            className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-[#a7f300]"
+                            className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
                           >
                             Open lesson
                           </Link>
@@ -210,7 +210,7 @@ export default async function SavedReceiptsPage() {
                             value={copyValue}
                             label="Copy move"
                             copiedLabel="Copied"
-                            className="min-h-9 rounded-full px-3 uppercase tracking-[0.12em]"
+                            className="min-h-10 rounded-full px-3 uppercase tracking-[0.12em]"
                           />
                           <SaveLessonButton
                             lessonId={lesson.id}
@@ -242,7 +242,7 @@ export default async function SavedReceiptsPage() {
                   return (
                     <article
                       key={row.id}
-                      className="group grid gap-4 rounded-[1.75rem] border border-zinc-900 bg-zinc-950/82 p-5 transition hover:-translate-y-0.5 hover:border-zinc-700 sm:grid-cols-[48px_minmax(0,1fr)_auto]"
+                      className="group grid gap-4 rounded-[1.75rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)] sm:grid-cols-[48px_minmax(0,1fr)_auto]"
                     >
                       <Link href={`/u/${authorHandle}`} aria-label={`Open @${authorHandle}`}>
                         <Avatar
@@ -272,11 +272,11 @@ export default async function SavedReceiptsPage() {
                         </Link>
                         <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">{copy}</p>
                         <div className="mt-4 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black px-2.5 py-1">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-black px-2.5 py-1 shadow-[var(--trail-shadow-border)]">
                             <ToolIcon name={row.tool} size={12} className="text-[#a7f300]" />
                             {row.tool}
                           </span>
-                          <span className="rounded-full border border-zinc-800 bg-black px-2.5 py-1">
+                          <span className="rounded-full bg-black px-2.5 py-1 shadow-[var(--trail-shadow-border)]">
                             {formatCount(row.eventCount)} events
                           </span>
                         </div>
@@ -284,7 +284,7 @@ export default async function SavedReceiptsPage() {
                       <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                         <Link
                           href={href}
-                          className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-950 transition hover:bg-[#a7f300]"
+                          className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
                         >
                           Open
                         </Link>

@@ -11,27 +11,15 @@
 // Layer 2 (AI audit) is a future PR — the footer carries a disabled
 // "Coming soon to Pro" affordance that's intentionally not wired up.
 
+import { SiteNav } from "@/components/site-nav";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
-import { db, schema } from "@/db/client";
-import { auth } from "@/lib/auth";
-import { SiteNav } from "@/components/site-nav";
-import {
-  getCacheHitStats,
-  getCostByOutcome,
-  getTokensByEventKind,
-  getTokensByModel,
-  getTokensByToolName,
-  getTopExpensiveSessions,
-  type WindowDays,
-} from "@/lib/spend/queries";
-import { getCachedAudit } from "@/lib/spend/audit";
 import { AuditFooter } from "./AuditFooter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+type WindowDays = 7 | 30 | 365;
 
 const ALLOWED: readonly WindowDays[] = [7, 30, 365];
 
@@ -68,6 +56,28 @@ export default async function SpendPage({
   params: Promise<{ user: string }>;
   searchParams: Promise<{ window?: string }>;
 }) {
+  const [
+    { headers },
+    { eq },
+    { db, schema },
+    { auth },
+    {
+      getCacheHitStats,
+      getCostByOutcome,
+      getTokensByEventKind,
+      getTokensByModel,
+      getTokensByToolName,
+      getTopExpensiveSessions,
+    },
+    { getCachedAudit },
+  ] = await Promise.all([
+    import("next/headers"),
+    import("drizzle-orm"),
+    import("@/db/client"),
+    import("@/lib/auth"),
+    import("@/lib/spend/queries"),
+    import("@/lib/spend/audit"),
+  ]);
   const { user } = await params;
   const userRow = await db.query.user.findFirst({
     where: eq(schema.user.handle, user),
@@ -85,51 +95,45 @@ export default async function SpendPage({
   const sp = await searchParams;
   const windowDays = parseWindow(sp?.window);
 
-  const [
-    byKind,
-    byTool,
-    byModel,
-    cache,
-    byOutcome,
-    topSessions,
-    existingAudit,
-  ] = await Promise.all([
-    getTokensByEventKind(userRow.id, windowDays),
-    getTokensByToolName(userRow.id, windowDays),
-    getTokensByModel(userRow.id, windowDays),
-    getCacheHitStats(userRow.id, windowDays),
-    getCostByOutcome(userRow.id, windowDays),
-    getTopExpensiveSessions(userRow.id, windowDays, 10),
-    getCachedAudit(userRow.id, windowDays),
-  ]);
+  const [byKind, byTool, byModel, cache, byOutcome, topSessions, existingAudit] = await Promise.all(
+    [
+      getTokensByEventKind(userRow.id, windowDays),
+      getTokensByToolName(userRow.id, windowDays),
+      getTokensByModel(userRow.id, windowDays),
+      getCacheHitStats(userRow.id, windowDays),
+      getCostByOutcome(userRow.id, windowDays),
+      getTopExpensiveSessions(userRow.id, windowDays, 10),
+      getCachedAudit(userRow.id, windowDays),
+    ],
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
       <SiteNav />
 
-      <main className="max-w-5xl mx-auto px-6 pt-10 pb-24">
-        <header className="mb-8">
-          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">
+      <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
+        <header className="mb-8 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
             Trail · spend audit
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50 mb-2">
+          <h1 className="mb-2 mt-3 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
             Spend Audit
           </h1>
-          <p className="text-sm text-zinc-500 max-w-xl">
-            Where your tokens go. Private — only you can see this. Computed
-            instantly from your captured events. No model call.
+          <p className="max-w-xl text-sm leading-6 text-zinc-400">
+            Where your tokens go. Private - only you can see this. Computed instantly from your
+            captured events. No model call.
           </p>
-          <div className="flex items-center gap-2 mt-5">
+          <div className="mt-5 flex items-center gap-2">
             {ALLOWED.map((d) => {
               const active = d === windowDays;
               return (
                 <Link
                   key={d}
                   href={`/u/${user}/spend?window=${d}`}
-                  className={`px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+                  className={`inline-flex min-h-10 items-center rounded-full px-4 font-mono text-xs transition-[box-shadow,color,background-color,transform] active:scale-[0.97] ${
                     active
-                      ? "bg-[#a7f300]/10 text-[#a7f300] border-[#a7f300]/30"
-                      : "text-zinc-400 border-zinc-800 hover:text-zinc-100 hover:border-zinc-700"
+                      ? "bg-[#a7f300]/10 text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
+                      : "bg-zinc-950 text-zinc-400 shadow-[var(--trail-shadow-border)] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)]"
                   }`}
                 >
                   {windowLabel(d)}
@@ -139,7 +143,7 @@ export default async function SpendPage({
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Card
             title="Tokens by event kind"
             blurb="How much of your spend is prompts vs assistant completions vs tool-call dumps vs file diffs. Often a surprise."
@@ -246,7 +250,9 @@ export default async function SpendPage({
                   <tr key={r.outcome} className="border-t border-zinc-900">
                     <Td mono>{r.outcome}</Td>
                     <Td right>{fmtNum(r.sessionCount)}</Td>
-                    <Td right tabular>{fmtUsd(r.totalCostUsd)}</Td>
+                    <Td right tabular>
+                      {fmtUsd(r.totalCostUsd)}
+                    </Td>
                   </tr>
                 ))}
               </Table>
@@ -266,7 +272,7 @@ export default async function SpendPage({
                     <td className="px-3 py-2.5 text-zinc-200">
                       <Link
                         href={`/u/${user}/${r.slug}`}
-                        className="hover:text-[#a7f300] transition-colors truncate inline-block max-w-[28ch]"
+                        className="inline-block max-w-[28ch] truncate transition-colors hover:text-[#a7f300]"
                         title={r.title ?? r.slug}
                       >
                         {r.title ?? r.slug}
@@ -276,7 +282,9 @@ export default async function SpendPage({
                       </div>
                     </td>
                     <Td mono>{r.outcome ?? "—"}</Td>
-                    <Td right tabular>{fmtUsd(r.estimatedCostUsd)}</Td>
+                    <Td right tabular>
+                      {fmtUsd(r.estimatedCostUsd)}
+                    </Td>
                   </tr>
                 ))}
               </Table>
@@ -305,11 +313,9 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-zinc-900 rounded-lg p-5 bg-zinc-950">
+    <section className="rounded-[1.5rem] bg-zinc-950/70 p-5 shadow-[var(--trail-shadow-border)]">
       <div className="mb-3">
-        <h2 className="text-sm font-semibold tracking-tight text-zinc-100">
-          {title}
-        </h2>
+        <h2 className="text-sm font-semibold tracking-tight text-zinc-100">{title}</h2>
         <p className="text-[12px] text-zinc-500 mt-1 leading-snug">{blurb}</p>
       </div>
       {children}
@@ -325,7 +331,7 @@ function Table({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-zinc-900 rounded-md overflow-hidden">
+    <div className="overflow-hidden rounded-2xl shadow-[var(--trail-shadow-border)]">
       <table className="w-full text-[13px]">
         <thead className="bg-zinc-900/60">
           <tr className="text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-500">
@@ -369,7 +375,7 @@ function Td({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border border-dashed border-zinc-800 rounded-md px-4 py-6 text-center text-[12px] font-mono text-zinc-600">
+    <div className="rounded-2xl border border-dashed border-zinc-800/80 px-4 py-6 text-center font-mono text-[12px] text-zinc-600">
       {children}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 const TABS: Array<{ href: string; label: string }> = [
   { href: "/settings", label: "Profile" },
@@ -14,7 +14,7 @@ export function SettingsTabs() {
   return (
     <nav
       aria-label="Settings sections"
-      className="flex items-center gap-1 border-b border-zinc-900 mb-8 -mx-1"
+      className="mb-6 flex w-fit items-center gap-1 rounded-full bg-black/45 p-1 shadow-[var(--trail-shadow-border)]"
     >
       {TABS.map((t) => {
         const active = pathname === t.href;
@@ -24,19 +24,11 @@ export function SettingsTabs() {
             href={t.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative px-3 py-2 text-sm font-mono transition-colors",
-              active
-                ? "text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-300",
+              "relative inline-flex min-h-10 items-center rounded-full px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-[background-color,color,transform] active:scale-[0.97]",
+              active ? "bg-zinc-100 text-zinc-950" : "text-zinc-500 hover:text-zinc-200",
             )}
           >
             {t.label}
-            {active && (
-              <span
-                aria-hidden
-                className="absolute left-3 right-3 -bottom-px h-px bg-[#a7f300]"
-              />
-            )}
           </Link>
         );
       })}

@@ -178,10 +178,10 @@ function ActivityItem({ row }: { row: ActivityRow }) {
     <Link
       href={href}
       className={cn(
-        "group grid gap-4 rounded-2xl border p-4 transition sm:grid-cols-[44px,1fr,auto]",
+        "group grid gap-4 rounded-2xl p-4 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 sm:grid-cols-[44px,1fr,auto]",
         unread
-          ? "border-[#a7f300]/35 bg-[#a7f300]/[0.06] shadow-[0_0_35px_rgba(167,243,0,0.08)]"
-          : "border-zinc-850 bg-zinc-950/70 hover:border-zinc-700",
+          ? "bg-[#a7f300]/[0.06] shadow-[0_0_0_1px_rgba(167,243,0,0.28),0_20px_60px_rgba(0,0,0,0.3)]"
+          : "bg-zinc-950/70 hover:shadow-[var(--trail-shadow-border-hover)]",
       )}
     >
       <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-zinc-800 bg-black font-mono text-[12px] text-zinc-300">
@@ -280,11 +280,11 @@ export default async function NotificationsPage() {
   const earlier = activities.filter((row) => row.readAt);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.11),transparent_34rem),linear-gradient(180deg,#050505,#09090b_45%,#050505)] text-zinc-100">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.08),transparent_34rem),linear-gradient(180deg,#050505,#09090b_45%,#050505)] text-zinc-100">
       <SiteNav currentPath="/notifications" />
       <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-10">
         <div className="grid gap-5 lg:grid-cols-[0.85fr,1.35fr]">
-          <aside className="rounded-3xl border border-zinc-850 bg-black/45 p-6 shadow-2xl shadow-black/40">
+          <aside className="rounded-3xl bg-black/45 p-6 shadow-[var(--trail-shadow-border)]">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#a7f300]">
               Trail relay
             </div>
@@ -296,13 +296,13 @@ export default async function NotificationsPage() {
               receipt, or thread that needs a response.
             </p>
             <div className="mt-8 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-zinc-850 bg-zinc-950/70 p-4">
+              <div className="rounded-2xl bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   Unread
                 </div>
                 <div className="mt-2 text-3xl font-semibold text-[#a7f300]">{unreadCount}</div>
               </div>
-              <div className="rounded-2xl border border-zinc-850 bg-zinc-950/70 p-4">
+              <div className="rounded-2xl bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   Loaded
                 </div>
@@ -313,7 +313,7 @@ export default async function NotificationsPage() {
               <button
                 type="submit"
                 disabled={unreadCount === 0}
-                className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[#a7f300] px-4 text-[13px] font-semibold text-zinc-950 transition hover:bg-[#b9ff1f] disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#a7f300] px-4 text-[13px] font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
               >
                 Mark all read
               </button>
@@ -322,7 +322,7 @@ export default async function NotificationsPage() {
 
           <div className="space-y-5">
             {activities.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/70 p-8 text-center">
+              <div className="rounded-3xl border border-dashed border-zinc-800/80 bg-zinc-950/70 p-8 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
                   Quiet for now
                 </div>
@@ -335,7 +335,7 @@ export default async function NotificationsPage() {
                 </p>
                 <Link
                   href="/feed"
-                  className="mt-6 inline-flex h-10 items-center rounded-xl border border-zinc-700 px-4 text-[13px] font-medium text-zinc-200 transition hover:border-[#a7f300]/70 hover:text-[#a7f300]"
+                  className="mt-6 inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-[13px] font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
                 >
                   Open the feed
                 </Link>

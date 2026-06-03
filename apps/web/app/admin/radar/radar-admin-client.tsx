@@ -93,7 +93,11 @@ function StatusPill({ status }: { status: string }) {
           ? "bg-sky-500/15 text-sky-400 border-sky-500/30"
           : "bg-red-500/15 text-red-400 border-red-500/30";
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}>{status}</span>
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-medium shadow-[0_0_0_1px_currentColor] ${color}`}
+    >
+      {status}
+    </span>
   );
 }
 
@@ -164,254 +168,268 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
   }, [data]);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 text-zinc-200">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-100">Radar admin</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Monitor the X ingestion cron and trigger a manual fetch.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="hidden text-xs text-zinc-500 sm:inline">{adminLabel}</span>
-          <button
-            type="button"
-            onClick={() => loadStatus()}
-            disabled={loading}
-            className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
-
-      {data && (
-        <>
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Next run" value={nextRunRel} sub={new Date(data.nextRun).toUTCString()} />
-            <Stat label="Last run" value={rel(data.lastRunAt)} sub={data.schedule} />
-            <Stat
-              label="Signals"
-              value={int(data.totals.total)}
-              sub={`${int(data.totals.today)} today`}
-            />
-            <Stat
-              label="Newest tweet"
-              value={rel(data.totals.newestPublishedAt)}
-              sub="by publish time"
-            />
-          </div>
-
-          {apiCost && (
-            <div className="mb-8 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-              <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-                      X API estimate
-                    </h2>
-                    <p className="mt-1 text-sm text-zinc-400">
-                      Current cron: {data.xApiUsage.sourceCount} active sources ×{" "}
-                      {data.xApiUsage.scheduledRunsPerDay} scheduled runs/day.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-[#a7f300]/30 bg-[#a7f300]/10 px-3 py-2 text-right">
-                    <div className="text-xs uppercase tracking-wide text-[#a7f300]">
-                      Scheduled requests/day
-                    </div>
-                    <div className="mt-0.5 text-lg font-semibold text-zinc-100">
-                      {int(data.xApiUsage.scheduledRequestsPerDay)}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <Stat
-                    label="Per run"
-                    value={`${int(data.xApiUsage.scheduledRequestsPerRun)} requests`}
-                    sub="1 recent-search call per source"
-                  />
-                  <Stat
-                    label="Max post reads"
-                    value={int(data.xApiUsage.maxPostReadsPerDay)}
-                    sub={`${data.xApiUsage.maxResultsPerSource} max results/request`}
-                  />
-                  <Stat
-                    label="Manual run adds"
-                    value={`${int(apiCost.manualMaxPostReads)} max reads`}
-                    sub={`${money(apiCost.manualMax)} max`}
-                  />
-                </div>
-                <p className="mt-3 text-xs leading-5 text-zinc-500">
-                  X charges read operations per Post resource returned, not simply per request.
-                  Using the current posted rate of {money(X_POST_READ_USD)} per Post read:{" "}
-                  <span className="text-zinc-300">{money(apiCost.scheduledMax)} per day max</span>{" "}
-                  if every scheduled request returns {data.xApiUsage.maxResultsPerSource} new or
-                  non-deduped posts. Image previews also request media metadata, which X may meter
-                  as separate media reads. Confirm exact rates in your X billing dashboard.
-                </p>
-              </section>
-              <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-                  Estimated cost today
-                </h2>
-                <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100">
-                  {money(apiCost.observedToday)}
-                  <span className="ml-1 text-sm font-normal text-zinc-500">so far</span>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  Based on {int(apiCost.pulledToday)} unique stored posts fetched today. X says
-                  duplicate reads of the same resource are deduplicated within a 24-hour UTC window,
-                  so actual billed reads should track unique posts more closely than raw requests.
-                </p>
-              </section>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_16%_0%,rgba(167,243,0,0.08),transparent_26rem),#050505] px-4 py-10 text-zinc-200">
+      <div className="mx-auto max-w-5xl">
+        <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+                Radar operations
+              </div>
+              <h1 className="mt-4 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
+                Radar admin
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+                Monitor the X ingestion cron and trigger a manual fetch.
+              </p>
             </div>
-          )}
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="hidden text-xs text-zinc-500 sm:inline">{adminLabel}</span>
+              <button
+                type="button"
+                onClick={() => loadStatus()}
+                disabled={loading}
+                className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-sm font-medium text-zinc-100 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100"
+              >
+                {loading ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+          </div>
+        </section>
 
-          <div className="mb-8 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                Per-source limit
-              </span>
-              <input
-                type="number"
-                min={10}
-                max={100}
-                value={limit}
-                onChange={(e) =>
-                  setLimit(Math.min(100, Math.max(10, Number(e.target.value) || 10)))
-                }
-                className="w-20 rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-zinc-500"
+        {error && (
+          <div className="mb-6 rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-300 shadow-[0_0_0_1px_rgba(239,68,68,0.28)]">
+            {error}
+          </div>
+        )}
+
+        {data && (
+          <>
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat
+                label="Next run"
+                value={nextRunRel}
+                sub={new Date(data.nextRun).toUTCString()}
+              />
+              <Stat label="Last run" value={rel(data.lastRunAt)} sub={data.schedule} />
+              <Stat
+                label="Signals"
+                value={int(data.totals.total)}
+                sub={`${int(data.totals.today)} today`}
+              />
+              <Stat
+                label="Newest tweet"
+                value={rel(data.totals.newestPublishedAt)}
+                sub="by publish time"
               />
             </div>
-            <button
-              type="button"
-              onClick={runNow}
-              disabled={running}
-              className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50"
-            >
-              {running ? "Running…" : "Run fetch now"}
-            </button>
-            {runLog && <span className="text-sm text-zinc-400">{runLog}</span>}
-          </div>
 
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Pulled tweets by source
-          </h2>
-          <div className="mb-8 overflow-x-auto rounded-xl border border-zinc-800">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2">Source</th>
-                  <th className="px-3 py-2">Mode</th>
-                  <th className="px-3 py-2 text-right">Pulled today</th>
-                  <th className="px-3 py-2 text-right">Total stored</th>
-                  <th className="px-3 py-2">Latest pull</th>
-                  <th className="px-3 py-2">Newest tweet</th>
-                  <th className="px-3 py-2 text-right">Tweets</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800">
-                {data.sourceBreakdown.map((source) => (
-                  <tr key={source.handle} className="text-zinc-300">
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-zinc-100">@{source.handle}</div>
-                      <div className="max-w-[260px] truncate text-xs text-zinc-500">
-                        {source.name} · {source.role}
+            {apiCost && (
+              <div className="mb-8 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+                <section className="rounded-[1.75rem] bg-zinc-950/70 p-5 shadow-[var(--trail-shadow-border)]">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                        X API estimate
+                      </h2>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        Current cron: {data.xApiUsage.sourceCount} active sources ×{" "}
+                        {data.xApiUsage.scheduledRunsPerDay} scheduled runs/day.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#a7f300]/10 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
+                      <div className="text-xs uppercase tracking-wide text-[#a7f300]">
+                        Scheduled requests/day
                       </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                          source.active
-                            ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]"
-                            : "border-zinc-700 bg-zinc-800/70 text-zinc-500"
-                        }`}
-                      >
-                        {source.active ? "active" : "paused"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right">{int(source.pulledToday)}</td>
-                    <td className="px-3 py-2 text-right">{int(source.total)}</td>
-                    <td className="px-3 py-2" title={source.lastFetchedAt ?? ""}>
-                      {rel(source.lastFetchedAt)}
-                    </td>
-                    <td className="px-3 py-2" title={source.newestPublishedAt ?? ""}>
-                      {rel(source.newestPublishedAt)}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Link
-                        href={`/radar?source=${encodeURIComponent(source.handle)}`}
-                        className="text-[#a7f300] hover:text-[#c8ff4d]"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <div className="mt-0.5 text-lg font-semibold text-zinc-100">
+                        {int(data.xApiUsage.scheduledRequestsPerDay)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <Stat
+                      label="Per run"
+                      value={`${int(data.xApiUsage.scheduledRequestsPerRun)} requests`}
+                      sub="1 recent-search call per source"
+                    />
+                    <Stat
+                      label="Max post reads"
+                      value={int(data.xApiUsage.maxPostReadsPerDay)}
+                      sub={`${data.xApiUsage.maxResultsPerSource} max results/request`}
+                    />
+                    <Stat
+                      label="Manual run adds"
+                      value={`${int(apiCost.manualMaxPostReads)} max reads`}
+                      sub={`${money(apiCost.manualMax)} max`}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-zinc-500">
+                    X charges read operations per Post resource returned, not simply per request.
+                    Using the current posted rate of {money(X_POST_READ_USD)} per Post read:{" "}
+                    <span className="text-zinc-300">{money(apiCost.scheduledMax)} per day max</span>{" "}
+                    if every scheduled request returns {data.xApiUsage.maxResultsPerSource} new or
+                    non-deduped posts. Image previews also request media metadata, which X may meter
+                    as separate media reads. Confirm exact rates in your X billing dashboard.
+                  </p>
+                </section>
+                <section className="rounded-[1.75rem] bg-zinc-950/70 p-5 shadow-[var(--trail-shadow-border)]">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                    Estimated cost today
+                  </h2>
+                  <div className="mt-3 text-3xl font-semibold tracking-tight text-zinc-100">
+                    {money(apiCost.observedToday)}
+                    <span className="ml-1 text-sm font-normal text-zinc-500">so far</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    Based on {int(apiCost.pulledToday)} unique stored posts fetched today. X says
+                    duplicate reads of the same resource are deduplicated within a 24-hour UTC
+                    window, so actual billed reads should track unique posts more closely than raw
+                    requests.
+                  </p>
+                </section>
+              </div>
+            )}
 
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Recent runs
-          </h2>
-          <div className="overflow-x-auto rounded-xl border border-zinc-800">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2">Started</th>
-                  <th className="px-3 py-2">Trigger</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2 text-right">Sources</th>
-                  <th className="px-3 py-2 text-right">Fetched</th>
-                  <th className="px-3 py-2 text-right">Stored</th>
-                  <th className="px-3 py-2 text-right">Failures</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800">
-                {data.runs.length === 0 && (
+            <div className="mb-8 flex flex-wrap items-center gap-3 rounded-[1.5rem] bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                  Per-source limit
+                </span>
+                <input
+                  type="number"
+                  min={10}
+                  max={100}
+                  value={limit}
+                  onChange={(e) =>
+                    setLimit(Math.min(100, Math.max(10, Number(e.target.value) || 10)))
+                  }
+                  className="min-h-10 w-24 rounded-full bg-black px-3 text-sm text-zinc-100 shadow-[var(--trail-shadow-border)] outline-none transition-[box-shadow] focus:shadow-[0_0_0_1px_rgba(167,243,0,0.45)]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={runNow}
+                disabled={running}
+                className="inline-flex min-h-10 items-center rounded-full bg-emerald-500/15 px-4 text-sm font-medium text-emerald-300 shadow-[0_0_0_1px_rgba(16,185,129,0.35)] transition-[background-color,box-shadow,transform] hover:bg-emerald-500/25 active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100"
+              >
+                {running ? "Running…" : "Run fetch now"}
+              </button>
+              {runLog && <span className="text-sm text-zinc-400">{runLog}</span>}
+            </div>
+
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Pulled tweets by source
+            </h2>
+            <div className="mb-8 overflow-x-auto rounded-[1.5rem] shadow-[var(--trail-shadow-border)]">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
                   <tr>
-                    <td className="px-3 py-4 text-zinc-500" colSpan={7}>
-                      No runs recorded yet.
-                    </td>
+                    <th className="px-3 py-2">Source</th>
+                    <th className="px-3 py-2">Mode</th>
+                    <th className="px-3 py-2 text-right">Pulled today</th>
+                    <th className="px-3 py-2 text-right">Total stored</th>
+                    <th className="px-3 py-2">Latest pull</th>
+                    <th className="px-3 py-2">Newest tweet</th>
+                    <th className="px-3 py-2 text-right">Tweets</th>
                   </tr>
-                )}
-                {data.runs.map((r) => (
-                  <tr key={r.id} className="text-zinc-300">
-                    <td className="px-3 py-2" title={r.startedAt ?? ""}>
-                      {rel(r.startedAt)}
-                    </td>
-                    <td className="px-3 py-2 text-zinc-400">{r.trigger}</td>
-                    <td className="px-3 py-2">
-                      <StatusPill status={r.status} />
-                    </td>
-                    <td className="px-3 py-2 text-right">{r.sourcesCount}</td>
-                    <td className="px-3 py-2 text-right">{r.fetchedCount}</td>
-                    <td className="px-3 py-2 text-right">{r.storedCount}</td>
-                    <td className="px-3 py-2 text-right">{r.failureCount}</td>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {data.sourceBreakdown.map((source) => (
+                    <tr key={source.handle} className="text-zinc-300">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-zinc-100">@{source.handle}</div>
+                        <div className="max-w-[260px] truncate text-xs text-zinc-500">
+                          {source.name} · {source.role}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium shadow-[0_0_0_1px_currentColor] ${
+                            source.active
+                              ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]"
+                              : "border-zinc-700 bg-zinc-800/70 text-zinc-500"
+                          }`}
+                        >
+                          {source.active ? "active" : "paused"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">{int(source.pulledToday)}</td>
+                      <td className="px-3 py-2 text-right">{int(source.total)}</td>
+                      <td className="px-3 py-2" title={source.lastFetchedAt ?? ""}>
+                        {rel(source.lastFetchedAt)}
+                      </td>
+                      <td className="px-3 py-2" title={source.newestPublishedAt ?? ""}>
+                        {rel(source.newestPublishedAt)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <Link
+                          href={`/radar?source=${encodeURIComponent(source.handle)}`}
+                          className="text-[#a7f300] hover:text-[#c8ff4d]"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Recent runs
+            </h2>
+            <div className="overflow-x-auto rounded-[1.5rem] shadow-[var(--trail-shadow-border)]">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
+                  <tr>
+                    <th className="px-3 py-2">Started</th>
+                    <th className="px-3 py-2">Trigger</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2 text-right">Sources</th>
+                    <th className="px-3 py-2 text-right">Fetched</th>
+                    <th className="px-3 py-2 text-right">Stored</th>
+                    <th className="px-3 py-2 text-right">Failures</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-3 text-xs text-zinc-500">
-            All times shown relative to now. Schedule <code>{data.schedule}</code> runs in UTC.
-          </p>
-        </>
-      )}
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {data.runs.length === 0 && (
+                    <tr>
+                      <td className="px-3 py-4 text-zinc-500" colSpan={7}>
+                        No runs recorded yet.
+                      </td>
+                    </tr>
+                  )}
+                  {data.runs.map((r) => (
+                    <tr key={r.id} className="text-zinc-300">
+                      <td className="px-3 py-2" title={r.startedAt ?? ""}>
+                        {rel(r.startedAt)}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-400">{r.trigger}</td>
+                      <td className="px-3 py-2">
+                        <StatusPill status={r.status} />
+                      </td>
+                      <td className="px-3 py-2 text-right">{r.sourcesCount}</td>
+                      <td className="px-3 py-2 text-right">{r.fetchedCount}</td>
+                      <td className="px-3 py-2 text-right">{r.storedCount}</td>
+                      <td className="px-3 py-2 text-right">{r.failureCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-zinc-500">
+              All times shown relative to now. Schedule <code>{data.schedule}</code> runs in UTC.
+            </p>
+          </>
+        )}
+      </div>
     </main>
   );
 }
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+    <div className="rounded-[1.35rem] bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
       <div className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</div>
       <div className="mt-1 text-lg font-semibold text-zinc-100">{value}</div>
       {sub && <div className="mt-0.5 truncate text-xs text-zinc-500">{sub}</div>}

@@ -5,10 +5,10 @@
 // gating flags + any same-day cached audit; this component decides which
 // branch to render and POSTs to /api/spend/audit on click.
 
-import Link from "next/link";
-import { useState } from "react";
 import type { AuditResult } from "@/lib/spend/audit";
 import type { WindowDays } from "@/lib/spend/queries";
+import Link from "next/link";
+import { useState } from "react";
 
 type Props = {
   userPlan: string;
@@ -100,12 +100,15 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
           type="button"
           disabled
           aria-disabled="true"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-zinc-800 bg-zinc-900/60 text-xs font-mono text-zinc-500 cursor-not-allowed select-none"
+          className="inline-flex min-h-10 cursor-not-allowed select-none items-center gap-2 rounded-full bg-zinc-900/60 px-4 font-mono text-xs text-zinc-500 shadow-[var(--trail-shadow-border)]"
         >
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-700" />
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-zinc-700" />
           Coming soon to Pro
         </button>
-        <Link href="/pricing" className="text-xs font-mono text-zinc-500 hover:text-[#a7f300] transition-colors">
+        <Link
+          href="/pricing"
+          className="font-mono text-xs text-zinc-500 transition-colors hover:text-[#a7f300]"
+        >
           Upgrade →
         </Link>
       </ShellFooter>
@@ -119,7 +122,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
       >
         <Link
           href="/settings"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-[#a7f300]/40 bg-[#a7f300]/10 text-xs font-mono text-[#a7f300] hover:bg-[#a7f300]/15 transition-colors"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#a7f300]/10 px-4 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[#a7f300]/15 active:scale-[0.97]"
         >
           Enable in /settings →
         </Link>
@@ -137,7 +140,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
         <button
           type="button"
           onClick={run}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-[#a7f300]/40 bg-[#a7f300]/10 text-xs font-mono text-[#a7f300] hover:bg-[#a7f300]/15 transition-colors"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#a7f300]/10 px-4 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[#a7f300]/15 active:scale-[0.97]"
         >
           Run AI Audit
         </button>
@@ -147,20 +150,26 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
 
   if (state.kind === "loading") {
     return (
-      <footer className="mt-10 border border-dashed border-zinc-800 rounded-lg p-6">
-        <div className="text-sm text-zinc-300 font-mono animate-pulse">Running…</div>
-        <div className="text-[12px] text-zinc-500 mt-1">Assembling bundle, scrubbing, calling model. ~20s.</div>
+      <footer className="mt-10 rounded-[1.5rem] border border-dashed border-zinc-800/80 p-6">
+        <div className="animate-pulse font-mono text-sm text-zinc-300">Running…</div>
+        <div className="mt-1 text-[12px] text-zinc-500">
+          Assembling bundle, scrubbing, calling model. ~20s.
+        </div>
       </footer>
     );
   }
   if (state.kind === "error") {
     return (
-      <footer className="mt-10 border border-red-900/40 bg-red-950/20 rounded-lg p-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+      <footer className="mt-10 flex flex-col gap-4 rounded-[1.5rem] bg-red-950/20 p-6 shadow-[0_0_0_1px_rgba(127,29,29,0.55)] sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="text-sm text-red-300 font-medium">Audit failed</div>
-          <p className="text-[13px] text-red-300/80 mt-1 max-w-md">{state.message}</p>
+          <div className="text-sm font-medium text-red-300">Audit failed</div>
+          <p className="mt-1 max-w-md text-[13px] text-red-300/80">{state.message}</p>
         </div>
-        <button type="button" onClick={run} className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-zinc-700 bg-zinc-900 text-xs font-mono text-zinc-300 hover:bg-zinc-800 transition-colors">
+        <button
+          type="button"
+          onClick={run}
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-zinc-950 px-4 font-mono text-xs text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
+        >
           Retry
         </button>
       </footer>
@@ -169,43 +178,57 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
 
   const r = state.result;
   return (
-    <footer className="mt-10 border border-zinc-900 rounded-lg p-6 bg-zinc-950">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+    <footer className="mt-10 rounded-[1.5rem] bg-zinc-950/70 p-6 shadow-[var(--trail-shadow-border)]">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">AI Audit</div>
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            AI Audit
+          </div>
           <div className="text-3xl font-semibold tracking-tight text-[#a7f300] tabular-nums">
             {fmtUsd(r.totalPotentialSavingsUsd)}/mo
           </div>
-          <div className="text-[12px] text-zinc-500 mt-1">Potential savings if every finding below is applied.</div>
+          <div className="mt-1 text-[12px] text-zinc-500">
+            Potential savings if every finding below is applied.
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-[11px] font-mono text-zinc-600">
-            Last run: {fmtDate(r.generatedAt)}{r.cached ? " · cached" : ""}
+            Last run: {fmtDate(r.generatedAt)}
+            {r.cached ? " · cached" : ""}
           </div>
-          <button type="button" onClick={run} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-800 bg-zinc-900 text-[11px] font-mono text-zinc-300 hover:bg-zinc-800 transition-colors">
+          <button
+            type="button"
+            onClick={run}
+            className="inline-flex min-h-9 items-center gap-2 rounded-full bg-zinc-900 px-3 font-mono text-[11px] text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
+          >
             Run again
           </button>
         </div>
       </div>
       <ul className="space-y-3">
-        {r.findings.map((f, i) => (
-          <li key={i} className="border border-zinc-900 rounded-md p-4 bg-zinc-950 flex flex-col sm:flex-row gap-3 sm:items-start sm:justify-between">
+        {r.findings.map((f) => (
+          <li
+            key={`${f.severity}:${f.title}:${f.estimatedMonthlySavingsUsd}`}
+            className="flex flex-col gap-3 rounded-2xl bg-black/35 p-4 shadow-[var(--trail-shadow-border)] sm:flex-row sm:items-start sm:justify-between"
+          >
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-[0.14em] border ${severityClasses(f.severity)}`}>
+              <div className="mb-2 flex items-center gap-2">
+                <span
+                  className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] shadow-[0_0_0_1px_currentColor] ${severityClasses(f.severity)}`}
+                >
                   {f.severity}
                 </span>
                 <h3 className="text-sm font-semibold text-zinc-100 leading-snug">{f.title}</h3>
               </div>
               <p className="text-[13px] text-zinc-400 leading-relaxed">{f.recommendation}</p>
             </div>
-            <div className="sm:text-right font-mono tabular-nums text-[#a7f300] text-sm shrink-0">
+            <div className="shrink-0 font-mono text-sm tabular-nums text-[#a7f300] sm:text-right">
               {fmtUsd(f.estimatedMonthlySavingsUsd)}/mo
             </div>
           </li>
         ))}
       </ul>
-      <div className="mt-5 text-[11px] font-mono text-zinc-600">
+      <div className="mt-5 font-mono text-[11px] text-zinc-600">
         This audit cost you {fmtUsd(r.auditCostUsd)} to run · model {r.model}
       </div>
     </footer>
@@ -222,10 +245,10 @@ function ShellFooter({
   children: React.ReactNode;
 }) {
   return (
-    <footer className="mt-10 border border-dashed border-zinc-800 rounded-lg p-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+    <footer className="mt-10 flex flex-col gap-4 rounded-[1.5rem] border border-dashed border-zinc-800/80 p-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="text-sm text-zinc-200 font-medium">{title}</div>
-        <p className="text-[13px] text-zinc-500 mt-1 max-w-md">{blurb}</p>
+        <div className="text-sm font-medium text-zinc-200">{title}</div>
+        <p className="mt-1 max-w-md text-[13px] text-zinc-500">{blurb}</p>
       </div>
       <div className="flex items-center gap-3">{children}</div>
     </footer>
