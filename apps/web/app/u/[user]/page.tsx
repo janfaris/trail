@@ -475,11 +475,11 @@ export default async function UserProfile({ params }: PageProps) {
       <SiteNav />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(167,243,0,0.16),transparent_34%),radial-gradient(circle_at_82%_0%,rgba(255,255,255,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_38%)]"
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(167,243,0,0.09),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.018),transparent_38%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 opacity-[0.04] [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:44px_44px]"
+        className="pointer-events-none fixed inset-0 opacity-[0.025] [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:44px_44px]"
       />
 
       <main className="relative mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
@@ -493,14 +493,14 @@ export default async function UserProfile({ params }: PageProps) {
           </div>
         )}
 
-        <section className="relative overflow-hidden rounded-[2rem] border border-zinc-800/80 bg-zinc-950/90 shadow-2xl shadow-black/40">
+        <section className="relative overflow-hidden rounded-[2rem] bg-zinc-950/88 shadow-[var(--trail-shadow-border)]">
           <div
             aria-hidden
             className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#a7f300] via-zinc-100 to-zinc-700"
           />
           <div
             aria-hidden
-            className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[#a7f300]/20 bg-[#a7f300]/10 blur-3xl"
+            className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#a7f300]/[0.06] blur-3xl"
           />
           <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.75fr)] lg:p-10">
             <div className="min-w-0">
@@ -530,7 +530,7 @@ export default async function UserProfile({ params }: PageProps) {
                     ) : (
                       <Link
                         href={`/api/auth/sign-in/github?callbackURL=/u/${handle}`}
-                        className="rounded-full border border-[#a7f300] bg-[#a7f300] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#c8ff5e]"
+                        className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
                       >
                         Follow
                       </Link>
@@ -540,7 +540,7 @@ export default async function UserProfile({ params }: PageProps) {
                     href={profileTweetUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-50"
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-zinc-900 px-3 text-xs font-mono text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color,transform] hover:text-zinc-50 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.22)] active:scale-[0.96]"
                   >
                     <XIcon size={13} />
                     Share
@@ -555,7 +555,7 @@ export default async function UserProfile({ params }: PageProps) {
               ) : isSelf ? (
                 <Link
                   href="/settings"
-                  className="mt-6 inline-flex rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-mono text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                  className="mt-6 inline-flex min-h-10 items-center rounded-full bg-zinc-900 px-4 text-sm font-mono text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)] active:scale-[0.96]"
                 >
                   Add a bio so your proof has a voice →
                 </Link>
@@ -574,7 +574,7 @@ export default async function UserProfile({ params }: PageProps) {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="rounded-2xl border border-zinc-800/90 bg-black/30 p-4"
+                    className="rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]"
                   >
                     <p className="text-2xl font-semibold tracking-tight text-zinc-50">
                       {formatCount(Number(value))}
@@ -605,7 +605,7 @@ export default async function UserProfile({ params }: PageProps) {
                 {isSelf && (
                   <Link
                     href={`/u/${handle}/spend`}
-                    className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                    className="rounded-full bg-zinc-900/80 px-3 py-1 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)]"
                     title="Private — only you can see this"
                   >
                     Spend →
@@ -675,7 +675,7 @@ export default async function UserProfile({ params }: PageProps) {
               )}
             </div>
 
-            <aside className="rounded-[1.5rem] border border-zinc-800 bg-black/40 p-4">
+            <aside className="rounded-[1.5rem] bg-black/36 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
                   Pinned proof
@@ -687,7 +687,7 @@ export default async function UserProfile({ params }: PageProps) {
                 )}
               </div>
               {heroSession ? (
-                <div className="rounded-[1.25rem] border border-zinc-800 bg-zinc-950/80 p-4">
+                <div className="rounded-[1.25rem] bg-zinc-950/80 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
                   <div className="flex items-start justify-between gap-3">
                     <ToolIcon name={heroSession.tool} className="mt-1 text-[#a7f300]" />
                     {isSelf && (
@@ -722,13 +722,13 @@ export default async function UserProfile({ params }: PageProps) {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
                       href={`/u/${handle}/${heroSession.slug}`}
-                      className="inline-flex flex-1 items-center justify-center rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 px-3 py-2 text-xs font-mono text-[#a7f300] transition-colors hover:bg-[#a7f300]/20"
+                      className="inline-flex min-h-10 flex-1 items-center justify-center rounded-full bg-[#a7f300]/10 px-3 text-xs font-mono text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.24)] transition-[background-color,transform] hover:bg-[#a7f300]/20 active:scale-[0.96]"
                     >
                       Open receipt
                     </Link>
                     <Link
                       href={`/u/${handle}/${heroSession.slug}#conversation`}
-                      className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                      className="inline-flex min-h-10 items-center justify-center rounded-full px-3 text-xs font-mono text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-zinc-50 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.18)] active:scale-[0.96]"
                     >
                       Comment
                     </Link>
@@ -737,7 +737,7 @@ export default async function UserProfile({ params }: PageProps) {
                         href={heroTweetUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                        className="inline-flex min-h-10 items-center justify-center rounded-full px-3 text-xs font-mono text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-zinc-50 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.18)] active:scale-[0.96]"
                       >
                         <XIcon size={13} />
                       </a>
@@ -747,7 +747,7 @@ export default async function UserProfile({ params }: PageProps) {
                         href={heroRepoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-3 py-2 text-xs font-mono text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                        className="inline-flex min-h-10 items-center justify-center rounded-full px-3 text-xs font-mono text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-zinc-50 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.18)] active:scale-[0.96]"
                       >
                         Fork
                       </a>

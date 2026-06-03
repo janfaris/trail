@@ -95,7 +95,7 @@ function ReviewMetric({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+    <div className="rounded-2xl bg-black/30 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{label}</div>
       <div
         className={
@@ -122,7 +122,7 @@ function ReviewStep({
   return (
     <a
       href={href}
-      className="group rounded-2xl border border-white/10 bg-black/35 p-4 transition hover:-translate-y-0.5 hover:border-[#a7f300]/45 hover:bg-[#a7f300]/5"
+      className="group rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
     >
       <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">{step}</div>
       <div className="mt-2 text-sm font-semibold text-white group-hover:text-[#a7f300]">
@@ -508,7 +508,7 @@ export default async function SessionView({
             <span className="text-[#a7f300]">/</span>trail
           </Link>
           <nav className="flex items-center gap-1 text-sm font-mono text-zinc-500">
-            <Link href={`/u/${user}`} className="hover:text-zinc-100 transition-colors">
+            <Link href={`/u/${user}`} className="transition-[color] hover:text-zinc-100">
               @{user}
             </Link>
             <span className="text-zinc-700">/</span>
@@ -519,7 +519,7 @@ export default async function SessionView({
 
       <main className="mx-auto grid max-w-6xl gap-8 px-4 pb-24 pt-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:px-8">
         <div className="min-w-0">
-          <section className="relative overflow-hidden rounded-[2rem] border border-zinc-800 bg-[radial-gradient(circle_at_20%_0%,rgba(167,243,0,0.13),transparent_22rem),linear-gradient(135deg,rgba(255,255,255,0.055),rgba(255,255,255,0.015))] p-5 shadow-2xl shadow-black/35 sm:p-7">
+          <section className="relative overflow-hidden rounded-[2rem] bg-zinc-950/86 p-5 shadow-[var(--trail-shadow-border)] sm:p-7">
             <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-500">
               <ToolIcon name={sessionRow.tool} className="text-zinc-400" />
               <span className="text-zinc-300">{sessionRow.tool}</span>
@@ -536,7 +536,7 @@ export default async function SessionView({
                     href={`https://github.com/${sessionRow.linkedRepo}/commit/${sessionRow.linkedCommitSha}`}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 px-2 py-0.5 font-mono text-[11px] text-[#a7f300] transition-colors hover:bg-[#a7f300]/20"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#a7f300]/10 px-2 py-0.5 font-mono text-[11px] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.24)] transition-[background-color] hover:bg-[#a7f300]/20"
                     title={`Shipped in ${sessionRow.linkedRepo}@${sessionRow.linkedCommitSha}`}
                   >
                     Shipped {sessionRow.linkedCommitSha.slice(0, 7)}
@@ -569,7 +569,7 @@ export default async function SessionView({
             </div>
           </section>
 
-          <section className="mt-4 rounded-[2rem] border border-[#a7f300]/25 bg-[#071000] p-5 shadow-[0_24px_80px_rgba(167,243,0,0.08)] sm:p-6">
+          <section className="mt-4 rounded-[2rem] bg-[#071000]/82 p-5 shadow-[0_0_0_1px_rgba(167,243,0,0.16)] sm:p-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
               Start here
             </div>
@@ -586,13 +586,13 @@ export default async function SessionView({
               <div className="flex flex-wrap gap-2">
                 <a
                   href={lessonRows.length > 0 ? "#lessons" : "#check"}
-                  className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e]"
+                  className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
                 >
                   {lessonRows.length > 0 ? "Steal the moves" : "Read verdict"}
                 </a>
                 <a
                   href="#conversation"
-                  className="inline-flex min-h-9 items-center rounded-full border border-lime-200/20 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-lime-50 transition hover:border-lime-100/50 hover:text-white"
+                  className="inline-flex min-h-10 items-center rounded-full px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-lime-50 shadow-[0_0_0_1px_rgba(236,252,203,0.18)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(236,252,203,0.34)] active:scale-[0.96]"
                 >
                   Ask a question
                 </a>
@@ -634,7 +634,7 @@ export default async function SessionView({
                   initialSaved={Boolean(savedRow)}
                   signedIn={Boolean(viewer?.user?.id)}
                   signInHref={signInHref(`/u/${user}/${slug}`)}
-                  className="border-lime-200/20 bg-black/20 text-lime-50 hover:border-lime-100/50 hover:text-white"
+                  className="bg-black/20 text-lime-50 shadow-[0_0_0_1px_rgba(236,252,203,0.18)] hover:text-white hover:shadow-[0_0_0_1px_rgba(236,252,203,0.34)]"
                 />
               ) : null}
               <ForkButton user={user} slug={slug} title={sessionRow.title ?? slug} />
@@ -642,14 +642,14 @@ export default async function SessionView({
                 href={tweetIntent(`${title} - a trail by @${user}`, fullUrl)}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-lime-200/20 bg-black/20 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-lime-50 transition hover:border-lime-100/50 hover:text-white"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-black/20 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-lime-50 shadow-[0_0_0_1px_rgba(236,252,203,0.18)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(236,252,203,0.34)] active:scale-[0.96]"
               >
                 Share to X
               </a>
               {isOwner ? (
                 <Link
                   href="/dashboard"
-                  className="inline-flex min-h-9 items-center rounded-full border border-zinc-700 bg-black/20 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                  className="inline-flex min-h-10 items-center rounded-full bg-black/20 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.22)] active:scale-[0.96]"
                 >
                   Open Studio
                 </Link>

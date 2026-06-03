@@ -8,7 +8,7 @@ type NavLink = { href: string; label: string; external?: boolean };
 const PRIMARY_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
   { href: "/radar", label: "Radar" },
-  { href: "/tools", label: "Tools" },
+  { href: "/learn", label: "Learn" },
   { href: "/install", label: "Install" },
   { href: "https://github.com/janfaris/trail", label: "GitHub", external: true },
 ];
@@ -16,9 +16,8 @@ const PRIMARY_LINKS: NavLink[] = [
 const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
   { href: "/radar", label: "Radar" },
+  { href: "/learn", label: "Learn" },
   { href: "/saved", label: "Saved" },
-  { href: "/tools", label: "Tools" },
-  { href: "/install", label: "Install" },
   { href: "/notifications", label: "Notifications" },
   { href: "/dashboard", label: "Studio" },
 ];
@@ -27,7 +26,7 @@ function linkClass(href: string, currentPath?: string, className?: string) {
   const active = currentPath && href === currentPath;
   return cn(
     active ? "text-zinc-100" : "text-zinc-400",
-    "hover:text-zinc-100 transition-colors",
+    "transition-[color] hover:text-zinc-100",
     className,
   );
 }
@@ -114,7 +113,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
     unreadNotifications >= 10 ? "9+" : unreadNotifications > 0 ? String(unreadNotifications) : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/86 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
           <span className="text-[#a7f300]">/</span>trail
@@ -149,7 +148,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           ) : (
             <a
               href="/api/auth/sign-in/github?callbackURL=/feed"
-              className="inline-flex items-center h-8 px-3 rounded-md text-[12.5px] font-medium bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] transition-colors"
+              className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-[12.5px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.96]"
             >
               Sign in
             </a>
@@ -162,7 +161,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
             key={link.href}
             link={link}
             currentPath={currentPath}
-            className="inline-flex min-h-8 shrink-0 items-center rounded-full bg-black/35 px-3 font-mono uppercase tracking-[0.12em] shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-black/35 px-3 font-mono uppercase tracking-[0.12em] shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
             badge={link.href === "/notifications" ? notificationBadge : null}
           />
         ))}

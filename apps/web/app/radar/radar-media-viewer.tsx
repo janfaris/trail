@@ -80,7 +80,7 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
 
   return (
     <>
-      <div className="overflow-hidden rounded-[26px] border border-[#a7f300]/20 bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(24,24,27,0.96),rgba(0,0,0,0.98))] p-2 shadow-[0_18px_65px_rgba(167,243,0,0.08)] transition hover:border-[#a7f300]/45">
+      <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,rgba(255,255,255,0.045),rgba(255,255,255,0.01)),#09090b] p-2 shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]">
         <div className="mb-2 flex items-center justify-between gap-3 px-2 pt-1 font-mono text-[10px] uppercase tracking-[0.16em]">
           <span className="text-[#a7f300]">Visual proof attached</span>
           <span className="text-zinc-600">
@@ -101,7 +101,7 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                 type="button"
                 onClick={() => setActiveIndex(index)}
                 aria-label={`Maximize ${label} from @${sourceHandle}`}
-                className={`group relative block w-full overflow-hidden rounded-[20px] border border-white/10 bg-zinc-900 text-left outline-none transition hover:border-[#a7f300]/45 focus-visible:border-[#a7f300] focus-visible:ring-2 focus-visible:ring-[#a7f300]/40 ${aspectClass} ${spanClass}`}
+                className={`group relative block w-full overflow-hidden rounded-[20px] bg-zinc-900 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.08)] outline-none transition-[box-shadow,transform] active:scale-[0.96] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.28)] focus-visible:ring-2 focus-visible:ring-[#a7f300]/40 ${aspectClass} ${spanClass}`}
               >
                 <img
                   src={item.url}
@@ -109,10 +109,10 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                   loading="lazy"
                   width={item.width}
                   height={item.height}
-                  className="h-full w-full object-cover saturate-[1.04] transition duration-500 group-hover:scale-[1.035]"
+                  className="h-full w-full object-cover saturate-[1.02] outline outline-1 -outline-offset-1 outline-white/10 transition-transform duration-500 group-hover:scale-[1.025]"
                 />
                 <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_52%,rgba(0,0,0,0.76)_100%)] opacity-80" />
-                <span className="pointer-events-none absolute right-2 top-2 rounded-full border border-[#a7f300]/30 bg-black/70 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-[#a7f300] opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/70 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-[#a7f300] opacity-0 shadow-[0_0_0_1px_rgba(167,243,0,0.22)] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                   Maximize
                 </span>
                 <span className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/72 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-zinc-200">
@@ -155,14 +155,14 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                       href={signalUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="hidden rounded-full border border-zinc-700 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300] sm:inline-flex"
+                      className="hidden min-h-9 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)] active:scale-[0.96] sm:inline-flex"
                     >
                       Open X post
                     </a>
                     <button
                       type="button"
                       onClick={() => setActiveIndex(null)}
-                      className="rounded-full bg-zinc-100 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-black transition hover:bg-[#a7f300]"
+                      className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
                     >
                       Close
                     </button>
@@ -187,7 +187,7 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                             index === null ? 0 : (index - 1 + media.length) % media.length,
                           )
                         }
-                        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                        className="absolute left-3 top-1/2 inline-flex min-h-10 -translate-y-1/2 items-center rounded-full bg-black/72 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.15)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)] active:scale-[0.96]"
                       >
                         Prev
                       </button>
@@ -198,7 +198,7 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                             index === null ? 0 : (index + 1) % media.length,
                           )
                         }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-black/72 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                        className="absolute right-3 top-1/2 inline-flex min-h-10 -translate-y-1/2 items-center rounded-full bg-black/72 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-100 shadow-[0_0_0_1px_rgba(255,255,255,0.15)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)] active:scale-[0.96]"
                       >
                         Next
                       </button>
@@ -214,7 +214,7 @@ export function RadarMediaViewer({ media, sourceHandle, signalUrl }: RadarMediaV
                         type="button"
                         onClick={() => setActiveIndex(index)}
                         aria-label={`Show media ${index + 1}`}
-                        className={`h-12 w-16 shrink-0 overflow-hidden rounded-full border transition ${
+                        className={`h-12 w-16 shrink-0 overflow-hidden rounded-full border transition-[border-color,opacity,box-shadow,transform] active:scale-[0.96] ${
                           index === activeIndex
                             ? "border-[#a7f300] ring-2 ring-[#a7f300]/25"
                             : "border-white/10 opacity-55 hover:opacity-100"

@@ -303,28 +303,28 @@ export default async function RadarPage({
     <div className="min-h-screen bg-black text-zinc-50">
       <SiteNav currentPath="/radar" />
 
-      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.08),transparent_28%),#000]">
-        <section className="mx-auto grid max-w-6xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,760px)_300px] lg:px-8 lg:py-6">
+      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.045),transparent_26%),linear-gradient(180deg,rgba(24,24,27,0.18),rgba(0,0,0,0)_220px),#000]">
+        <section className="mx-auto grid max-w-6xl gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,760px)_300px] xl:px-8 xl:py-6">
           <div className="space-y-4">
-            <section className="rounded-[24px] border border-zinc-800 bg-zinc-950/88 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.42)] sm:p-5">
+            <section className="rounded-[26px] bg-zinc-950/82 p-4 shadow-[var(--trail-shadow-border)] sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
-                    Radar feed
+                    AI Radar
                   </div>
-                  <h1 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white sm:text-3xl">
-                    Fresh AI builder claims
+                  <h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-white sm:text-4xl">
+                    Claims worth testing
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                    Newest posts first. Use Radar to spot a claim, test it, then publish the receipt
-                    as proof.
+                  <p className="mt-2 max-w-2xl text-pretty text-sm leading-6 text-zinc-400">
+                    A curated newswire of AI posts builders can verify with public Trail receipts.
+                    Newest first, proof second.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:min-w-[360px]">
                   <StatCard label="signals" value={formatCount(data.stats.total)} />
                   <StatCard label="today" value={formatCount(data.stats.lastDay)} />
                   <StatCard label="sources" value={formatCount(data.stats.sources)} />
-                  <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
+                  <div className="rounded-2xl bg-black/38 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
                     <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
                       refreshed
                     </div>
@@ -340,9 +340,9 @@ export default async function RadarPage({
               </div>
             </section>
 
-            <section className="rounded-[22px] border border-zinc-800 bg-zinc-950/78 p-3">
+            <section className="rounded-[22px] bg-zinc-950/62 p-3 shadow-[var(--trail-shadow-border)]">
               <div className="mb-2 px-1 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                Filter by category
+                Category
               </div>
               <div className="flex flex-wrap gap-2">
                 <FilterPill href={filterHref({ source: activeSource })} active={!activeCategory}>
@@ -379,7 +379,7 @@ export default async function RadarPage({
                   </div>
                   <Link
                     href="/feed"
-                    className="hidden rounded-full border border-zinc-800 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 transition hover:border-[#a7f300]/40 hover:text-[#a7f300] sm:inline-flex"
+                    className="hidden rounded-full px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)] sm:inline-flex"
                   >
                     Open feed
                   </Link>
@@ -395,13 +395,13 @@ export default async function RadarPage({
             )}
           </div>
 
-          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <section className="overflow-hidden rounded-[24px] border border-zinc-800 bg-zinc-950/88">
-              <div className="border-b border-zinc-900 px-4 py-4">
+          <aside className="hidden space-y-4 xl:sticky xl:top-20 xl:block xl:self-start">
+            <section className="overflow-hidden rounded-[24px] bg-zinc-950/78 shadow-[var(--trail-shadow-border)]">
+              <div className="border-b border-zinc-900/85 px-4 py-4">
                 <h2 className="text-lg font-semibold tracking-[-0.04em] text-zinc-50">Sources</h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Active sources are pulled every 6 hours. Paused sources remain filterable for
-                  older signals.
+                  Active sources are pulled on the scheduled Radar cadence. Paused sources stay
+                  filterable for older signals.
                 </p>
               </div>
               <div className="divide-y divide-zinc-900">
@@ -412,7 +412,7 @@ export default async function RadarPage({
                     <Link
                       href={filterHref({ category: activeCategory, source: source.handle })}
                       key={source.handle}
-                      className={`block px-4 py-3 transition hover:bg-black/45 ${
+                      className={`block px-4 py-3 transition-[background-color] hover:bg-black/38 ${
                         activeSource === source.handle ? "bg-[#a7f300]/[0.07]" : ""
                       }`}
                     >
@@ -436,9 +436,9 @@ export default async function RadarPage({
               </div>
             </section>
 
-            <section className="rounded-[24px] border border-[#a7f300]/25 bg-[#a7f300]/10 p-4">
+            <section className="rounded-[24px] bg-[#a7f300]/[0.055] p-4 shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
-                How to use it
+                Proof loop
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-300">
                 Open a fresh claim, test it with your stack, then publish the receipt back to Trail.
@@ -453,7 +453,7 @@ export default async function RadarPage({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+    <div className="rounded-2xl bg-black/38 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
       <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">{label}</div>
       <div className="mt-2 font-mono text-xl text-zinc-100 tabular-nums">{value}</div>
     </div>
@@ -472,10 +472,10 @@ function FilterPill({
   return (
     <Link
       href={href}
-      className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] transition ${
+      className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] transition-[background-color,box-shadow,color,transform] active:scale-[0.96] ${
         active
           ? "bg-[#a7f300] text-black"
-          : "border border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-[#a7f300]/45 hover:text-[#a7f300]"
+          : "bg-zinc-950 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
       }`}
     >
       {children}
@@ -488,9 +488,9 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
   const media = radarMediaPreviews(signal.entities);
 
   return (
-    <article className="overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950/86 shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition hover:-translate-y-0.5 hover:border-[#a7f300]/35">
-      <div className="grid gap-px bg-zinc-900/80 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="bg-zinc-950 p-5 sm:p-6">
+    <article className="overflow-hidden rounded-[28px] bg-zinc-950/84 shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]">
+      <div className="grid gap-px bg-zinc-900/55 lg:grid-cols-[minmax(0,1fr)_238px]">
+        <div className="bg-zinc-950/96 p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em]">
             <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">
               {radarCategoryLabel(signal.category)}
@@ -527,14 +527,14 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
           ) : null}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-800 bg-black/35 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+            <div className="rounded-2xl bg-black/28 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                 Why builders care
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">{signal.whyBuildersCare}</p>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-black/35 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber-100/75">
+            <div className="rounded-2xl bg-black/28 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                 How to verify
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">{signal.testPrompt}</p>
@@ -546,7 +546,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
               {signal.tags.slice(0, 6).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-zinc-800 px-2.5 py-1 font-mono text-[10px] text-zinc-500"
+                  className="rounded-full bg-black/35 px-2.5 py-1 font-mono text-[10px] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
                 >
                   {tag}
                 </span>
@@ -555,7 +555,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
           ) : null}
         </div>
 
-        <div className="bg-black/72 p-5">
+        <div className="bg-black/58 p-5">
           <div className="grid grid-cols-2 gap-2">
             <MiniMetric label="radar score" value={toNumber(signal.score).toFixed(1)} />
             <MiniMetric label="engagement" value={formatCount(engagement)} />
@@ -574,19 +574,19 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
               href={signal.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition hover:bg-[#a7f300]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
             >
               Open X signal
             </a>
             <Link
               href="/feed#feed-composer"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-zinc-800 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)] active:scale-[0.96]"
             >
               Publish proof
             </Link>
             <Link
               href={`/learn?q=${encodeURIComponent(signal.category.replace(/_/g, " "))}`}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition hover:bg-zinc-950 hover:text-zinc-100"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-950 hover:text-zinc-100 active:scale-[0.96]"
             >
               Find lessons
             </Link>
@@ -599,7 +599,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-900 bg-zinc-950/80 p-3">
+    <div className="rounded-2xl bg-zinc-950/76 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.055)]">
       <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">{label}</div>
       <div className="mt-1 font-mono text-sm text-zinc-100 tabular-nums">{value}</div>
     </div>

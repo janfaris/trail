@@ -1590,22 +1590,26 @@ function FeedNavRail({
     <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6">
       <div>
         <Link href="/" className="inline-flex items-center gap-2 px-3 font-mono text-sm">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#a7f300] text-black shadow-[0_0_36px_rgba(167,243,0,0.24)]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#a7f300] text-black shadow-[0_0_24px_rgba(167,243,0,0.18)]">
             /
           </span>
           <span className="text-zinc-100">trail</span>
         </Link>
 
-        <nav className="mt-8 space-y-2">
+        <nav className="mt-8 space-y-1.5">
           {navItems.map((item) => (
             <TrailLink
               key={item.label}
               href={item.href}
-              className={`group block rounded-[22px] px-4 py-3 transition-[background-color,transform] active:scale-[0.98] ${
-                item.active ? "bg-zinc-100 text-zinc-950" : "text-zinc-300 hover:bg-zinc-950"
+              className={`group block rounded-[20px] px-4 py-3 transition-[background-color,color] ${
+                item.active
+                  ? "bg-zinc-100 text-zinc-950"
+                  : "text-zinc-400 hover:bg-zinc-950/72 hover:text-zinc-100"
               }`}
             >
-              <span className="block text-[18px] font-medium tracking-[-0.03em]">{item.label}</span>
+              <span className="block text-[17px] font-medium tracking-[-0.025em]">
+                {item.label}
+              </span>
               <span
                 className={`mt-1 block text-[12px] leading-4 ${
                   item.active ? "text-zinc-600" : "text-zinc-600 group-hover:text-zinc-500"
@@ -1619,13 +1623,13 @@ function FeedNavRail({
 
         <TrailLink
           href={publishHref}
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[12px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+          className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
         >
           Publish receipt
         </TrailLink>
       </div>
 
-      <div className="rounded-[24px] bg-zinc-950/80 p-4 text-sm leading-6 text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+      <div className="rounded-[22px] bg-zinc-950/70 p-4 text-sm leading-6 text-zinc-500 shadow-[var(--trail-shadow-border)]">
         Daily loop: read one receipt, steal one move, publish one proof, answer one signal.
       </div>
     </div>
@@ -1642,13 +1646,13 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
   ];
 
   return (
-    <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+    <section className="rounded-[24px] bg-zinc-950/82 p-4 shadow-[var(--trail-shadow-border)]">
       <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
         Network pulse
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
         {items.map(([label, value]) => (
-          <div key={label} className="rounded-[18px] bg-black px-3 py-3">
+          <div key={label} className="rounded-2xl bg-black/55 px-3 py-3">
             <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
               {label}
             </div>
@@ -1682,7 +1686,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   ].filter(Boolean);
 
   return (
-    <article className="group grid grid-cols-[44px_minmax(0,1fr)] gap-3 px-4 py-4 transition-[background-color] hover:bg-zinc-950/70 sm:grid-cols-[52px_minmax(0,1fr)] sm:px-5">
+    <article className="group grid grid-cols-[44px_minmax(0,1fr)] gap-3 px-4 py-5 transition-[background-color] hover:bg-zinc-950/55 sm:grid-cols-[52px_minmax(0,1fr)] sm:px-5">
       <Link
         href={authorHref}
         className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-full transition-transform group-hover:scale-[1.03] active:scale-[0.96] sm:h-12 sm:w-12"
@@ -1763,16 +1767,16 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             </p>
           ) : null}
 
-          <div className="mt-4 overflow-hidden rounded-[22px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.06),transparent_42%),#09090b] transition-[border-color,background-color] group-hover:border-zinc-800">
-            <div className="border-b border-zinc-900/90 px-4 py-3">
+          <div className="mt-4 rounded-[22px] bg-zinc-950/58 px-4 py-3 shadow-[var(--trail-shadow-border)] transition-[box-shadow] group-hover:shadow-[var(--trail-shadow-border-hover)]">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
-                Receipt proof
+                Proof
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {chips.map((chip) => (
                   <span
                     key={chip}
-                    className="inline-flex min-h-7 items-center rounded-full bg-black px-2.5 font-mono text-[10px] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+                    className="inline-flex min-h-7 items-center rounded-full bg-black/55 px-2.5 font-mono text-[10px] text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
                   >
                     {chip}
                   </span>
@@ -1780,25 +1784,23 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-px bg-zinc-900/80 sm:grid-cols-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               {metrics.map((metric) => (
-                <div key={metric.label} className="bg-black/70 px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">
+                <div key={metric.label} className="rounded-full bg-black/45 px-3 py-1.5">
+                  <div className="inline font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
                     {metric.label}
                   </div>
-                  <div className="mt-1 truncate font-mono text-[12px] text-zinc-200 tabular-nums">
+                  <div className="ml-2 inline font-mono text-[11px] text-zinc-200 tabular-nums">
                     {metric.value}
                   </div>
                 </div>
               ))}
               {repoLabel ? (
-                <div className="col-span-2 bg-black/70 px-4 py-3 sm:col-span-3">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-zinc-600">
+                <div className="min-w-0 rounded-full bg-black/45 px-3 py-1.5">
+                  <div className="inline font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
                     Repo
                   </div>
-                  <div className="mt-1 truncate font-mono text-[12px] text-zinc-200">
-                    {repoLabel}
-                  </div>
+                  <div className="ml-2 inline font-mono text-[11px] text-zinc-200">{repoLabel}</div>
                 </div>
               ) : null}
             </div>
@@ -1808,7 +1810,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         {r.lessonCount > 0 ? (
           <Link
             href={`${currentReceiptHref}#lessons`}
-            className="mt-3 block rounded-[22px] border border-[#a7f300]/20 bg-[#a7f300]/[0.055] px-4 py-3 transition-[border-color,background-color] hover:border-[#a7f300]/50 hover:bg-[#a7f300]/[0.08]"
+            className="mt-3 block rounded-[22px] bg-[#a7f300]/[0.045] px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.14)] transition-[background-color,box-shadow] hover:bg-[#a7f300]/[0.065] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.28)]"
           >
             <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
               <span>Steal this move</span>
@@ -1826,7 +1828,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         ) : null}
 
         <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em]">
-          <span className="rounded-full border border-[#a7f300]/20 bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">
+          <span className="rounded-full bg-zinc-950/70 px-2.5 py-1 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
             {reason}
           </span>
           {socialProof.length > 0 ? (
@@ -1879,24 +1881,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               Join the thread →
             </div>
           </Link>
-        ) : (
-          <Link
-            href={`${currentReceiptHref}#conversation`}
-            className="mt-3 flex items-center justify-between gap-4 rounded-[22px] border border-dashed border-zinc-900 bg-zinc-950/35 px-4 py-3 transition-[border-color,background-color] hover:border-zinc-800 hover:bg-zinc-950"
-          >
-            <span className="min-w-0">
-              <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
-                Open thread
-              </span>
-              <span className="mt-1 block text-[13px] leading-5 text-zinc-500">
-                Ask a proof check, suggest a fork, or start the builder conversation.
-              </span>
-            </span>
-            <span className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-              Reply
-            </span>
-          </Link>
-        )}
+        ) : null}
 
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <ReactionBar
@@ -1948,7 +1933,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             </a>
             <Link
               href={currentReceiptHref}
-              className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
             >
               Open
             </Link>
@@ -2494,8 +2479,8 @@ export default async function FeedPage({
     <div className="min-h-screen bg-black text-zinc-50">
       <SiteNav currentPath="/feed" />
 
-      <main className="min-h-[calc(100vh-3.5rem)] w-full bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.08),transparent_28%),linear-gradient(180deg,rgba(24,24,27,0.36),rgba(0,0,0,0)_220px)]">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-6 lg:px-4 xl:grid-cols-[220px_minmax(0,660px)_340px] xl:gap-8">
+      <main className="min-h-[calc(100vh-3.5rem)] w-full bg-[radial-gradient(circle_at_10%_0%,rgba(167,243,0,0.045),transparent_24%),linear-gradient(180deg,rgba(24,24,27,0.24),rgba(0,0,0,0)_220px)]">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 lg:grid-cols-[208px_minmax(0,1fr)] lg:gap-6 lg:px-4 xl:grid-cols-[208px_minmax(0,680px)_320px] xl:gap-8">
           <aside className="hidden lg:block">
             <FeedNavRail
               followingHref={followingHref}
@@ -2504,21 +2489,21 @@ export default async function FeedPage({
             />
           </aside>
 
-          <section className="min-w-0 border-x border-zinc-900 bg-black/80 lg:min-h-[calc(100vh-3.5rem)]">
-            <div className="border-b border-zinc-900 bg-black/90 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
+          <section className="min-w-0 border-x border-zinc-900/80 bg-black/72 lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-zinc-900/90 bg-black/86 shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
               <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
                 <div className="min-w-0">
                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
                     Trail social
                   </div>
-                  <h1 className="mt-1 text-[26px] font-semibold tracking-[-0.05em] text-zinc-50">
+                  <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.055em] text-zinc-50">
                     {feedTitle}
                   </h1>
                   <p className="mt-1 max-w-xl text-pretty text-[13px] leading-5 text-zinc-500">
                     {subtitle}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-full bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-500 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                <span className="shrink-0 rounded-full bg-zinc-950/75 px-3 py-2 font-mono text-[11px] text-zinc-500 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
                   {feedCountLabel}
                 </span>
               </div>
