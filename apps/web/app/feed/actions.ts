@@ -1,5 +1,6 @@
 "use server";
 
+import { extractGithubLinkage } from "@/lib/github-url";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -94,30 +95,6 @@ function slugifyTitle(title: string): string {
     .replace(/-+$/g, "");
   const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 6);
   return `${slug || "build"}-${suffix}`;
-}
-
-function parseGithubUrl(value: string | null): {
-  linkedRepo: string | null;
-  linkedPrUrl: string | null;
-  linkedCommitSha: string | null;
-} {
-  if (!value) return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
-  try {
-    const url = new URL(value);
-    if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
-      return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
-    }
-    const [owner, repo, section, ref] = url.pathname.split("/").filter(Boolean);
-    if (!owner || !repo) return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
-    const linkedRepo = `${owner}/${repo}`;
-    return {
-      linkedRepo,
-      linkedPrUrl: section === "pull" && ref ? value : null,
-      linkedCommitSha: section === "commit" && ref ? ref : null,
-    };
-  } catch {
-    return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
-  }
 }
 
 export async function publishSessionFromFeed(input: FeedPublishInput): Promise<FeedPublishResult> {
@@ -344,7 +321,7 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
   const community = input.community === "puerto-rico" ? "puerto-rico" : null;
   const tools = cleanCsv(input.tools, 8, 32);
   const stack = cleanCsv(input.stack, 10, 32);
-  const github = parseGithubUrl(githubUrl);
+  const github = extractGithubLinkage(githubUrl);
   const primaryTool = tools[0]?.toLowerCase().replace(/\s+/g, "-") || "manual";
   const now = new Date();
   const sessionId = crypto.randomUUID();
