@@ -1,5 +1,6 @@
 "use client";
 
+import { importGithubBuildDraft } from "@/app/create/actions";
 import { type BuildPostInput, createBuildPostFromFeed } from "@/app/feed/actions";
 import Link from "next/link";
 import { type ReactNode, useState, useTransition } from "react";
@@ -24,6 +25,25 @@ function createEmptyInput(defaultCommunity = "", defaultQuestion = ""): BuildPos
   };
 }
 
+function mergeCsv(existing: string, incoming: string[]): string {
+  const values = [
+    ...existing
+      .split(/[,\n]/)
+      .map((value) => value.trim())
+      .filter(Boolean),
+    ...incoming,
+  ];
+  const seen = new Set<string>();
+  return values
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+}
+
 type BuildPostFormProps = {
   defaultCommunity?: string;
   defaultQuestion?: string;
@@ -35,17 +55,22 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
   );
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [published, setPublished] = useState<{
     href: string;
     shareUrl: string;
     title: string;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isImportPending, startImportTransition] = useTransition();
 
   const update = (key: keyof BuildPostInput, value: string) => {
     setInput((current) => ({ ...current, [key]: value }));
     setError(null);
     setCopyStatus(null);
+    setImportError(null);
+    setImportStatus(null);
   };
 
   const publish = () => {
@@ -70,6 +95,27 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
       setCopyStatus(error instanceof Error ? `Copy failed: ${error.message}` : "Copy failed");
     }
   }
+
+  const importFromGithub = () => {
+    setImportError(null);
+    setImportStatus(null);
+    startImportTransition(async () => {
+      const result = await importGithubBuildDraft(input.githubUrl);
+      if (!result.ok) {
+        setImportError(result.error);
+        return;
+      }
+
+      setInput((current) => ({
+        ...current,
+        title: current.title.trim() ? current.title : result.draft.title,
+        summary: current.summary.trim() ? current.summary : result.draft.summary,
+        stack: mergeCsv(current.stack, result.draft.stack),
+        githubUrl: result.draft.githubUrl,
+      }));
+      setImportStatus(`Drafted from ${result.sourceLabel}. Review the copy before publishing.`);
+    });
+  };
 
   const tweetHref = published
     ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -177,6 +223,27 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               placeholder="https://github.com/owner/repo/pull/12"
               className={`${railInputClassName} font-mono text-xs`}
             />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={importFromGithub}
+                disabled={!input.githubUrl.trim() || isImportPending}
+                className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isImportPending ? "Reading GitHub..." : "Draft from GitHub"}
+              </button>
+              <span className="text-[11px] leading-5 text-zinc-500">
+                Repo, PR, release, issue, discussion, or commit
+              </span>
+            </div>
+            {importError ? (
+              <div className="mt-3 text-xs leading-5 text-red-200">{importError}</div>
+            ) : null}
+            {importStatus ? (
+              <div className="mt-3 text-xs leading-5 text-[var(--trail-orange)]">
+                {importStatus}
+              </div>
+            ) : null}
           </Field>
 
           <Field label="X / Twitter" labelFor="build-x" tone="rail">
