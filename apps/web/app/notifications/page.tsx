@@ -295,14 +295,14 @@ export default async function NotificationsPage() {
               Follows, reactions, comments, and replies should pull you back to the exact builder,
               receipt, or thread that needs a response.
             </p>
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
+            <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.05]">
+              <div className="bg-zinc-950/90 p-4">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   Unread
                 </div>
                 <div className="mt-2 text-3xl font-semibold text-[#a7f300]">{unreadCount}</div>
               </div>
-              <div className="rounded-2xl bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
+              <div className="bg-zinc-950/90 p-4">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   Loaded
                 </div>
@@ -322,7 +322,7 @@ export default async function NotificationsPage() {
 
           <div className="space-y-5">
             {activities.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-zinc-800/80 bg-zinc-950/70 p-8 text-center">
+              <div className="rounded-3xl bg-zinc-950/70 p-8 text-center shadow-[var(--trail-shadow-border)]">
                 <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500">
                   Quiet for now
                 </div>

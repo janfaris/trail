@@ -1,7 +1,7 @@
+import { SiteNav } from "@/components/site-nav";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { UpgradeButton } from "./UpgradeButton";
-import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
   title: "Pricing — Trail",
@@ -102,7 +102,9 @@ export default function PricingPage() {
           <div className="col-span-12 md:col-span-1 md:pt-2">
             <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
               <span className="text-[#a7f300]">$$</span>
-              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">Pricing</span>
+              <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">
+                Pricing
+              </span>
             </div>
           </div>
           <div className="col-span-12 md:col-span-11">
@@ -114,23 +116,24 @@ export default function PricingPage() {
               Trail Pricing
             </h1>
             <p className="text-[16px] leading-[1.65] text-zinc-300 max-w-[64ch]">
-              Free forever for local single-vendor use. Paid plans unlock the cross-vendor part — the only metric that matters when you&apos;re shipping with four agents.
+              Free forever for local single-vendor use. Paid plans unlock the cross-vendor part —
+              the only metric that matters when you&apos;re shipping with four agents.
             </p>
           </div>
         </section>
 
         {/* Tiers */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-14">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {TIERS.map((t) => {
                 const borderCls = t.featured
-                  ? "border-[#a7f300]/40 shadow-[0_20px_60px_-20px_rgba(167,243,0,0.18)]"
-                  : "border-zinc-800";
+                  ? "border border-[#a7f300]/40 shadow-[0_20px_60px_-20px_rgba(167,243,0,0.18)]"
+                  : "shadow-[var(--trail-shadow-border)]";
                 return (
                   <div
                     key={t.key}
-                    className={`rounded-xl border ${borderCls} bg-gradient-to-b from-zinc-900/40 to-zinc-950 p-6 flex flex-col`}
+                    className={`rounded-xl ${borderCls} bg-gradient-to-b from-zinc-900/40 to-zinc-950 p-6 flex flex-col`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <h2 className="font-display text-[24px] text-zinc-50">{t.name}</h2>
@@ -146,7 +149,9 @@ export default function PricingPage() {
                       </span>
                       <span className="font-mono text-[12px] text-zinc-500">{t.period}</span>
                     </div>
-                    <p className="text-[12.5px] leading-[1.55] text-zinc-400 mb-6 mt-2">{t.blurb}</p>
+                    <p className="text-[12.5px] leading-[1.55] text-zinc-400 mb-6 mt-2">
+                      {t.blurb}
+                    </p>
 
                     <ul className="space-y-2 text-[13.5px] text-zinc-300 mb-6 flex-1">
                       {t.bullets.map((b) => (
@@ -192,12 +197,12 @@ export default function PricingPage() {
         </section>
 
         {/* FAQ */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-6 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.22em] text-zinc-600">
             <span>FAQ</span>
             <span className="text-zinc-700">Three questions</span>
           </div>
-          <div className="border-t border-zinc-900">
+          <div className="border-t border-white/10">
             <div className="mx-auto max-w-6xl px-6 lg:px-10 py-14 grid grid-cols-12 gap-x-6 gap-y-10">
               <div className="col-span-12 md:col-span-4">
                 <h2 className="font-display text-[28px] sm:text-[32px] leading-[1.05] tracking-[-0.015em] text-zinc-50 mb-3 max-w-[16ch]">
@@ -207,7 +212,7 @@ export default function PricingPage() {
                   Anything else — jan@trail.dev. Usually replies within a day.
                 </p>
               </div>
-              <ol className="col-span-12 md:col-span-8 divide-y divide-zinc-900 border-y border-zinc-900">
+              <ol className="col-span-12 md:col-span-8 divide-y divide-white/10 border-y border-white/10">
                 {FAQ.map((item, i) => (
                   <li key={item.q} className="py-6 grid grid-cols-12 gap-4">
                     <div className="col-span-2 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 pt-1">
@@ -215,7 +220,9 @@ export default function PricingPage() {
                     </div>
                     <div className="col-span-10">
                       <h3 className="text-[16px] text-zinc-100 font-medium mb-2">{item.q}</h3>
-                      <p className="text-[14px] leading-[1.65] text-zinc-400 max-w-[64ch]">{item.a}</p>
+                      <p className="text-[14px] leading-[1.65] text-zinc-400 max-w-[64ch]">
+                        {item.a}
+                      </p>
                     </div>
                   </li>
                 ))}
@@ -225,11 +232,14 @@ export default function PricingPage() {
         </section>
 
         {/* Closing */}
-        <section className="border-t border-zinc-900 bg-gradient-to-b from-zinc-950 to-black">
+        <section className="border-t border-white/10 bg-gradient-to-b from-zinc-950 to-black">
           <div className="mx-auto max-w-6xl px-6 lg:px-10 py-16 text-center">
             <p className="text-[13.5px] font-mono text-zinc-500">
               Questions?{" "}
-              <a href="mailto:jan@trail.dev" className="text-zinc-200 hover:text-[#a7f300] transition-colors">
+              <a
+                href="mailto:jan@trail.dev"
+                className="text-zinc-200 hover:text-[#a7f300] transition-colors"
+              >
                 jan@trail.dev
               </a>
             </p>
@@ -238,7 +248,7 @@ export default function PricingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-900">
+      <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 lg:px-10 py-8 flex flex-wrap items-center justify-between gap-y-4 text-[12px] font-mono text-zinc-500">
           <div className="flex items-center gap-2">
             <span className="text-[#a7f300]">/</span>
@@ -250,13 +260,17 @@ export default function PricingPage() {
             <a
               href="https://github.com/janfaris/trail"
               target="_blank"
-              rel="noopener"
+              rel="noreferrer noopener"
               className="hover:text-zinc-200 transition-colors"
             >
               GitHub
             </a>
-            <Link href="/install" className="hover:text-zinc-200 transition-colors">Install</Link>
-            <Link href="/" className="hover:text-zinc-200 transition-colors">Home</Link>
+            <Link href="/install" className="hover:text-zinc-200 transition-colors">
+              Install
+            </Link>
+            <Link href="/" className="hover:text-zinc-200 transition-colors">
+              Home
+            </Link>
           </div>
         </div>
       </footer>

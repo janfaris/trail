@@ -530,7 +530,7 @@ export default async function DiscoverPage() {
                           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
                             {stack.kind}
                           </span>
-                          <span className="rounded-full bg-zinc-950/70 px-2 py-0.5 font-mono text-[10px] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+                          <span className="rounded-full bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-zinc-300">
                             {formatCount(stack.builderCount)} builders
                           </span>
                         </div>
@@ -638,7 +638,7 @@ export default async function DiscoverPage() {
         </section>
       </main>
 
-      <footer className="border-t border-zinc-900">
+      <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 text-xs font-mono text-zinc-500">
           <span>© 2026 Trail</span>
           <Link href="/feed" className="transition-[color] hover:text-zinc-200">
@@ -718,7 +718,7 @@ function ReceiptCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 font-mono shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-zinc-300">
                 <ToolIcon name={receipt.tool} size={12} className="text-lime-300" />
                 {receipt.tool}
               </span>
@@ -740,7 +740,7 @@ function ReceiptCard({
                 </span>
               )}
               {(receipt.linkedRepo || receipt.repo) && (
-                <span className="rounded-full px-3 py-1 text-xs text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
+                <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-zinc-300">
                   {receipt.linkedRepo || receipt.repo}
                 </span>
               )}
@@ -748,7 +748,7 @@ function ReceiptCard({
           </div>
         </div>
       </Link>
-      <div className="grid grid-cols-3 border-t border-zinc-900 bg-black/25 text-xs text-zinc-500 sm:grid-cols-7">
+      <div className="grid grid-cols-3 border-t border-white/10 bg-black/25 text-xs text-zinc-500 sm:grid-cols-7">
         <ProofMetric label="events" value={formatCount(receipt.eventCount)} />
         <ProofMetric label="reactions" value={formatCount(receipt.reactions)} />
         <ProofMetric label="comments" value={formatCount(receipt.comments)} />
@@ -757,19 +757,19 @@ function ReceiptCard({
           initialSaved={Boolean(receipt.viewerHasSaved)}
           signedIn={viewerId !== null}
           signInHref={signInHref(href)}
-          className="flex min-h-10 items-center justify-center rounded-none border-0 border-l border-zinc-900 px-3 py-3 text-xs font-semibold normal-case tracking-normal text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
+          className="flex min-h-10 items-center justify-center rounded-none border-0 border-l border-white/10 px-3 py-3 text-xs font-semibold normal-case tracking-normal text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
           savedLabel="saved"
           unsavedLabel="save"
         />
         <Link
           href={forkHref}
-          className="flex min-h-10 items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
+          className="flex min-h-10 items-center justify-center border-l border-white/10 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
         >
           fork
         </Link>
         <Link
           href={href}
-          className="flex min-h-10 items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
+          className="flex min-h-10 items-center justify-center border-l border-white/10 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100"
         >
           open
         </Link>
@@ -777,7 +777,7 @@ function ReceiptCard({
           href={tweetUrl}
           target="_blank"
           rel="noreferrer"
-          className="hidden min-h-10 items-center justify-center border-l border-zinc-900 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100 sm:flex"
+          className="hidden min-h-10 items-center justify-center border-l border-white/10 px-3 py-3 font-semibold text-zinc-300 transition-[background-color,color] hover:bg-lime-300/10 hover:text-lime-100 sm:flex"
         >
           share
         </a>
@@ -788,7 +788,7 @@ function ReceiptCard({
 
 function ProofMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-l border-zinc-900 px-3 py-3 first:border-l-0">
+    <div className="border-l border-white/10 px-3 py-3 first:border-l-0">
       <div className="text-sm font-semibold text-zinc-100">{value}</div>
       <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em]">{label}</div>
     </div>
@@ -836,7 +836,7 @@ function BuilderCard({
           <div>receipts</div>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-zinc-900 pt-3">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
         <span className="text-[11px] text-zinc-500">
           {builder.isFollowing ? "In your graph" : "Add to Following"}
         </span>

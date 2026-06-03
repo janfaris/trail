@@ -218,13 +218,13 @@ export default async function Home() {
                 </Link>
                 <Link
                   href="/feed"
-                  className="inline-flex items-center justify-center px-5 py-3 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:border-zinc-700 hover:text-zinc-50 transition-colors"
+                  className="inline-flex items-center justify-center px-5 py-3 rounded-md bg-white/[0.04] text-zinc-300 text-[13px] font-mono uppercase tracking-[0.14em] hover:bg-white/[0.07] hover:text-zinc-50 transition-colors"
                 >
                   Browse feed
                 </Link>
               </div>
 
-              <div className="flex items-center gap-0 border border-zinc-800 bg-zinc-950 rounded-md overflow-hidden w-fit max-w-full">
+              <div className="flex items-center gap-0 bg-zinc-950 rounded-md overflow-hidden w-fit max-w-full shadow-[var(--trail-shadow-border)]">
                 <code className="font-mono text-[13px] text-zinc-300 px-4 py-3 select-all whitespace-nowrap overflow-x-auto">
                   <span className="text-zinc-600">$&nbsp;</span>
                   {INSTALL}
@@ -233,8 +233,8 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="border border-zinc-900 bg-black rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(167,243,0,0.04),0_30px_80px_rgba(0,0,0,0.45)]">
-              <div className="border-b border-zinc-900 px-5 py-4 flex items-center justify-between">
+            <div className="bg-black rounded-xl overflow-hidden shadow-[0_0_0_1px_rgba(167,243,0,0.04),0_30px_80px_rgba(0,0,0,0.45)]">
+              <div className="border-b border-white/10 px-5 py-4 flex items-center justify-between">
                 <div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                     Feed preview
@@ -246,7 +246,7 @@ export default async function Home() {
                 </span>
               </div>
 
-              <div className="divide-y divide-zinc-900">
+              <div className="divide-y divide-white/10">
                 {feedPreview.map((item) => (
                   <Link
                     key={item.action}
@@ -255,7 +255,7 @@ export default async function Home() {
                   >
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <div className="font-mono text-[11px] text-[#a7f300]">{item.handle}</div>
-                      <div className="rounded-full border border-zinc-800 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500 group-hover:border-[#a7f300]/30 group-hover:text-[#a7f300]">
+                      <div className="rounded-full bg-white/[0.04] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-300 group-hover:bg-[#a7f300]/10 group-hover:text-[#a7f300]">
                         {item.tag}
                       </div>
                     </div>
@@ -270,7 +270,7 @@ export default async function Home() {
               </div>
 
               <div className="p-5">
-                <div className="rounded-lg border border-zinc-900 bg-zinc-950/70 p-4">
+                <div className="rounded-lg bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]">
                   <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-5">
                     Trust layer
                   </div>
@@ -305,13 +305,13 @@ export default async function Home() {
         </section>
 
         {/* START HERE — make the product loop explicit without gating the public feed. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-16">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Start here
             </div>
 
-            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-px bg-white/[0.05] rounded-md overflow-hidden shadow-[var(--trail-shadow-border)] md:grid-cols-2 lg:grid-cols-4">
               {startHere.map((item) => (
                 <div key={item.n} className="bg-zinc-950 p-5">
                   <div className="flex items-center justify-between gap-4 mb-5">
@@ -354,7 +354,7 @@ export default async function Home() {
         </section>
 
         {/* BREAKDOWN — the number, decomposed. Hairline rules, tabular-nums everywhere. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Breakdown
@@ -364,7 +364,7 @@ export default async function Home() {
               The number, decomposed.
             </h2>
 
-            <div className="divide-y divide-zinc-900 border-y border-zinc-900">
+            <div className="divide-y divide-white/10 border-y border-white/10">
               {breakdown.map((row) => (
                 <div key={row.label} className="grid grid-cols-12 gap-4 py-5 items-baseline">
                   <div className="col-span-12 sm:col-span-5 font-mono text-[13px] text-zinc-400 uppercase tracking-[0.08em]">
@@ -402,7 +402,7 @@ export default async function Home() {
         </section>
 
         {/* WHAT A RECEIPT PROVES — anatomy of the proof object + locked badge. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;What a receipt proves
@@ -417,7 +417,7 @@ export default async function Home() {
               merge attributed to you — is what turns a receipt into a badge.
             </p>
 
-            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-px bg-white/[0.05] rounded-md overflow-hidden shadow-[var(--trail-shadow-border)] sm:grid-cols-2 lg:grid-cols-5">
               {receiptFields.map((f) => (
                 <div key={f.field} className="bg-zinc-950 p-5">
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500 mb-3">
@@ -432,8 +432,8 @@ export default async function Home() {
             </div>
 
             {/* The badge as a mechanism — shown LOCKED, never implied-earned. */}
-            <div className="mt-12 flex flex-col sm:flex-row sm:items-center gap-5 border border-dashed border-zinc-800 rounded-md p-6 bg-zinc-950">
-              <span className="inline-flex items-center gap-2 self-start rounded-full border border-dashed border-zinc-700 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
+            <div className="mt-12 flex flex-col sm:flex-row sm:items-center gap-5 rounded-md p-6 bg-zinc-950 shadow-[var(--trail-shadow-border)]">
+              <span className="inline-flex items-center gap-2 self-start rounded-full bg-white/[0.04] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">
                 <span aria-hidden className="text-zinc-600">
                   ◇
                 </span>
@@ -449,7 +449,7 @@ export default async function Home() {
         </section>
 
         {/* HOW IT WORKS — three steps, hairline-divided, code-led. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;How
@@ -461,7 +461,7 @@ export default async function Home() {
 
             <div className="space-y-12">
               {steps.map((step) => (
-                <div key={step.n} className="grid grid-cols-12 gap-6 border-t border-zinc-900 pt-8">
+                <div key={step.n} className="grid grid-cols-12 gap-6 border-t border-white/10 pt-8">
                   <div className="col-span-12 sm:col-span-1 font-mono text-[12px] text-[#a7f300] tracking-[0.14em]">
                     {step.n}
                   </div>
@@ -474,7 +474,7 @@ export default async function Home() {
                     </p>
                   </div>
                   <div className="col-span-12 sm:col-span-6">
-                    <div className="flex items-center gap-0 border border-zinc-800 rounded-md overflow-hidden bg-black">
+                    <div className="flex items-center gap-0 rounded-md overflow-hidden bg-black shadow-[var(--trail-shadow-border)]">
                       <code className="font-mono text-[12px] md:text-[13px] text-zinc-300 px-3 py-2.5 select-all whitespace-nowrap overflow-x-auto flex-1">
                         <span className="text-zinc-600">$&nbsp;</span>
                         {step.code}
@@ -489,7 +489,7 @@ export default async function Home() {
         </section>
 
         {/* RECEIPTS COMPOUND — the social/distribution surfaces, framed "be early". */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Track record
@@ -504,7 +504,7 @@ export default async function Home() {
               counts. Early is the whole point.
             </p>
 
-            <div className="grid gap-px bg-zinc-900 border border-zinc-900 rounded-md overflow-hidden sm:grid-cols-2">
+            <div className="grid gap-px bg-white/[0.05] rounded-md overflow-hidden shadow-[var(--trail-shadow-border)] sm:grid-cols-2">
               <Link
                 href={PROFILE_HREF}
                 className="group bg-zinc-950 p-6 hover:bg-zinc-900/60 transition-colors"
@@ -575,7 +575,7 @@ export default async function Home() {
         </section>
 
         {/* WHAT TRAIL CAPTURES — honest tiers, no marketing puff. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-20">
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500 mb-8">
               <span className="text-[#a7f300]">●</span>&nbsp;&nbsp;Coverage
@@ -589,7 +589,7 @@ export default async function Home() {
               we say so instead of inventing a number.
             </p>
 
-            <div className="divide-y divide-zinc-900 border-y border-zinc-900">
+            <div className="divide-y divide-white/10 border-y border-white/10">
               {captures.map((row) => (
                 <div key={row.tool} className="grid grid-cols-12 gap-4 py-5 items-baseline">
                   <div className="col-span-6 sm:col-span-3 font-display text-[18px] md:text-[20px] text-zinc-50">
@@ -626,12 +626,12 @@ export default async function Home() {
         </section>
 
         {/* INSTALL — repeat the primary action at the bottom, single CTA. */}
-        <section className="border-t border-zinc-900">
+        <section className="border-t border-white/10">
           <div className="mx-auto max-w-5xl px-6 lg:px-10 py-24 text-center">
             <p className="italic text-zinc-300 text-[18px] md:text-[22px] mb-8 max-w-[46ch] mx-auto leading-[1.45]">
               Start your first receipt. Ship something, and let GitHub vouch for it.
             </p>
-            <div className="inline-flex items-center gap-0 border border-zinc-800 bg-black rounded-md overflow-hidden">
+            <div className="inline-flex items-center gap-0 bg-black rounded-md overflow-hidden shadow-[var(--trail-shadow-border)]">
               <code className="font-mono text-[14px] text-zinc-200 px-5 py-3.5 select-all whitespace-nowrap">
                 <span className="text-zinc-600">$&nbsp;</span>
                 {INSTALL}
@@ -649,7 +649,7 @@ export default async function Home() {
       </main>
 
       {/* FOOTER — Ft7 one-line minimal. Wordmark + handle + verifiable proof links. */}
-      <footer className="border-t border-zinc-900">
+      <footer className="border-t border-white/10">
         <div className="mx-auto max-w-5xl px-6 lg:px-10 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="font-display text-[15px] text-zinc-400">
             <Link href="/" className="text-zinc-200 hover:text-zinc-50">

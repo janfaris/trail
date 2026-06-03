@@ -140,7 +140,7 @@ export default async function SavedReceiptsPage() {
         </section>
 
         {lessonRows.length === 0 && receiptRows.length === 0 ? (
-          <section className="mt-6 rounded-[2rem] border border-dashed border-zinc-800/80 bg-zinc-950/70 p-10 text-center">
+          <section className="mt-6 rounded-[2rem] bg-zinc-950/70 p-10 text-center shadow-[var(--trail-shadow-border)]">
             <div className="font-mono text-sm text-zinc-400">No saved lessons or receipts yet.</div>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
               Save lessons from /learn or receipts from the feed when you find a build worth
@@ -272,11 +272,11 @@ export default async function SavedReceiptsPage() {
                         </Link>
                         <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-400">{copy}</p>
                         <div className="mt-4 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-black px-2.5 py-1 shadow-[var(--trail-shadow-border)]">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-2.5 py-1 text-zinc-300">
                             <ToolIcon name={row.tool} size={12} className="text-[#a7f300]" />
                             {row.tool}
                           </span>
-                          <span className="rounded-full bg-black px-2.5 py-1 shadow-[var(--trail-shadow-border)]">
+                          <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-zinc-300">
                             {formatCount(row.eventCount)} events
                           </span>
                         </div>

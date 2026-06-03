@@ -186,7 +186,7 @@ export default async function CostDashboardPage({
                       key={d}
                       href="/pricing"
                       title="Upgrade to Pro to unlock 90-day cost history"
-                      className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-xs text-zinc-600 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)] active:scale-[0.97]"
+                      className="inline-flex min-h-10 items-center rounded-full bg-white/[0.04] px-4 font-mono text-xs text-zinc-300 transition-[color,transform] hover:text-[#a7f300] active:scale-[0.97]"
                     >
                       {d}d · pro
                     </Link>
@@ -199,7 +199,7 @@ export default async function CostDashboardPage({
                     className={`inline-flex min-h-10 items-center rounded-full px-4 font-mono text-xs transition-[box-shadow,color,background-color,transform] active:scale-[0.97] ${
                       active
                         ? "bg-[#a7f300]/10 text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
-                        : "bg-zinc-950 text-zinc-400 shadow-[var(--trail-shadow-border)] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)]"
+                        : "bg-white/[0.04] text-zinc-300 hover:text-zinc-100"
                     }`}
                   >
                     {d}d
@@ -252,7 +252,7 @@ export default async function CostDashboardPage({
             {/* Per-PR table */}
             <Section title="Per-PR cost">
               {payload.breakdown.perPr.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-zinc-800/80 p-8 text-center">
+                <div className="rounded-[1.5rem] p-8 text-center shadow-[var(--trail-shadow-border)]">
                   <div className="mb-2 font-mono text-sm text-zinc-400">
                     No shipped PRs in window.
                   </div>
@@ -276,7 +276,7 @@ export default async function CostDashboardPage({
                     </thead>
                     <tbody>
                       {payload.breakdown.perPr.map((p) => (
-                        <tr key={p.prUrl} className="border-t border-zinc-900 hover:bg-zinc-900/40">
+                        <tr key={p.prUrl} className="border-t border-white/10 hover:bg-zinc-900/40">
                           <td className="px-4 py-3 font-mono text-[12px]">
                             <a
                               href={p.prUrl}

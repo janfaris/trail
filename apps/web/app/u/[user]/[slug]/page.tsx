@@ -179,7 +179,7 @@ function ReviewRail({
 
   return (
     <aside className="hidden lg:block">
-      <div className="sticky top-24 rounded-[1.75rem] border border-zinc-800 bg-zinc-950/85 p-4 shadow-2xl shadow-black/30">
+      <div className="sticky top-24 rounded-[1.75rem] border border-white/10 bg-zinc-950/85 p-4 shadow-2xl shadow-black/30">
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-zinc-500">
           Receipt map
         </div>
@@ -188,7 +188,7 @@ function ReviewRail({
             <a
               key={href}
               href={href}
-              className="group flex items-center justify-between rounded-2xl border border-zinc-900 bg-black/35 px-3 py-2.5 text-sm text-zinc-400 transition hover:border-[#a7f300]/45 hover:text-white"
+              className="group flex items-center justify-between rounded-2xl bg-white/[0.03] px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
             >
               <span className="font-mono text-[10px] text-zinc-600 group-hover:text-[#a7f300]">
                 {step}
@@ -198,7 +198,7 @@ function ReviewRail({
           ))}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-zinc-900 bg-black/30 p-3">
+        <div className="mt-4 rounded-2xl bg-black/30 p-3 shadow-[var(--trail-shadow-border)]">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-zinc-500">Status</span>
             <span className={`rounded-full border px-2 py-0.5 text-[11px] ${statusClass(status)}`}>
@@ -502,7 +502,7 @@ export default async function SessionView({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-zinc-900 sticky top-0 bg-zinc-950/85 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70 z-10">
+      <header className="border-b border-white/10 sticky top-0 bg-zinc-950/85 backdrop-blur supports-[backdrop-filter]:bg-zinc-950/70 z-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <Link href="/" className="font-mono text-[15px] font-semibold tracking-tight">
             <span className="text-[#a7f300]">/</span>trail
@@ -876,7 +876,7 @@ export default async function SessionView({
 
             <details
               data-timeline-details
-              className="group mt-6 rounded-[1.5rem] border border-zinc-900 bg-zinc-950/70 p-4"
+              className="group mt-6 rounded-[1.5rem] bg-zinc-950/70 p-4 shadow-[var(--trail-shadow-border)]"
             >
               <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-sm font-mono text-zinc-400 transition-colors hover:text-zinc-100">
                 <span
@@ -912,7 +912,7 @@ export default async function SessionView({
           </section>
 
           {isOwner ? (
-            <details className="group mt-8 rounded-[1.5rem] border border-dashed border-zinc-800 bg-black/20 p-4">
+            <details className="group mt-8 rounded-[1.5rem] border border-dashed border-white/10 bg-black/20 p-4">
               <summary className="inline-flex cursor-pointer list-none items-center gap-2 font-mono text-xs uppercase tracking-[0.16em] text-zinc-500 transition hover:text-zinc-200">
                 <span
                   className="inline-block transition-transform group-open:rotate-90"

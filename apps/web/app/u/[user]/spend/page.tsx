@@ -133,7 +133,7 @@ export default async function SpendPage({
                   className={`inline-flex min-h-10 items-center rounded-full px-4 font-mono text-xs transition-[box-shadow,color,background-color,transform] active:scale-[0.97] ${
                     active
                       ? "bg-[#a7f300]/10 text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
-                      : "bg-zinc-950 text-zinc-400 shadow-[var(--trail-shadow-border)] hover:text-zinc-100 hover:shadow-[var(--trail-shadow-border-hover)]"
+                      : "bg-white/[0.04] text-zinc-300 hover:text-zinc-100"
                   }`}
                 >
                   {windowLabel(d)}
@@ -153,7 +153,7 @@ export default async function SpendPage({
             ) : (
               <Table head={["Kind", "Input", "Output", "Cache read", "Events"]}>
                 {byKind.map((r) => (
-                  <tr key={r.kind} className="border-t border-zinc-900">
+                  <tr key={r.kind} className="border-t border-white/10">
                     <Td mono>{r.kind}</Td>
                     <Td right>{fmtNum(r.inputTokens)}</Td>
                     <Td right>{fmtNum(r.outputTokens)}</Td>
@@ -174,7 +174,7 @@ export default async function SpendPage({
             ) : (
               <Table head={["Tool", "Input", "Output", "Calls"]}>
                 {byTool.map((r) => (
-                  <tr key={r.toolName} className="border-t border-zinc-900">
+                  <tr key={r.toolName} className="border-t border-white/10">
                     <Td mono>{r.toolName}</Td>
                     <Td right>{fmtNum(r.inputTokens)}</Td>
                     <Td right>{fmtNum(r.outputTokens)}</Td>
@@ -194,7 +194,7 @@ export default async function SpendPage({
             ) : (
               <Table head={["Model", "Input", "Output", "Cache read", "Events"]}>
                 {byModel.map((r) => (
-                  <tr key={r.model} className="border-t border-zinc-900">
+                  <tr key={r.model} className="border-t border-white/10">
                     <Td mono>{r.model}</Td>
                     <Td right>{fmtNum(r.inputTokens)}</Td>
                     <Td right>{fmtNum(r.outputTokens)}</Td>
@@ -247,7 +247,7 @@ export default async function SpendPage({
             ) : (
               <Table head={["Outcome", "Sessions", "Cost"]}>
                 {byOutcome.map((r) => (
-                  <tr key={r.outcome} className="border-t border-zinc-900">
+                  <tr key={r.outcome} className="border-t border-white/10">
                     <Td mono>{r.outcome}</Td>
                     <Td right>{fmtNum(r.sessionCount)}</Td>
                     <Td right tabular>
@@ -268,7 +268,7 @@ export default async function SpendPage({
             ) : (
               <Table head={["Session", "Outcome", "Cost"]}>
                 {topSessions.map((r) => (
-                  <tr key={r.slug} className="border-t border-zinc-900">
+                  <tr key={r.slug} className="border-t border-white/10">
                     <td className="px-3 py-2.5 text-zinc-200">
                       <Link
                         href={`/u/${user}/${r.slug}`}
@@ -375,7 +375,7 @@ function Td({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-800/80 px-4 py-6 text-center font-mono text-[12px] text-zinc-600">
+    <div className="rounded-2xl px-4 py-6 text-center font-mono text-[12px] text-zinc-600 shadow-[var(--trail-shadow-border)]">
       {children}
     </div>
   );

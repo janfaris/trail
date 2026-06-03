@@ -590,16 +590,14 @@ export default async function UserProfile({ params }: PageProps) {
                 <span className="rounded-full border border-[#a7f300]/25 bg-[#a7f300]/10 px-3 py-1 text-[#a7f300]">
                   {reputation.label} · {formatCount(reputation.score)}
                 </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                <span className="rounded-full bg-white/[0.04] px-3 py-1">
                   {formatCount(totalEvents)} agent events
                 </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
-                  {hoursLabel} logged
-                </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                <span className="rounded-full bg-white/[0.04] px-3 py-1">{hoursLabel} logged</span>
+                <span className="rounded-full bg-white/[0.04] px-3 py-1">
                   {streak.current}d streak
                 </span>
-                <span className="rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1">
+                <span className="rounded-full bg-white/[0.04] px-3 py-1">
                   {formatCount(commentCount)} comments
                 </span>
                 {isSelf && (
@@ -620,7 +618,7 @@ export default async function UserProfile({ params }: PageProps) {
                       href={`https://github.com/${gh}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-3 py-1.5 transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
                     >
                       <GitHubIcon size={14} />
                       GitHub
@@ -631,7 +629,7 @@ export default async function UserProfile({ params }: PageProps) {
                       href={`https://x.com/${x}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-3 py-1.5 transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
                     >
                       <XIcon size={13} />X
                     </a>
@@ -641,7 +639,7 @@ export default async function UserProfile({ params }: PageProps) {
                       href={`https://linkedin.com/in/${li}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-3 py-1.5 transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
                     >
                       LinkedIn
                     </a>
@@ -651,7 +649,7 @@ export default async function UserProfile({ params }: PageProps) {
                       href={site}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex max-w-[18rem] items-center gap-1.5 truncate rounded-full border border-zinc-800 bg-black/20 px-3 py-1.5 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                      className="inline-flex max-w-[18rem] items-center gap-1.5 truncate rounded-full bg-white/[0.04] px-3 py-1.5 transition-colors hover:bg-white/[0.08] hover:text-zinc-100"
                     >
                       {site.replace(/^https?:\/\//, "")}
                     </a>
@@ -665,7 +663,7 @@ export default async function UserProfile({ params }: PageProps) {
                     <Link
                       key={stack.tag}
                       href={stackHref(stack.tag)}
-                      className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs font-mono text-zinc-300 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                      className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-[#a7f300]"
                     >
                       <span>{stack.tag}</span>
                       <span className="text-zinc-600">{stack.count}</span>
@@ -706,15 +704,15 @@ export default async function UserProfile({ params }: PageProps) {
                     </p>
                   </Link>
                   <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs font-mono text-zinc-500">
-                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                    <div className="rounded-xl bg-white/[0.03] p-2">
                       <p className="text-zinc-100">{formatCount(heroSession.eventCount)}</p>
                       <p>events</p>
                     </div>
-                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                    <div className="rounded-xl bg-white/[0.03] p-2">
                       <p className="text-zinc-100">{formatCount(heroEngagement?.reactions ?? 0)}</p>
                       <p>react</p>
                     </div>
-                    <div className="rounded-xl border border-zinc-800 bg-black/30 p-2">
+                    <div className="rounded-xl bg-white/[0.03] p-2">
                       <p className="text-zinc-100">{formatCount(heroEngagement?.comments ?? 0)}</p>
                       <p>talk</p>
                     </div>
@@ -755,7 +753,7 @@ export default async function UserProfile({ params }: PageProps) {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-[1.25rem] border border-dashed border-zinc-800 bg-zinc-950/70 p-5">
+                <div className="rounded-[1.25rem] border border-dashed border-white/10 bg-zinc-950/70 p-5">
                   <p className="text-sm font-medium text-zinc-200">No public receipts yet.</p>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-500">
                     The first published session will become this builder&apos;s proof card.
@@ -769,7 +767,7 @@ export default async function UserProfile({ params }: PageProps) {
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-8">
             {compactFeatured.length > 0 && (
-              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
+              <section className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)] p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
                     Curated receipts
@@ -788,11 +786,11 @@ export default async function UserProfile({ params }: PageProps) {
 
             {all.length === 0 ? (
               isSelf ? (
-                <div className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70 p-5">
+                <div className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)] p-5">
                   <EmptyInstallCard />
                 </div>
               ) : (
-                <div className="rounded-[1.5rem] border border-dashed border-zinc-800 bg-zinc-950/60 p-8 text-center">
+                <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-zinc-950/60 p-8 text-center">
                   <p className="text-lg font-semibold text-zinc-200">
                     @{handle} has not published a receipt yet.
                   </p>
@@ -802,8 +800,8 @@ export default async function UserProfile({ params }: PageProps) {
                 </div>
               )
             ) : recent.length > 0 ? (
-              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/70">
-                <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-4 sm:px-5">
+              <section className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)]">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-5">
                   <div>
                     <h3 className="text-sm font-semibold text-zinc-100">Shipping timeline</h3>
                     <p className="mt-1 text-xs font-mono text-zinc-500">
@@ -812,7 +810,7 @@ export default async function UserProfile({ params }: PageProps) {
                   </div>
                   <Link
                     href="/feed"
-                    className="hidden rounded-full border border-zinc-800 px-3 py-1.5 text-xs font-mono text-zinc-400 transition-colors hover:border-[#a7f300]/50 hover:text-[#a7f300] sm:inline-flex"
+                    className="hidden rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-[#a7f300] sm:inline-flex"
                   >
                     Open feed
                   </Link>
@@ -829,10 +827,10 @@ export default async function UserProfile({ params }: PageProps) {
                     const repoUrl = githubRepoUrl(s.linkedRepo ?? s.repo);
                     const receiptUrl = isPublicReceipt(s) ? shareUrl(handle, s.slug, base) : null;
                     return (
-                      <li key={s.id} className="border-b border-zinc-800 last:border-b-0">
+                      <li key={s.id} className="border-b border-white/10 last:border-b-0">
                         <article className="group grid gap-4 px-4 py-5 transition-colors hover:bg-zinc-900/45 sm:grid-cols-[3.5rem_1fr] sm:px-5">
                           <div className="hidden sm:flex sm:flex-col sm:items-center">
-                            <span className="h-10 w-10 rounded-full border border-zinc-800 bg-black/40 p-2 text-[#a7f300]">
+                            <span className="h-10 w-10 rounded-full border border-white/10 bg-black/40 p-2 text-[#a7f300]">
                               <ToolIcon name={s.tool} />
                             </span>
                             <span className="mt-3 h-full w-px bg-zinc-800 group-last:hidden" />
@@ -864,7 +862,7 @@ export default async function UserProfile({ params }: PageProps) {
                               </p>
                             </Link>
                             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-mono">
-                              <span className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400">
+                              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-zinc-400">
                                 {formatCount(s.eventCount)} events
                                 {s.durationSeconds != null && (
                                   <span className="text-zinc-600">
@@ -873,12 +871,12 @@ export default async function UserProfile({ params }: PageProps) {
                                   </span>
                                 )}
                               </span>
-                              <span className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400">
+                              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-zinc-400">
                                 {formatCount(engagement.reactions)} reactions
                               </span>
                               <Link
                                 href={`/u/${handle}/${s.slug}#conversation`}
-                                className="rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                                className="rounded-full bg-white/[0.04] px-3 py-1 text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-zinc-50"
                               >
                                 {formatCount(engagement.comments)} comments
                               </Link>
@@ -890,7 +888,7 @@ export default async function UserProfile({ params }: PageProps) {
                                   href={repoUrl}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-black/20 px-3 py-1 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                                  className="inline-flex items-center gap-1 rounded-full bg-white/[0.04] px-3 py-1 text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-zinc-50"
                                 >
                                   Fork
                                   <ArrowUpRightIcon size={12} />
@@ -913,7 +911,7 @@ export default async function UserProfile({ params }: PageProps) {
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-            <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+            <section className="rounded-[1.5rem] bg-zinc-950/75 shadow-[var(--trail-shadow-border)] p-5">
               <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
                 Builder status
               </p>
@@ -958,7 +956,7 @@ export default async function UserProfile({ params }: PageProps) {
             </section>
 
             {all.length > 0 && (
-              <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+              <section className="rounded-[1.5rem] bg-zinc-950/75 shadow-[var(--trail-shadow-border)] p-5">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
                   Proof graph
                 </p>
@@ -1016,7 +1014,7 @@ export default async function UserProfile({ params }: PageProps) {
               </section>
             )}
 
-            <section className="rounded-[1.5rem] border border-zinc-800 bg-zinc-950/75 p-5">
+            <section className="rounded-[1.5rem] bg-zinc-950/75 shadow-[var(--trail-shadow-border)] p-5">
               <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
                 Shareable proof
               </p>
@@ -1025,7 +1023,7 @@ export default async function UserProfile({ params }: PageProps) {
                   ? "Use your profile or recruiter view as a proof-of-work link in DMs, applications, and launch posts."
                   : "Open the recruiter view for a compact scan of shipped, commit-backed work."}
               </p>
-              <div className="mt-4 rounded-[1.25rem] border border-zinc-800 bg-black/35 p-4">
+              <div className="mt-4 rounded-[1.25rem] bg-black/35 shadow-[var(--trail-shadow-border)] p-4">
                 <p className="text-sm font-semibold text-zinc-100">
                   {userRow.name || `@${handle}`} builder proof
                 </p>
@@ -1059,7 +1057,7 @@ export default async function UserProfile({ params }: PageProps) {
                   href={profileTweetUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-black/20 px-3 py-2 text-xs font-mono text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-50"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/[0.04] px-3 py-2 text-xs font-mono text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-zinc-50"
                 >
                   Post to X
                   <XIcon size={12} />
