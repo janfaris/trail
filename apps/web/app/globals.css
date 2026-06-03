@@ -4,6 +4,11 @@
   --background: #09090b;
   --foreground: #fafafa;
   --accent: #a7f300;
+  --trail-paper: #f5f4f2;
+  --trail-ink: #0a0a0a;
+  --trail-orange: #ff6b00;
+  --trail-orange-soft: rgba(255, 107, 0, 0.1);
+  --trail-orange-border: rgba(255, 107, 0, 0.4);
   --trail-shadow-border: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 48px rgba(0, 0, 0, 0.24);
   --trail-shadow-border-hover: 0 0 0 1px rgba(255, 255, 255, 0.13), 0 20px 56px rgba(0, 0, 0, 0.32);
 }

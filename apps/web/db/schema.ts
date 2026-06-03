@@ -931,7 +931,7 @@ export const sessionTag = pgTable(
       .references(() => trailSession.id, { onDelete: "cascade" }),
     tag: text("tag").notNull(), // canonical slug, the stable URL key (e.g. "nextjs")
     label: text("label").notNull(), // display label derived from the slug (e.g. "Next.js")
-    kind: text("kind").notNull(), // 'tool' | 'framework' | 'model'
+    kind: text("kind").notNull(), // 'tool' | 'framework' | 'model' | 'community'
     confidence: numeric("confidence", { precision: 4, scale: 3 }).notNull().default("1.000"),
     source: text("source").notNull().default("llm"), // 'llm' | 'heuristic'
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

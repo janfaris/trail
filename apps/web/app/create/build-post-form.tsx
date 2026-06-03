@@ -2,25 +2,39 @@
 
 import { type BuildPostInput, createBuildPostFromFeed } from "@/app/feed/actions";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 
 const inputClassName =
-  "w-full border-0 border-b border-white/10 bg-transparent px-0 py-3 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-700 focus:border-[#a7f300]/60";
+  "w-full border-0 border-b border-black/15 bg-transparent px-0 py-3 text-sm text-[var(--trail-ink)] outline-none transition-colors placeholder:text-black/35 focus:border-[color:var(--trail-orange)]";
 
-const emptyInput: BuildPostInput = {
-  title: "",
-  summary: "",
-  tools: "",
-  stack: "",
-  githubUrl: "",
-  xUrl: "",
-  demoUrl: "",
-  question: "",
+const railInputClassName =
+  "w-full border-0 border-b border-white/15 bg-transparent px-0 py-3 text-sm text-zinc-50 outline-none transition-colors placeholder:text-zinc-600 focus:border-[color:var(--trail-orange)]";
+
+function createEmptyInput(defaultCommunity = "", defaultQuestion = ""): BuildPostInput {
+  return {
+    title: "",
+    summary: "",
+    tools: "",
+    stack: "",
+    githubUrl: "",
+    xUrl: "",
+    demoUrl: "",
+    question: defaultQuestion,
+    community: defaultCommunity,
+  };
+}
+
+type BuildPostFormProps = {
+  defaultCommunity?: string;
+  defaultQuestion?: string;
 };
 
-export function BuildPostForm() {
-  const [input, setInput] = useState<BuildPostInput>(emptyInput);
+export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: BuildPostFormProps) {
+  const [input, setInput] = useState<BuildPostInput>(() =>
+    createEmptyInput(defaultCommunity, defaultQuestion),
+  );
   const [error, setError] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [published, setPublished] = useState<{
     href: string;
     shareUrl: string;
@@ -31,6 +45,7 @@ export function BuildPostForm() {
   const update = (key: keyof BuildPostInput, value: string) => {
     setInput((current) => ({ ...current, [key]: value }));
     setError(null);
+    setCopyStatus(null);
   };
 
   const publish = () => {
@@ -42,32 +57,49 @@ export function BuildPostForm() {
         return;
       }
       setPublished({ href: result.href, shareUrl: result.shareUrl, title: result.title });
-      setInput(emptyInput);
+      setInput(createEmptyInput(defaultCommunity, defaultQuestion));
+      setCopyStatus(null);
     });
   };
 
-  return (
-    <div className="border-y border-white/10 bg-zinc-950">
-      <div className="border-b border-white/10 px-5 py-4 sm:px-6">
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
-          No install needed
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-zinc-50 sm:text-3xl">
-          Post a build
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-          Share what you built with AI, add proof links, and start the thread. Logs are optional.
-        </p>
-      </div>
+  async function copyShareUrl(shareUrl: string) {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopyStatus("Copied link");
+    } catch (error) {
+      setCopyStatus(error instanceof Error ? `Copy failed: ${error.message}` : "Copy failed");
+    }
+  }
 
+  const tweetHref = published
+    ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        `I just posted a build on Trail: ${published.title}`,
+      )}&url=${encodeURIComponent(published.shareUrl)}`
+    : null;
+
+  return (
+    <div className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           publish();
         }}
-        className="grid gap-0 divide-y divide-white/10 lg:grid-cols-[minmax(0,1fr)_280px] lg:divide-x lg:divide-y-0"
+        className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]"
       >
-        <div className="space-y-8 px-5 py-6 sm:px-6">
+        <div className="space-y-8 px-5 py-6 sm:px-8 sm:py-8">
+          <div className="border-b border-black/10 pb-6">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
+              No install needed
+            </div>
+            <h1 className="mt-3 max-w-2xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
+              Post the thing you just built.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-black/60">
+              Write the outcome, attach proof links, and give other builders a useful thread to
+              join. Logs stay optional.
+            </p>
+          </div>
+
           <Field label="What did you build?" labelFor="build-title">
             <input
               id="build-title"
@@ -75,7 +107,7 @@ export function BuildPostForm() {
               onChange={(event) => update("title", event.target.value)}
               maxLength={120}
               placeholder="A Vercel cron monitor for AI Radar"
-              className={`${inputClassName} text-lg font-semibold tracking-[-0.03em]`}
+              className={`${inputClassName} text-xl font-semibold tracking-[-0.04em] sm:text-2xl`}
               required
             />
           </Field>
@@ -88,7 +120,7 @@ export function BuildPostForm() {
               rows={5}
               maxLength={1200}
               placeholder="What changed, who it helps, what you learned, and what feedback you want."
-              className={`${inputClassName} resize-none leading-6`}
+              className={`${inputClassName} resize-none leading-7`}
               required
             />
           </Field>
@@ -126,72 +158,114 @@ export function BuildPostForm() {
           </Field>
         </div>
 
-        <aside className="space-y-6 px-5 py-6 sm:px-6">
+        <aside className="space-y-6 bg-[var(--trail-ink)] px-5 py-6 text-zinc-50 sm:px-6 sm:py-8">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-orange)]">
               Proof links
             </div>
-            <p className="mt-2 text-xs leading-5 text-zinc-600">
-              Add any public link. Trail labels these as proof, not fake social activity.
+            <p className="mt-2 text-xs leading-5 text-zinc-400">
+              Add any public link. Trail labels these as proof, never as fake social activity.
             </p>
           </div>
 
-          <Field label="GitHub" labelFor="build-github">
+          <Field label="GitHub" labelFor="build-github" tone="rail">
             <input
               id="build-github"
               type="url"
               value={input.githubUrl}
               onChange={(event) => update("githubUrl", event.target.value)}
               placeholder="https://github.com/owner/repo/pull/12"
-              className={`${inputClassName} font-mono text-xs`}
+              className={`${railInputClassName} font-mono text-xs`}
             />
           </Field>
 
-          <Field label="X / Twitter" labelFor="build-x">
+          <Field label="X / Twitter" labelFor="build-x" tone="rail">
             <input
               id="build-x"
               type="url"
               value={input.xUrl}
               onChange={(event) => update("xUrl", event.target.value)}
               placeholder="https://x.com/..."
-              className={`${inputClassName} font-mono text-xs`}
+              className={`${railInputClassName} font-mono text-xs`}
             />
           </Field>
 
-          <Field label="Demo / deploy" labelFor="build-demo">
+          <Field label="Demo / deploy" labelFor="build-demo" tone="rail">
             <input
               id="build-demo"
               type="url"
               value={input.demoUrl}
               onChange={(event) => update("demoUrl", event.target.value)}
               placeholder="https://your-demo.vercel.app"
-              className={`${inputClassName} font-mono text-xs`}
+              className={`${railInputClassName} font-mono text-xs`}
             />
           </Field>
 
+          <label className="flex gap-3 border-y border-white/10 py-4 text-sm leading-6 text-zinc-300">
+            <input
+              type="checkbox"
+              checked={input.community === "puerto-rico"}
+              onChange={(event) => update("community", event.target.checked ? "puerto-rico" : "")}
+              className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-orange)]"
+            />
+            <span>
+              <span className="block font-medium text-zinc-100">
+                Add to Puerto Rico AI builders
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                Use this for local meetup demos, island-built projects, and PR/USA collaboration
+                posts.
+              </span>
+            </span>
+          </label>
+
           {error && (
-            <div className="border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+            <div className="border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
               {error}
             </div>
           )}
 
           {published && (
-            <div className="space-y-3 border border-[#a7f300]/25 bg-[#a7f300]/10 px-4 py-3 text-sm leading-6 text-zinc-100">
-              <div className="font-medium text-[#d8ff8f]">Published: {published.title}</div>
+            <div className="space-y-4 border border-[color:var(--trail-orange-border)] bg-[var(--trail-orange-soft)] px-4 py-4 text-sm leading-6 text-zinc-100">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-orange)]">
+                  Build is live
+                </div>
+                <div className="mt-1 font-medium text-zinc-50">{published.title}</div>
+                <p className="mt-2 text-xs leading-5 text-zinc-400">
+                  Now share it, open the thread, or check where it landed in the feed.
+                </p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={published.href}
-                  className="text-[#d8ff8f] underline-offset-4 hover:underline"
+                  className="rounded-full bg-[var(--trail-orange)] px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-white"
                 >
                   Open post
                 </Link>
+                <Link
+                  href="/feed"
+                  className="rounded-full px-3 py-1.5 text-xs font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-colors hover:text-zinc-50"
+                >
+                  View feed
+                </Link>
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText(published.shareUrl)}
-                  className="text-zinc-300 underline-offset-4 hover:text-zinc-50 hover:underline"
+                  onClick={() => copyShareUrl(published.shareUrl)}
+                  className="rounded-full px-3 py-1.5 text-xs font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-colors hover:text-zinc-50"
                 >
-                  Copy link
+                  {copyStatus ?? "Copy link"}
                 </button>
+                {tweetHref ? (
+                  <a
+                    href={tweetHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full px-3 py-1.5 text-xs font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-colors hover:text-zinc-50"
+                  >
+                    Share on X
+                  </a>
+                ) : null}
               </div>
             </div>
           )}
@@ -199,7 +273,7 @@ export function BuildPostForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--trail-orange)] px-5 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? "Posting..." : "Publish build"}
           </button>
@@ -213,23 +287,39 @@ function Field({
   label,
   labelFor,
   hint,
+  tone = "paper",
   children,
 }: {
   label: string;
   labelFor: string;
   hint?: string;
-  children: React.ReactNode;
+  tone?: "paper" | "rail";
+  children: ReactNode;
 }) {
   return (
     <div>
       <label
         htmlFor={labelFor}
-        className="block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500"
+        className={
+          tone === "rail"
+            ? "block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500"
+            : "block font-mono text-[10px] uppercase tracking-[0.2em] text-black/45"
+        }
       >
         {label}
       </label>
       {children}
-      {hint && <div className="mt-2 text-xs leading-5 text-zinc-600">{hint}</div>}
+      {hint && (
+        <div
+          className={
+            tone === "rail"
+              ? "mt-2 text-xs leading-5 text-zinc-500"
+              : "mt-2 text-xs leading-5 text-black/45"
+          }
+        >
+          {hint}
+        </div>
+      )}
     </div>
   );
 }

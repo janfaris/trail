@@ -2,7 +2,19 @@ import { BuildPostForm } from "@/app/create/build-post-form";
 import SiteNav from "@/components/site-nav";
 import Link from "next/link";
 
-export default async function CreatePage() {
+type CreateSearchParams = {
+  community?: string;
+  prompt?: string;
+};
+
+export default async function CreatePage({
+  searchParams,
+}: {
+  searchParams: Promise<CreateSearchParams>;
+}) {
+  const sp = await searchParams;
+  const defaultCommunity = sp.community === "puerto-rico" ? "puerto-rico" : "";
+  const defaultQuestion = typeof sp.prompt === "string" ? sp.prompt.slice(0, 260) : "";
   const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
     import("next/headers"),
     import("drizzle-orm"),
@@ -20,14 +32,14 @@ export default async function CreatePage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <SiteNav currentPath="/create" />
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:px-8">
+      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
         <aside className="hidden lg:block">
           <div className="sticky top-24 space-y-6 text-sm text-zinc-500">
-            <div className="border-t border-white/10 pt-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
+            <div className="rounded-[1.5rem] bg-[var(--trail-paper)] p-5 text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
                 Trail loop
               </div>
-              <div className="mt-3 space-y-3 leading-6">
+              <div className="mt-3 space-y-3 leading-6 text-black/65">
                 <p>Post what you built.</p>
                 <p>Add proof links.</p>
                 <p>Get comments, follows, saves, and collaborators.</p>
@@ -65,7 +77,7 @@ export default async function CreatePage() {
               actionLabel="Edit profile"
             />
           ) : (
-            <BuildPostForm />
+            <BuildPostForm defaultCommunity={defaultCommunity} defaultQuestion={defaultQuestion} />
           )}
         </section>
       </div>
@@ -87,17 +99,17 @@ function GateCard({
   actionLabel: string;
 }) {
   return (
-    <div className="border-y border-white/10 bg-zinc-950 px-5 py-12 sm:px-8">
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+    <div className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] px-5 py-12 text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)] sm:px-8">
+      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
         {eyebrow}
       </div>
-      <h1 className="mt-3 max-w-xl text-3xl font-semibold tracking-[-0.05em] text-zinc-50 sm:text-5xl">
+      <h1 className="mt-3 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
         {title}
       </h1>
-      <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-500">{body}</p>
+      <p className="mt-4 max-w-xl text-sm leading-6 text-black/60">{body}</p>
       <Link
         href={actionHref}
-        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98]"
+        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-orange)] hover:text-black active:scale-[0.98]"
       >
         {actionLabel}
       </Link>

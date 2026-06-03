@@ -9,7 +9,7 @@
 // tools, and roll up per-builder usage. This module turns the raw LLM labels
 // into stable canonical slugs (the URL key) + display labels.
 
-export type TagKind = "tool" | "framework" | "model";
+export type TagKind = "tool" | "framework" | "model" | "community";
 
 export interface SessionTagInput {
   /** Canonical slug — the stable URL key, e.g. "nextjs". */
