@@ -1441,12 +1441,12 @@ async function DailyBuilderBrief({
       <div className="overflow-hidden rounded-[28px] border border-[#a7f300]/25 bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01)),#080908] shadow-[0_24px_90px_rgba(0,0,0,0.35)]">
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="p-4 sm:p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
               Today on Trail
             </div>
             <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-[24px] font-semibold tracking-[-0.055em] text-white">
+                <h2 className="text-[24px] font-medium tracking-[-0.055em] text-white">
                   {action.title}
                 </h2>
                 <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-400">{action.body}</p>
@@ -1477,7 +1477,7 @@ async function DailyBuilderBrief({
           </div>
 
           <div className="border-t border-white/10 bg-black/25 p-4 lg:border-l lg:border-t-0">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-100/70">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
               Moves to steal
             </div>
             <div className="mt-3 space-y-3">
@@ -1493,7 +1493,7 @@ async function DailyBuilderBrief({
                       <span>{formatToolName(lesson.tool)}</span>
                     </div>
                     <Link href={`/learn#lesson-${lesson.id}`} className="mt-2 block">
-                      <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-zinc-100 transition hover:text-[#a7f300]">
+                      <h3 className="line-clamp-2 text-sm font-medium leading-5 text-zinc-100 transition hover:text-[#a7f300]">
                         {lesson.title}
                       </h3>
                       <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-zinc-500">
@@ -1641,7 +1641,7 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
 
   return (
     <section className="rounded-[24px] bg-zinc-950/82 p-4 shadow-[var(--trail-shadow-border)]">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
         Network pulse
       </div>
       <dl className="mt-3 space-y-2">
@@ -1701,7 +1701,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <Link
                 href={authorHref}
-                className="max-w-[180px] truncate text-[15px] font-semibold tracking-[-0.02em] text-zinc-100 transition-colors hover:text-white sm:max-w-[240px]"
+                className="max-w-[180px] truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-100 transition-colors hover:text-white sm:max-w-[240px]"
               >
                 {displayName}
               </Link>
@@ -1752,7 +1752,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         </div>
 
         <Link href={currentReceiptHref} className="mt-3 block">
-          <h3 className="break-words text-pretty text-[18.5px] font-semibold leading-[1.35] tracking-[-0.02em] text-zinc-50 transition-colors group-hover:text-white">
+          <h3 className="break-words text-pretty text-[17px] font-medium leading-[1.4] tracking-[-0.015em] text-zinc-50 transition-colors group-hover:text-white">
             {r.title ?? r.slug}
           </h3>
           {r.summary ? (
@@ -1763,7 +1763,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
 
           <div className="mt-4 rounded-[20px] bg-zinc-950/40 px-4 py-3 shadow-[var(--trail-shadow-border)] transition-[box-shadow] group-hover:shadow-[var(--trail-shadow-border-hover)]">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
                 Proof
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -1806,9 +1806,9 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         {r.lessonCount > 0 ? (
           <Link
             href={`${currentReceiptHref}#lessons`}
-            className="mt-3 block rounded-[22px] bg-[#a7f300]/[0.045] px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.14)] transition-[background-color,box-shadow] hover:bg-[#a7f300]/[0.065] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.28)]"
+            className="mt-3 block rounded-[22px] bg-[#a7f300]/[0.03] px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.09)] transition-[background-color,box-shadow] hover:bg-[#a7f300]/[0.05] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)]"
           >
-            <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
               <span>Steal this move</span>
               <span className="text-lime-100/45">{pluralize(r.lessonCount, "lesson")}</span>
               {r.lessonPreviewTitle ? (
@@ -1853,7 +1853,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-[12px] font-semibold text-zinc-200">
+                        <span className="truncate text-[12px] font-medium text-zinc-200">
                           {comment.authorName}
                         </span>
                         <RelativeTime
@@ -1891,7 +1891,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <Link
               href={`${currentReceiptHref}#conversation`}
-              className="inline-flex min-h-9 items-center rounded-full border border-transparent px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
+              className="inline-flex min-h-9 items-center rounded-full border border-transparent px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-zinc-200 active:scale-[0.96]"
             >
               Reply {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
             </Link>
@@ -1910,7 +1910,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             />
             <Link
               href={forkHref}
-              className="inline-flex min-h-9 items-center rounded-full px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-amber-100 active:scale-[0.96]"
+              className="inline-flex min-h-9 items-center rounded-full px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-zinc-200 active:scale-[0.96]"
             >
               Fork
             </Link>
@@ -1970,7 +1970,7 @@ function EmptyTimeline({
                       className="h-10 w-10 rounded-full"
                     />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-zinc-100">
+                      <span className="block truncate text-sm font-medium text-zinc-100">
                         {builder.name}
                       </span>
                       <span className="block truncate font-mono text-[11px] text-zinc-600">
@@ -2088,10 +2088,10 @@ function PersonalizationNudge({
     <section className="border-b border-white/10 px-4 py-4 sm:px-5">
       <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b] shadow-[var(--trail-shadow-border)]">
         <div className="border-b border-white/10 px-4 py-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
             Personalize Trail
           </div>
-          <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+          <h2 className="mt-2 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
             Make the daily feed feel like it was built for you.
           </h2>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
@@ -2117,10 +2117,10 @@ function PersonalizationNudge({
               >
                 {item.done ? "done" : "next"}
               </div>
-              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
                 {item.label}
               </div>
-              <div className="mt-1 truncate text-[15px] font-semibold tracking-[-0.03em] text-zinc-100 group-hover:text-[#a7f300]">
+              <div className="mt-1 truncate text-[15px] font-medium tracking-[-0.03em] text-zinc-100 group-hover:text-[#a7f300]">
                 {item.value}
               </div>
               <div className="mt-1 text-[12px] leading-5 text-zinc-500">{item.body}</div>
@@ -2140,7 +2140,7 @@ function PersonalizationNudge({
                     className="h-10 w-10 rounded-full"
                   />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-zinc-100">
+                    <span className="block truncate text-sm font-medium text-zinc-100">
                       {builder.name}
                     </span>
                     <span className="block truncate font-mono text-[11px] text-zinc-600">
@@ -2164,7 +2164,7 @@ function PersonalizationNudge({
 
         {stackSuggestions.length > 0 ? (
           <div className="border-t border-white/10 px-4 py-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
               Browse stacks to follow the work you care about
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -2214,10 +2214,10 @@ function FeedDiscoveryPanel({
       <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
               AI Radar
             </div>
-            <h3 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+            <h3 className="mt-1 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
               Signals to test
             </h3>
           </div>
@@ -2259,7 +2259,7 @@ function FeedDiscoveryPanel({
                 <p className="mt-2 line-clamp-3 text-sm font-medium leading-5 text-zinc-200 group-hover:text-white">
                   {signal.title}
                 </p>
-                <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-amber-100/60">
+                <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
                   Needs Trail receipts
                 </div>
               </Link>
@@ -2270,9 +2270,7 @@ function FeedDiscoveryPanel({
 
       <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
         <div className="border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
-            Who to follow
-          </h3>
+          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Who to follow</h3>
         </div>
 
         {discovery.builders.length === 0 ? (
@@ -2335,9 +2333,7 @@ function FeedDiscoveryPanel({
 
       <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
         <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
-            Trending now
-          </h3>
+          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Trending now</h3>
           <Link
             href="/tools"
             className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition-colors hover:text-[#c8ff5e]"
@@ -2377,7 +2373,7 @@ function FeedDiscoveryPanel({
 
       <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
         <div className="border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">Explore</h3>
+          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Explore</h3>
         </div>
         <div className="divide-y divide-zinc-900">
           {discoveryLinks.map((link) => (
@@ -2403,7 +2399,7 @@ function FeedDiscoveryPanel({
       </section>
 
       <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[var(--trail-shadow-border)]">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
           How Trail works
         </div>
         <div className="mt-4 space-y-3">
@@ -2485,10 +2481,10 @@ export default async function FeedPage({
             <div className="border-b border-white/10 bg-black/86 shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
               <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
                 <div className="min-w-0">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
                     Trail social
                   </div>
-                  <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.055em] text-zinc-50">
+                  <h1 className="mt-1 text-[24px] font-medium tracking-[-0.04em] text-zinc-50">
                     {feedTitle}
                   </h1>
                   <p className="mt-1 max-w-xl text-pretty text-[13px] leading-5 text-zinc-500">
@@ -2525,10 +2521,10 @@ export default async function FeedPage({
             {!viewerId && !isFollowingView ? (
               <div className="border-b border-white/10 px-4 py-4 sm:px-5">
                 <div className="rounded-[24px] bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_44%),#09090b] p-4 shadow-[var(--trail-shadow-border)]">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
                     Make it personal
                   </div>
-                  <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
+                  <h2 className="mt-2 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
                     Follow builders, react to receipts, and get notifications.
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
