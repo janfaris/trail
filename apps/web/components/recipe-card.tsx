@@ -35,33 +35,37 @@ export function RecipeCard({
   const duration = formatDuration(session.durationSeconds);
 
   return (
-    <section className="relative rounded-lg border border-white/10 bg-zinc-900/30 p-5 sm:p-6">
+    <section className="px-4 py-5 sm:px-5">
       {session.recipeOutcome ? (
-        <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-zinc-900/50 px-2.5 py-0.5 text-xs font-mono text-[#a7f300] border border-[#a7f300]/20">
-          {session.recipeOutcome}
-        </span>
+        <span className="font-mono text-[11px] text-[#a7f300]">{session.recipeOutcome}</span>
       ) : null}
 
-      <h2 className="text-zinc-100 text-[22px] sm:text-[26px] leading-snug font-semibold pr-24">
+      <h2 className="mt-1 text-[17px] font-medium leading-6 tracking-[-0.015em] text-zinc-50">
         {session.recipeTldr}
       </h2>
 
       {keyPrompts.length > 0 ? (
         <div className="mt-6">
-          <h3 className="text-xs uppercase tracking-wide text-zinc-400 font-mono">Key prompts</h3>
-          <ul className="mt-3 space-y-2">
+          <h3 className="text-[12px] text-zinc-600">Key prompts</h3>
+          <ul className="mt-3 divide-y divide-white/[0.08] border-l border-white/10 pl-3">
             {keyPrompts.map((p) => {
               const anchor = String(p.idx).padStart(2, "0");
               return (
-                <li key={p.idx} className="rounded-md border border-white/10 bg-zinc-950/40 p-3">
-                  <p className="text-sm text-zinc-200 line-clamp-3 whitespace-pre-wrap">{p.text}</p>
+                <li key={p.idx} className="py-3 first:pt-0 last:pb-0">
+                  <p className="line-clamp-3 whitespace-pre-wrap text-[13px] leading-5 text-zinc-400">
+                    {p.text}
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <CopyButton value={p.text} label="Copy" />
+                    <CopyButton
+                      value={p.text}
+                      label="Copy"
+                      className="min-h-8 rounded-full px-3 text-[12px] normal-case tracking-normal"
+                    />
                     <a
                       href={`#${anchor}`}
-                      className="inline-flex items-center h-7 px-2.5 rounded-md border border-white/10 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition-colors"
+                      className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
                     >
-                      jump →
+                      Jump
                     </a>
                   </div>
                 </li>
@@ -71,8 +75,8 @@ export function RecipeCard({
         </div>
       ) : null}
 
-      <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-zinc-500">
-        <span className="uppercase tracking-wide text-zinc-400">Setup</span>
+      <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.08] pt-3 text-[12px] text-zinc-600">
+        <span>Setup</span>
         <span className="inline-flex items-center gap-1.5 text-zinc-300">
           <ToolIcon name={session.tool} />
           {session.tool}

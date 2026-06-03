@@ -84,27 +84,25 @@ export function ForkButtons({ shareUrl, forkUrl, setupPrompt }: ForkButtonsProps
   }
 
   return (
-    <div className="rounded border border-white/10 bg-zinc-900/40 p-4">
-      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
-        Fork into your AI tool
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="px-4 py-5 sm:px-5">
+      <div className="mb-3 text-[12px] text-zinc-600">Fork into your AI tool</div>
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-white/[0.08] sm:grid-cols-2">
         {TOOLS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => handleClick(t)}
-            className="text-left rounded border border-white/10 hover:border-[#a7f300]/60 hover:bg-zinc-900 px-3 py-2 transition-[color,background-color,border-color,transform] active:scale-[0.98]"
+            className="bg-[#0b0b0a] px-3 py-3 text-left transition-[background-color,transform] hover:bg-white/[0.035] active:scale-[0.99]"
             title={t.hint}
           >
-            <div className="text-sm font-medium text-zinc-100">{t.label}</div>
-            <div className="text-[11px] font-mono text-zinc-500 mt-0.5">
+            <div className="text-[13px] font-medium text-zinc-200">{t.label}</div>
+            <div className="mt-0.5 text-[12px] text-zinc-600">
               {copied === t.key ? "copied!" : t.deepLink ? "open via deep-link" : "copy command"}
             </div>
           </button>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono text-zinc-500">
+      <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-zinc-600">
         <button
           type="button"
           onClick={() => {
@@ -113,12 +111,12 @@ export function ForkButtons({ shareUrl, forkUrl, setupPrompt }: ForkButtonsProps
               setTimeout(() => setCopied((c) => (c === "setup" ? null : c)), 2000);
             }
           }}
-          className="hover:text-zinc-100"
+          className="hover:text-zinc-200"
         >
-          {copied === "setup" ? "✓ copied" : "Copy setup prompt"}
+          {copied === "setup" ? "Copied" : "Copy setup prompt"}
         </button>
         <span className="opacity-50">·</span>
-        <a href={forkUrl} className="hover:text-zinc-100" target="_blank" rel="noreferrer">
+        <a href={forkUrl} className="hover:text-zinc-200" target="_blank" rel="noreferrer">
           View raw recipe (.md)
         </a>
       </div>

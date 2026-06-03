@@ -39,6 +39,7 @@ export async function promoteSessionToPublicReceipt(args: {
             title = case when ${args.title !== undefined} then ${args.title ?? null} else title end,
             summary = case when ${args.summary !== undefined} then ${args.summary ?? null} else summary end,
             outcome = case when ${args.outcome !== undefined} then ${args.outcome ?? null} else outcome end,
+            post_kind = 'agent_session',
             visibility = 'public',
             shared_at = coalesce(shared_at, now())
           where id = ${args.sessionId}
@@ -61,6 +62,7 @@ export async function promoteSessionToPublicReceipt(args: {
                   and public_receipts.visibility = 'public'
                   and public_receipts.shared_at is not null
                   and public_receipts.receipt_generated_at is not null
+                  and public_receipts.post_kind = 'agent_session'
               ) < ${FREE_PUBLIC_RECEIPT_LIMIT}
             )
           returning id, slug

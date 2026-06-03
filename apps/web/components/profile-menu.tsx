@@ -7,8 +7,12 @@ type MenuLink = { href: string; label: string; mobileOnly?: boolean };
 
 const MENU_LINKS: MenuLink[] = [
   { href: "/feed", label: "Feed", mobileOnly: true },
-  { href: "/notifications", label: "Inbox", mobileOnly: true },
-  { href: "/dashboard", label: "Dashboard", mobileOnly: true },
+  { href: "/create", label: "Create", mobileOnly: true },
+  { href: "/discover", label: "Builders", mobileOnly: true },
+  { href: "/puerto-rico", label: "Puerto Rico", mobileOnly: true },
+  { href: "/notifications", label: "Notifications" },
+  { href: "/saved", label: "Saved" },
+  { href: "/dashboard", label: "Studio" },
   { href: "/dashboard/cost", label: "Cost" },
 ];
 

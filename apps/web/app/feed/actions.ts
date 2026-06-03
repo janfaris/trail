@@ -13,6 +13,17 @@ export type FeedPublishInput = {
   outcome: FeedComposerOutcome;
 };
 
+export type BuildPostInput = {
+  title: string;
+  summary: string;
+  tools: string;
+  stack: string;
+  githubUrl: string;
+  xUrl: string;
+  demoUrl: string;
+  question: string;
+};
+
 export type FeedPublishResult =
   | {
       ok: true;
@@ -47,6 +58,65 @@ function cleanSummary(value: string, maxLength: number): string | null {
     .join("\n");
   if (!cleaned) return null;
   return cleaned.slice(0, maxLength);
+}
+
+function cleanCsv(value: string, maxItems: number, maxLength: number): string[] {
+  return value
+    .split(/[,\n]/)
+    .map((part) => cleanText(part, maxLength))
+    .filter((part): part is string => Boolean(part))
+    .filter(
+      (part, index, list) =>
+        list.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === index,
+    )
+    .slice(0, maxItems);
+}
+
+function cleanUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function slugifyTitle(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 52)
+    .replace(/-+$/g, "");
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 6);
+  return `${slug || "build"}-${suffix}`;
+}
+
+function parseGithubUrl(value: string | null): {
+  linkedRepo: string | null;
+  linkedPrUrl: string | null;
+  linkedCommitSha: string | null;
+} {
+  if (!value) return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
+  try {
+    const url = new URL(value);
+    if (url.hostname !== "github.com" && url.hostname !== "www.github.com") {
+      return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
+    }
+    const [owner, repo, section, ref] = url.pathname.split("/").filter(Boolean);
+    if (!owner || !repo) return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
+    const linkedRepo = `${owner}/${repo}`;
+    return {
+      linkedRepo,
+      linkedPrUrl: section === "pull" && ref ? value : null,
+      linkedCommitSha: section === "commit" && ref ? ref : null,
+    };
+  } catch {
+    return { linkedRepo: null, linkedPrUrl: null, linkedCommitSha: null };
+  }
 }
 
 export async function publishSessionFromFeed(input: FeedPublishInput): Promise<FeedPublishResult> {
@@ -231,6 +301,137 @@ export async function publishSessionFromFeed(input: FeedPublishInput): Promise<F
   revalidatePath("/dashboard");
   revalidatePath(`/u/${published.handle}`);
   revalidatePath(`/u/${published.handle}/interview`);
+  revalidatePath(href);
+
+  return {
+    ok: true,
+    href,
+    shareUrl: `${PUBLIC_APP_URL}${href}`,
+    title,
+  };
+}
+
+export async function createBuildPostFromFeed(input: BuildPostInput): Promise<FeedPublishResult> {
+  if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) {
+    return {
+      ok: false,
+      error: "Posting is unavailable until Trail auth and database are configured.",
+    };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const sessionInfo = await auth.api.getSession({ headers: await headers() });
+  if (!sessionInfo?.user?.id) {
+    return {
+      ok: false,
+      error: "Sign in with GitHub before posting a build.",
+      actionHref: "/api/auth/sign-in/github?callbackURL=%2Fcreate",
+      actionLabel: "Sign in",
+    };
+  }
+
+  const title = cleanText(input.title, 120);
+  const summary = cleanSummary(input.summary, 1200);
+  if (!title || !summary) {
+    return { ok: false, error: "Add a title and a short summary before publishing." };
+  }
+
+  const githubUrl = cleanUrl(input.githubUrl);
+  const xUrl = cleanUrl(input.xUrl);
+  const demoUrl = cleanUrl(input.demoUrl);
+  const question = cleanSummary(input.question, 260);
+  const tools = cleanCsv(input.tools, 8, 32);
+  const stack = cleanCsv(input.stack, 10, 32);
+  const github = parseGithubUrl(githubUrl);
+  const primaryTool = tools[0]?.toLowerCase().replace(/\s+/g, "-") || "manual";
+  const now = new Date();
+  const sessionId = crypto.randomUUID();
+  const slug = slugifyTitle(title);
+
+  const { db, schema } = await import("@/db/client");
+  const { extractSessionTags } = await import("@/lib/tags");
+  const viewer = await db.query.user.findFirst({
+    where: eq(schema.user.id, sessionInfo.user.id),
+    columns: { id: true, handle: true },
+  });
+
+  if (!viewer) return { ok: false, error: "Your Trail profile could not be found." };
+  if (!viewer.handle) {
+    return {
+      ok: false,
+      error: "Add your public Trail handle before posting builds to the feed.",
+      actionHref: "/settings",
+      actionLabel: "Edit profile",
+    };
+  }
+
+  await db.insert(schema.trailSession).values({
+    id: sessionId,
+    userId: viewer.id,
+    slug,
+    tool: primaryTool,
+    postKind: "manual_build",
+    repo: github.linkedRepo,
+    summary,
+    title,
+    eventCount: 0,
+    startedAt: now,
+    endedAt: now,
+    sharedAt: now,
+    visibility: "public",
+    toolsUsed: tools.length > 0 ? tools : null,
+    frameworks: stack.length > 0 ? stack : null,
+    taskType: "shipped",
+    outcome: "shipped",
+    linkedPrUrl: github.linkedPrUrl,
+    linkedCommitSha: github.linkedCommitSha,
+    linkedRepo: github.linkedRepo,
+    receiptTldr: question ? `${summary}\n\nQuestion for the community: ${question}` : summary,
+    recipeTldr: summary,
+  });
+
+  const links = [
+    githubUrl
+      ? { id: crypto.randomUUID(), sessionId, kind: "github", url: githubUrl, label: "GitHub" }
+      : null,
+    xUrl
+      ? { id: crypto.randomUUID(), sessionId, kind: "x", url: xUrl, label: "X / Twitter" }
+      : null,
+    demoUrl
+      ? { id: crypto.randomUUID(), sessionId, kind: "demo", url: demoUrl, label: "Demo" }
+      : null,
+  ].filter((link): link is NonNullable<typeof link> => Boolean(link));
+  if (links.length > 0) {
+    await db.insert(schema.buildPostLink).values(links);
+  }
+
+  const tags = extractSessionTags({
+    tool: primaryTool,
+    toolsUsed: tools,
+    frameworks: stack,
+    models: null,
+  });
+  if (tags.length > 0) {
+    await db
+      .insert(schema.sessionTag)
+      .values(
+        tags.map((tag) => ({
+          id: crypto.randomUUID(),
+          sessionId,
+          tag: tag.tag,
+          label: tag.label,
+          kind: tag.kind,
+          confidence: tag.confidence.toFixed(3),
+          source: tag.source,
+        })),
+      )
+      .onConflictDoNothing();
+  }
+
+  const href = `/u/${viewer.handle}/${slug}`;
+  revalidatePath("/feed");
+  revalidatePath("/create");
+  revalidatePath(`/u/${viewer.handle}`);
   revalidatePath(href);
 
   return {

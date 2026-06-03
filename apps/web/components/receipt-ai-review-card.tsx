@@ -25,10 +25,10 @@ const VERDICT_LABELS: Record<ReceiptAiReviewVerdict, string> = {
 };
 
 const VERDICT_CLASSES: Record<ReceiptAiReviewVerdict, string> = {
-  shipped: "border-[#a7f300]/45 bg-[#a7f300]/10 text-[#a7f300]",
-  partial: "border-sky-300/35 bg-sky-300/10 text-sky-100",
-  failed: "border-red-300/35 bg-red-300/10 text-red-100",
-  "needs-proof": "border-amber-300/35 bg-amber-300/10 text-amber-100",
+  shipped: "text-[#a7f300]",
+  partial: "text-sky-200",
+  failed: "text-red-200",
+  "needs-proof": "text-amber-200",
 };
 
 const DEFAULT_QUESTIONS = [
@@ -76,23 +76,21 @@ export function ReceiptAiReviewCard({
 
   if (!review) {
     return (
-      <div className="rounded-[1.5rem] border border-white/10 bg-black/25 p-4">
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-lime-200/60">
-          Quick read
-        </div>
-        <h3 className="mt-2 text-lg font-semibold tracking-[-0.04em] text-white">
+      <div className="border-l border-white/10 pl-3">
+        <div className="text-[12px] text-zinc-600">Quick read</div>
+        <h3 className="mt-1 text-[16px] font-medium tracking-[-0.015em] text-zinc-50">
           This receipt has not been AI-checked yet.
         </h3>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-lime-50/65">{fallbackSummary}</p>
+        <p className="mt-1 max-w-2xl text-[13px] leading-5 text-zinc-500">{fallbackSummary}</p>
         {canGenerate ? (
           <div className="mt-4">
             <button
               type="button"
               onClick={generate}
               disabled={pending}
-              className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition hover:bg-[#c8ff5e] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? "Checking..." : "Run GPT-5.4 mini check"}
+              {pending ? "Checking..." : "Run AI check"}
             </button>
             {error ? <p className="mt-2 text-xs text-red-200">{error}</p> : null}
           </div>
@@ -107,35 +105,30 @@ export function ReceiptAiReviewCard({
       : ["Read the outcome, inspect the cited proof, then ask the builder what to fork next."];
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-lime-200/20 bg-black/25">
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
-        <div className="p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
-              Trail checked this receipt for you
-            </span>
+    <div className="border-l border-[#a7f300]/30 pl-3">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(16rem,0.92fr)]">
+        <div>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-zinc-600">
+            <span>Trail checked this receipt</span>
             <span
-              className={cn(
-                "rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em]",
-                VERDICT_CLASSES[review.verdict],
-              )}
+              className={cn("font-mono text-[11px] tabular-nums", VERDICT_CLASSES[review.verdict])}
             >
               {VERDICT_LABELS[review.verdict]}
             </span>
-            <span className="rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-lime-50/55">
+            <span className="font-mono text-[11px] text-zinc-500">
               {review.confidence} confidence
             </span>
           </div>
-          <h3 className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-white">
+          <h3 className="mt-2 text-[17px] font-medium leading-6 tracking-[-0.015em] text-zinc-50">
             {review.headline}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-lime-50/70">{review.summary}</p>
+          <p className="mt-2 text-[13px] leading-5 text-zinc-400">{review.summary}</p>
 
-          <div className="mt-4 grid gap-2">
+          <div className="mt-3 grid gap-2">
             {nextSteps.map((step) => (
               <div
                 key={step}
-                className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm leading-5 text-lime-50/75"
+                className="border-l border-white/10 pl-3 text-[13px] leading-5 text-zinc-500"
               >
                 {step}
               </div>
@@ -143,10 +136,8 @@ export function ReceiptAiReviewCard({
           </div>
         </div>
 
-        <div className="border-t border-lime-100/10 bg-[#a7f300]/[0.035] p-4 sm:p-5 lg:border-l lg:border-t-0">
-          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-lime-200/60">
-            Evidence Trail cited
-          </div>
+        <div className="border-t border-white/[0.08] pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+          <div className="text-[12px] text-zinc-600">Evidence Trail cited</div>
           <div className="mt-3 space-y-2">
             {review.evidence.map((item, index) => {
               const href = item.eventIdx === null ? "#proof" : `#event-${item.eventIdx}`;
@@ -155,30 +146,28 @@ export function ReceiptAiReviewCard({
                   key={`${item.label}-${item.eventIdx ?? "receipt"}-${index}`}
                   href={href}
                   onClick={item.eventIdx === null ? undefined : openTimeline}
-                  className="block rounded-2xl border border-white/10 bg-black/25 p-3 transition hover:border-[#a7f300]/45 hover:bg-[#a7f300]/10"
+                  className="block border-l border-white/10 pl-3 transition-colors hover:border-white/25"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold text-white">{item.label}</span>
+                    <span className="text-[13px] font-medium text-zinc-200">{item.label}</span>
                     {item.eventIdx === null ? null : (
-                      <span className="font-mono text-[10px] text-[#a7f300]">#{item.eventIdx}</span>
+                      <span className="font-mono text-[11px] text-zinc-600">#{item.eventIdx}</span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-lime-50/60">{item.detail}</p>
+                  <p className="mt-1 text-[12px] leading-5 text-zinc-500">{item.detail}</p>
                 </a>
               );
             })}
           </div>
 
-          <div className="mt-4 border-t border-lime-100/10 pt-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-lime-200/60">
-              Ask next
-            </div>
+          <div className="mt-4 border-t border-white/[0.08] pt-3">
+            <div className="text-[12px] text-zinc-600">Ask next</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {questionStarters.slice(0, 3).map((question) => (
                 <a
                   key={question}
                   href="#conversation"
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-left text-[11px] font-semibold text-lime-50/65 transition hover:border-[#a7f300]/45 hover:text-white"
+                  className="rounded-full px-2.5 py-1.5 text-left text-[12px] text-zinc-600 transition-[background-color,color] hover:bg-white/[0.04] hover:text-zinc-200"
                 >
                   {question}
                 </a>

@@ -30,49 +30,24 @@ const PUBLIC_APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.ver
 
 const discoveryLinks = [
   {
+    href: "/create",
+    label: "Post a build",
+    detail: "Share work manually, paste GitHub/X/demo links, and start a thread.",
+  },
+  {
+    href: "/discover",
+    label: "Builders",
+    detail: "Find people by stack, tool, shipping history, and conversation signals.",
+  },
+  {
+    href: "/puerto-rico",
+    label: "Puerto Rico",
+    detail: "Join the local AI builder loop around meetups, demos, and recaps.",
+  },
+  {
     href: "/radar",
-    label: "AI Radar",
-    detail: "Track fresh model, tool, benchmark, and leak signals that need proof receipts.",
-  },
-  {
-    href: "/tools",
-    label: "AI tools",
-    detail: "See what people are shipping with Claude Code, Codex, Cursor, and more.",
-  },
-  {
-    href: "/frameworks",
-    label: "Frameworks",
-    detail: "Browse receipts by the stack behind the work.",
-  },
-  {
-    href: "/install",
-    label: "Install Trail",
-    detail: "Record local agent sessions and publish the receipts worth sharing.",
-  },
-];
-
-const onboardingSteps = [
-  {
-    n: "01",
-    label: "Read",
-    title: "Browse openly",
-    body: "The Everyone feed is public: no account needed to read sessions, costs, models, and merged work.",
-  },
-  {
-    n: "02",
-    label: "Follow",
-    title: "Sign in to follow",
-    body: "GitHub sign-in unlocks follow buttons, reactions, and your personal Following feed.",
-    href: FOLLOWING_SIGN_IN_HREF,
-    cta: "Sign in",
-  },
-  {
-    n: "03",
-    label: "Publish",
-    title: "Install and share",
-    body: "Run Trail locally, keep using your AI tools, then publish the sessions worth turning into proof.",
-    href: "/install",
-    cta: "Install",
+    label: "Trail Picks",
+    detail: "Curated AI builder signals to discuss while the network grows.",
   },
 ];
 
@@ -153,6 +128,10 @@ function stackChips(row: BaseFeedRow): string[] {
   return Array.from(new Set(values)).slice(0, 5);
 }
 
+function isManualBuildPost(row: BaseFeedRow): boolean {
+  return row.postKind === "manual_build";
+}
+
 function normalizeTag(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -180,6 +159,7 @@ function matchedViewerStackLabels(row: BaseFeedRow, viewerTags: Set<string>): st
 }
 
 function timelineMetrics(row: BaseFeedRow): Array<{ label: string; value: string }> {
+  if (isManualBuildPost(row)) return [];
   const metrics = [{ label: "Events", value: `${row.eventCount} ev` }];
   const duration = formatDuration(row.durationSeconds);
   const cost = formatUsd(row.estimatedCostUsd);
@@ -223,12 +203,14 @@ function feedReason(row: FeedRow): string {
     return `${pluralize(row.commentCount, "reply", "replies")} in the thread`;
   if (row.lessonCount > 0) return `${pluralize(row.lessonCount, "reusable lesson")} extracted`;
   if (row.positiveReactions + row.negativeReactions > 0) return reactionSummary(row);
+  if (isManualBuildPost(row)) return "New build post";
   if (row.receiptStatus === "shipped" || row.outcome === "shipped") return "Fresh shipping proof";
   if (row.linkedRepo ?? row.repo) return `Proof from ${row.linkedRepo ?? row.repo}`;
-  return "New builder receipt";
+  return "New builder post";
 }
 
 function receiptBadge(row: BaseFeedRow): string | null {
+  if (isManualBuildPost(row)) return "Build post";
   if (row.receiptStatus === "shipped") return "Shipped";
   if (row.receiptStatus === "draft") return "Draft";
   if (row.outcome === "shipped") return "Marked shipped";
@@ -246,6 +228,7 @@ interface BaseFeedRow extends RankableSession {
   title: string | null;
   summary: string | null;
   tool: string;
+  postKind: string;
   eventCount: number;
   authorId: string;
   handle: string | null;
@@ -686,6 +669,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
       title: schema.trailSession.title,
       summary: schema.trailSession.summary,
       tool: schema.trailSession.tool,
+      postKind: schema.trailSession.postKind,
       eventCount: schema.trailSession.eventCount,
       startedAt: schema.trailSession.startedAt,
       sharedAt: schema.trailSession.sharedAt,
@@ -766,6 +750,7 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
       title: schema.trailSession.title,
       summary: schema.trailSession.summary,
       tool: schema.trailSession.tool,
+      postKind: schema.trailSession.postKind,
       eventCount: schema.trailSession.eventCount,
       startedAt: schema.trailSession.startedAt,
       sharedAt: schema.trailSession.sharedAt,
@@ -1323,37 +1308,25 @@ function FeedTabs({
   isFollowingView: boolean;
 }) {
   const tabClass =
-    "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-3 text-sm font-medium transition-[background-color,color] hover:bg-zinc-950/80";
+    "relative inline-flex min-h-8 items-center gap-2 rounded-full px-3 text-sm transition-[background-color,color] hover:bg-white/[0.04]";
 
   return (
-    <div className="grid grid-cols-2 border-t border-white/10">
+    <div className="flex flex-wrap items-center gap-1">
       <Link
         href="/feed"
         className={`${tabClass} ${
-          isFollowingView ? "text-zinc-500 hover:text-zinc-200" : "text-zinc-50"
+          isFollowingView ? "text-zinc-500 hover:text-zinc-200" : "bg-zinc-100 text-zinc-950"
         }`}
       >
         <span>For you</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
-          Everyone
-        </span>
-        {!isFollowingView ? (
-          <span className="absolute bottom-0 h-1 w-14 rounded-t-full bg-[#a7f300]" />
-        ) : null}
       </Link>
       <TrailLink
         href={followingHref}
         className={`${tabClass} ${
-          isFollowingView ? "text-zinc-50" : "text-zinc-500 hover:text-zinc-200"
+          isFollowingView ? "bg-zinc-100 text-zinc-950" : "text-zinc-500 hover:text-zinc-200"
         }`}
       >
         <span>Following</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-600">
-          Your graph
-        </span>
-        {isFollowingView ? (
-          <span className="absolute bottom-0 h-1 w-14 rounded-t-full bg-[#a7f300]" />
-        ) : null}
       </TrailLink>
     </div>
   );
@@ -1369,8 +1342,8 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
     return {
       href: "#feed-composer",
       label: "Publish",
-      title: "Ship one receipt today",
-      body: `${pluralize(data.draftCount, "draft")} can become public proof from the composer below.`,
+      title: "Turn one agent run into proof",
+      body: `${pluralize(data.draftCount, "draft")} can become a proof-backed build post below.`,
     };
   }
 
@@ -1412,8 +1385,8 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
 
 function DailyBuilderBriefSkeleton() {
   return (
-    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
-      <div className="h-48 animate-pulse rounded-[28px] bg-zinc-950/75 shadow-[var(--trail-shadow-border)]" />
+    <section className="border-b border-white/[0.08] px-4 py-3 sm:px-5">
+      <div className="h-16 animate-pulse rounded-2xl bg-white/[0.03]" />
     </section>
   );
 }
@@ -1437,100 +1410,65 @@ async function DailyBuilderBrief({
   ];
 
   return (
-    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
-      <div className="overflow-hidden rounded-[28px] border border-[#a7f300]/25 bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01)),#080908] shadow-[0_24px_90px_rgba(0,0,0,0.35)]">
-        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="p-4 sm:p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-              Today on Trail
-            </div>
-            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-[24px] font-medium tracking-[-0.055em] text-white">
-                  {action.title}
-                </h2>
-                <p className="mt-1 max-w-xl text-sm leading-6 text-zinc-400">{action.body}</p>
-              </div>
-              <Link
-                href={action.href}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
-              >
-                {action.label}
-              </Link>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-              {stats.map((stat) => (
-                <div key={stat.label} className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-lg text-zinc-100 tabular-nums">{stat.value}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                    {stat.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-4 text-[12px] leading-5 text-zinc-500">
-              Builder signal: {data.reputation.summary}. Trail gets useful when you read one
-              receipt, steal one move, ship one receipt, and answer one signal.
-            </p>
+    <section className="border-b border-white/[0.08] px-4 py-3 sm:px-5">
+      <div className="flex flex-col gap-3 text-sm lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-[15px] font-medium tracking-[-0.015em] text-zinc-100">
+              {action.title}
+            </h2>
+            <Link
+              href={action.href}
+              className="text-[13px] text-zinc-500 underline-offset-4 transition-colors hover:text-zinc-100 hover:underline"
+            >
+              {action.label}
+            </Link>
           </div>
-
-          <div className="border-t border-white/10 bg-black/25 p-4 lg:border-l lg:border-t-0">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-              Moves to steal
-            </div>
-            <div className="mt-3 space-y-3">
-              {data.lessons.length > 0 ? (
-                data.lessons.map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    className="rounded-2xl border border-white/10 bg-black/30 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                      <span className="text-[#a7f300]">{lesson.transferabilityScore}/5</span>
-                      <span>@{lesson.handle}</span>
-                      <span>{formatToolName(lesson.tool)}</span>
-                    </div>
-                    <Link href={`/learn#lesson-${lesson.id}`} className="mt-2 block">
-                      <h3 className="line-clamp-2 text-sm font-medium leading-5 text-zinc-100 transition hover:text-[#a7f300]">
-                        {lesson.title}
-                      </h3>
-                      <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-zinc-500">
-                        {lesson.whatToSteal}
-                      </p>
-                    </Link>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <UseLessonButton
-                        lessonId={lesson.id}
-                        initialUsed={lesson.usedByViewer}
-                        signedIn={true}
-                        signInHref={signInHref("/feed")}
-                        className="min-h-8 px-2.5 text-[10px]"
-                        refreshOnChange={true}
-                      />
-                      <Link
-                        href={`/u/${lesson.handle}/${lesson.slug}#lessons`}
-                        className="inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
-                      >
-                        Proof
-                      </Link>
-                      {lesson.reuseCount > 0 ? (
-                        <span className="inline-flex min-h-8 items-center rounded-full px-2.5 font-mono text-[10px] text-zinc-600">
-                          {formatCount(lesson.reuseCount)} used
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-500">
-                  Publish or follow more builders and Trail will recommend specific moves to reuse.
-                </p>
-              )}
-            </div>
+          <p className="mt-1 max-w-2xl text-[13px] leading-5 text-zinc-500">{action.body}</p>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+            {stats.map((stat) => (
+              <div key={stat.label} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[13px] text-zinc-200 tabular-nums">
+                  {stat.value}
+                </span>
+                <span className="text-[12px] text-zinc-600">{stat.label}</span>
+              </div>
+            ))}
           </div>
         </div>
+
+        {data.lessons.length > 0 ? (
+          <div className="min-w-0 border-t border-white/[0.08] pt-3 lg:w-72 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+            {data.lessons.slice(0, 1).map((lesson) => (
+              <div key={lesson.id} className="min-w-0">
+                <Link href={`/learn#lesson-${lesson.id}`} className="group block">
+                  <div className="text-[12px] text-zinc-600">
+                    Move to steal · {lesson.transferabilityScore}/5 · @{lesson.handle}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-300 group-hover:text-zinc-100">
+                    {lesson.title}
+                  </p>
+                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <UseLessonButton
+                    lessonId={lesson.id}
+                    initialUsed={lesson.usedByViewer}
+                    signedIn={true}
+                    signInHref={signInHref("/feed")}
+                    className="min-h-7 px-2.5 text-[10px]"
+                    refreshOnChange={true}
+                  />
+                  <Link
+                    href={`/u/${lesson.handle}/${lesson.slug}#lessons`}
+                    className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
+                  >
+                    Proof
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -1546,12 +1484,12 @@ function FeedNavRail({
   viewerId: string | null;
 }) {
   const notificationsHref = viewerId ? "/notifications" : signInHref("/notifications");
-  const publishHref = viewerId ? "/dashboard" : "/install";
+  const publishHref = viewerId ? "/create" : signInHref("/create");
   const navItems = [
     {
       href: "/feed",
       label: "Today",
-      detail: "Read / steal / ship",
+      detail: "Builds and threads",
       active: !isFollowingView,
     },
     {
@@ -1561,9 +1499,9 @@ function FeedNavRail({
       active: isFollowingView,
     },
     {
-      href: "/radar",
-      label: "Radar",
-      detail: "AI signals to test",
+      href: "/create",
+      label: "Create",
+      detail: "Post a build",
       active: false,
     },
     {
@@ -1573,40 +1511,36 @@ function FeedNavRail({
       active: false,
     },
     {
-      href: "/tools",
-      label: "Explore",
-      detail: "Tools, stacks, builders",
+      href: "/discover",
+      label: "Builders",
+      detail: "People and stacks",
       active: false,
     },
   ];
 
   return (
-    <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6">
+    <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6 pr-2">
       <div>
-        <Link href="/" className="inline-flex items-center gap-2 px-3 font-mono text-sm">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#a7f300] text-black shadow-[0_0_24px_rgba(167,243,0,0.18)]">
-            /
-          </span>
-          <span className="text-zinc-100">trail</span>
+        <Link href="/" className="inline-flex items-baseline gap-2 px-2 text-sm">
+          <span className="font-medium tracking-[-0.02em] text-zinc-100">trail</span>
+          <span className="font-mono text-[11px] text-zinc-600">build network</span>
         </Link>
 
-        <nav className="mt-8 space-y-1.5">
+        <nav className="mt-8 space-y-0.5">
           {navItems.map((item) => (
             <TrailLink
               key={item.label}
               href={item.href}
-              className={`group block rounded-[20px] px-4 py-3 transition-[background-color,color] ${
+              className={`group block border-l px-3 py-2.5 transition-[border-color,color] ${
                 item.active
-                  ? "bg-zinc-100 text-zinc-950"
-                  : "text-zinc-400 hover:bg-zinc-950/72 hover:text-zinc-100"
+                  ? "border-zinc-100 text-zinc-100"
+                  : "border-white/0 text-zinc-500 hover:border-white/20 hover:text-zinc-200"
               }`}
             >
-              <span className="block text-[17px] font-medium tracking-[-0.025em]">
-                {item.label}
-              </span>
+              <span className="block text-[14px] font-medium tracking-[-0.01em]">{item.label}</span>
               <span
-                className={`mt-1 block text-[12px] leading-4 ${
-                  item.active ? "text-zinc-600" : "text-zinc-600 group-hover:text-zinc-500"
+                className={`mt-0.5 block text-[12px] leading-4 ${
+                  item.active ? "text-zinc-500" : "text-zinc-700 group-hover:text-zinc-600"
                 }`}
               >
                 {item.detail}
@@ -1617,14 +1551,14 @@ function FeedNavRail({
 
         <TrailLink
           href={publishHref}
-          className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
+          className="mt-6 inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
         >
-          Publish receipt
+          Post
         </TrailLink>
       </div>
 
-      <div className="rounded-[22px] bg-zinc-950/70 p-4 text-sm leading-6 text-zinc-500 shadow-[var(--trail-shadow-border)]">
-        Daily loop: read one receipt, steal one move, publish one proof, answer one signal.
+      <div className="border-l border-white/10 px-3 text-[12px] leading-5 text-zinc-600">
+        Daily loop: read one build, steal one move, post one update, answer one thread.
       </div>
     </div>
   );
@@ -1633,23 +1567,19 @@ function FeedNavRail({
 function NetworkPulse({ stats }: { stats: FeedStats }) {
   const items = [
     ["Builders", formatCount(stats.builders)],
-    ["Receipts", formatCount(stats.receipts)],
+    ["Posts", formatCount(stats.receipts)],
     ["Shipped", formatCount(stats.shipped)],
     ["Reactions", formatCount(stats.reactions)],
     ["Comments", formatCount(stats.comments)],
   ];
 
   return (
-    <section className="rounded-[24px] bg-zinc-950/82 p-4 shadow-[var(--trail-shadow-border)]">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-        Network pulse
-      </div>
-      <dl className="mt-3 space-y-2">
+    <section className="border-b border-white/[0.08] pb-5">
+      <div className="text-sm font-medium tracking-[-0.01em] text-zinc-200">Network pulse</div>
+      <dl className="mt-3 space-y-1.5">
         {items.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-3">
-            <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
-              {label}
-            </dt>
+            <dt className="text-[12px] text-zinc-600">{label}</dt>
             <dd className="font-mono text-sm text-zinc-100 tabular-nums">{value}</dd>
           </div>
         ))}
@@ -1669,8 +1599,10 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   const chips = stackChips(r);
   const metrics = timelineMetrics(r);
   const currentPublicReceiptUrl = publicReceiptUrl(r);
+  const manualPost = isManualBuildPost(r);
+  const postNoun = manualPost ? "build post" : "receipt";
   const tweetHref = tweetIntent(
-    `${displayName} published a Trail receipt from ${formatToolName(r.tool)}.`,
+    `${displayName} published a Trail ${postNoun} from ${formatToolName(r.tool)}.`,
     currentPublicReceiptUrl,
   );
   const reason = feedReason(r);
@@ -1680,58 +1612,56 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   ].filter(Boolean);
 
   return (
-    <article className="group grid grid-cols-[44px_minmax(0,1fr)] gap-3 px-4 py-5 transition-[background-color] hover:bg-zinc-950/55 sm:grid-cols-[52px_minmax(0,1fr)] sm:px-5">
+    <article className="group grid grid-cols-[40px_minmax(0,1fr)] gap-3 border-b border-white/[0.08] px-4 py-5 transition-[background-color] hover:bg-white/[0.025] sm:grid-cols-[44px_minmax(0,1fr)] sm:px-5">
       <Link
         href={authorHref}
-        className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-full transition-transform group-hover:scale-[1.03] active:scale-[0.96] sm:h-12 sm:w-12"
+        className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-full transition-opacity hover:opacity-90 sm:h-11 sm:w-11"
         aria-label={`Open ${handleLabel}'s profile`}
       >
         <Avatar
           src={avatarSrc(r)}
           alt={displayName}
-          size={48}
+          size={44}
           fallback={r.handle ?? displayName}
-          className="border-zinc-700 bg-black shadow-[0_0_0_3px_rgba(255,255,255,0.03)]"
+          className="border-white/10 bg-black"
         />
       </Link>
 
       <div className="min-w-0">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
               <Link
                 href={authorHref}
-                className="max-w-[180px] truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-100 transition-colors hover:text-white sm:max-w-[240px]"
+                className="max-w-[180px] truncate font-medium tracking-[-0.01em] text-zinc-100 transition-colors hover:text-white sm:max-w-[240px]"
               >
                 {displayName}
               </Link>
               <Link
                 href={authorHref}
-                className="font-mono text-[12px] text-zinc-500 transition-colors hover:text-zinc-300"
+                className="font-mono text-[12px] text-zinc-600 transition-colors hover:text-zinc-300"
               >
                 {handleLabel}
               </Link>
-              <span className="text-zinc-700">·</span>
+              <span className="text-zinc-800">·</span>
               <RelativeTime
                 date={r.sharedAt ?? r.startedAt}
-                className="font-mono text-[12px] text-zinc-500 tabular-nums"
+                className="font-mono text-[12px] text-zinc-600 tabular-nums"
               />
+              {badge ? (
+                <>
+                  <span className="text-zinc-800">·</span>
+                  <span className="text-[12px] text-zinc-500">{badge}</span>
+                </>
+              ) : null}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-zinc-500">
-              <span>published a receipt</span>
-              <span className="text-zinc-700">·</span>
-              <span className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-500">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
+              <span>{manualPost ? "posted a build" : "published proof"}</span>
+              <span className="text-zinc-800">·</span>
+              <span className="inline-flex items-center gap-1 font-mono text-[11px] text-zinc-500">
                 <ToolIcon name={r.tool} size={12} className="text-[#a7f300]" />
                 {formatToolName(r.tool)}
               </span>
-              {badge ? (
-                <>
-                  <span className="text-zinc-700">·</span>
-                  <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#a7f300]">
-                    {badge}
-                  </span>
-                </>
-              ) : null}
             </div>
           </div>
 
@@ -1744,15 +1674,15 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           ) : !viewerId ? (
             <TrailLink
               href={signInHref(authorHref)}
-              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.08] hover:text-[#a7f300] active:scale-[0.96]"
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white/[0.04] px-3 text-[12px] text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.08] hover:text-zinc-100 active:scale-[0.97]"
             >
               Follow
             </TrailLink>
           ) : null}
         </div>
 
-        <Link href={currentReceiptHref} className="mt-3 block">
-          <h3 className="break-words text-pretty text-[17px] font-medium leading-[1.4] tracking-[-0.015em] text-zinc-50 transition-colors group-hover:text-white">
+        <Link href={currentReceiptHref} className="mt-2.5 block">
+          <h3 className="break-words text-pretty text-[17px] font-medium leading-[1.42] tracking-[-0.012em] text-zinc-50 transition-colors group-hover:text-white">
             {r.title ?? r.slug}
           </h3>
           {r.summary ? (
@@ -1760,71 +1690,59 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               {r.summary}
             </p>
           ) : null}
-
-          <div className="mt-4 rounded-[20px] bg-zinc-950/40 px-4 py-3 shadow-[var(--trail-shadow-border)] transition-[box-shadow] group-hover:shadow-[var(--trail-shadow-border-hover)]">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                Proof
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {chips.map((chip) => (
-                  <span
-                    key={chip}
-                    className="inline-flex min-h-7 items-center rounded-full bg-white/[0.04] px-2.5 font-mono text-[10px] text-zinc-300"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2">
-              {metrics.map((metric) => (
-                <div key={metric.label} className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                    {metric.label}
-                  </span>
-                  <span className="font-mono text-[12.5px] text-zinc-100 tabular-nums">
-                    {metric.value}
-                  </span>
-                </div>
-              ))}
-              {repoLabel ? (
-                <div className="flex min-w-0 items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                    Repo
-                  </span>
-                  <span className="truncate font-mono text-[12.5px] text-zinc-300">
-                    {repoLabel}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </div>
         </Link>
+
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
+          {metrics.map((metric) => (
+            <div key={metric.label} className="flex items-baseline gap-1.5">
+              <span className="text-[12px] text-zinc-600">{metric.label}</span>
+              <span className="font-mono text-[12.5px] text-zinc-200 tabular-nums">
+                {metric.value}
+              </span>
+            </div>
+          ))}
+          {repoLabel ? (
+            <div className="flex min-w-0 items-baseline gap-1.5">
+              <span className="text-[12px] text-zinc-600">Repo</span>
+              <span className="truncate font-mono text-[12.5px] text-zinc-300">{repoLabel}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {chips.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-zinc-600">
+            {chips.map((chip) => (
+              <span key={chip}>#{chip}</span>
+            ))}
+          </div>
+        ) : null}
 
         {r.lessonCount > 0 ? (
           <Link
             href={`${currentReceiptHref}#lessons`}
-            className="mt-3 block rounded-[22px] bg-[#a7f300]/[0.03] px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.09)] transition-[background-color,box-shadow] hover:bg-[#a7f300]/[0.05] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)]"
+            className="mt-3 block border-l border-[#a7f300]/30 pl-3 transition-colors hover:border-[#a7f300]/70"
           >
-            <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-500">
               <span>Steal this move</span>
-              <span className="text-lime-100/45">{pluralize(r.lessonCount, "lesson")}</span>
+              <span className="text-zinc-700">·</span>
+              <span>{pluralize(r.lessonCount, "lesson")}</span>
               {r.lessonPreviewTitle ? (
-                <span className="text-lime-100/45">{r.lessonPreviewTitle}</span>
+                <>
+                  <span className="text-zinc-700">·</span>
+                  <span>{r.lessonPreviewTitle}</span>
+                </>
               ) : null}
             </div>
             {r.lessonPreviewWhatToSteal ? (
-              <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-lime-50/75">
+              <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-400">
                 {r.lessonPreviewWhatToSteal}
               </p>
             ) : null}
           </Link>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] text-zinc-600">
-          <span className="uppercase tracking-[0.1em]">{reason}</span>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-zinc-600">
+          <span>{reason}</span>
           {socialProof.length > 0 ? (
             <>
               <span className="text-zinc-700">·</span>
@@ -1836,9 +1754,9 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         {r.commentPreviews.length > 0 ? (
           <Link
             href={`${currentReceiptHref}#conversation`}
-            className="mt-3 block rounded-2xl bg-zinc-950/45 px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] transition-[background-color,box-shadow] hover:bg-zinc-950 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.09)]"
+            className="mt-3 block border-l border-white/10 pl-3 transition-colors hover:border-white/25"
           >
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {r.commentPreviews
                 .slice()
                 .reverse()
@@ -1868,8 +1786,8 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
                   </div>
                 ))}
             </div>
-            <div className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
-              Join the thread →
+            <div className="mt-2 text-[12px] text-zinc-500">
+              Join the thread <span aria-hidden>→</span>
             </div>
           </Link>
         ) : null}
@@ -1891,7 +1809,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <Link
               href={`${currentReceiptHref}#conversation`}
-              className="inline-flex min-h-9 items-center rounded-full border border-transparent px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-zinc-200 active:scale-[0.96]"
+              className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
             >
               Reply {r.commentCount > 0 ? formatCount(r.commentCount) : ""}
             </Link>
@@ -1900,34 +1818,36 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               initialSaved={r.viewerHasSaved}
               signedIn={viewerId !== null}
               signInHref={signInHref(currentReceiptHref)}
-              className="border-transparent"
+              className="border-transparent bg-transparent px-2.5 text-[13px] normal-case tracking-normal text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-200"
             />
             <CopyButton
               value={currentPublicReceiptUrl}
               label="Copy"
               copiedLabel="Copied"
-              className="min-h-9 rounded-full border-transparent bg-transparent px-2.5 text-[10px] text-zinc-600 hover:bg-zinc-900 hover:text-zinc-200"
+              className="min-h-8 rounded-full border-transparent bg-transparent px-2.5 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-200"
             />
-            <Link
-              href={forkHref}
-              className="inline-flex min-h-9 items-center rounded-full px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-zinc-200 active:scale-[0.96]"
-            >
-              Fork
-            </Link>
+            {!manualPost ? (
+              <Link
+                href={forkHref}
+                className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
+              >
+                Fork
+              </Link>
+            ) : null}
             <a
               href={tweetHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-9 items-center rounded-full px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
             >
               Share
             </a>
             <span className="mx-0.5 hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden />
             <Link
               href={currentReceiptHref}
-              className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
             >
-              Open
+              Open {manualPost ? "post" : "receipt"}
             </Link>
           </div>
         </div>
@@ -1952,14 +1872,14 @@ function EmptyTimeline({
       {isFollowingView ? (
         <div className="mx-auto max-w-xl">
           <p className="text-pretty text-sm leading-relaxed text-zinc-400">
-            Your Following timeline is empty. Follow a few builders and this becomes your live proof
+            Your Following timeline is empty. Follow a few builders and this becomes your live build
             stream instead of a blank tab.
           </p>
           {builders.length > 0 ? (
             <div className="mt-6 grid gap-3 text-left">
               {builders.map((builder) => (
                 <div
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-950/70 p-3 shadow-[var(--trail-shadow-border)]"
+                  className="flex items-center justify-between gap-3 border-l border-white/10 pl-3"
                   key={builder.id}
                 >
                   <Link className="flex min-w-0 items-center gap-3" href={`/u/${builder.handle}`}>
@@ -1974,7 +1894,7 @@ function EmptyTimeline({
                         {builder.name}
                       </span>
                       <span className="block truncate font-mono text-[11px] text-zinc-600">
-                        {formatCount(builder.receiptCount)} receipts · @{builder.handle}
+                        {formatCount(builder.receiptCount)} posts · @{builder.handle}
                       </span>
                     </span>
                   </Link>
@@ -1991,8 +1911,8 @@ function EmptyTimeline({
           ) : (
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">
               Browse{" "}
-              <Link href="/tools" className="text-[#a7f300] hover:underline">
-                AI tools
+              <Link href="/discover" className="text-[#a7f300] hover:underline">
+                Builders
               </Link>{" "}
               to find people shipping in your stack.
             </p>
@@ -2000,8 +1920,7 @@ function EmptyTimeline({
         </div>
       ) : (
         <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
-          No public sessions yet. Install Trail and share one with{" "}
-          <span className="font-mono text-zinc-200">trail share latest</span>.
+          No public build posts yet. Be first to post what you built this week.
         </p>
       )}
     </div>
@@ -2061,16 +1980,16 @@ function PersonalizationNudge({
       href: "/learn",
     },
     {
-      label: "Proof",
+      label: "Build",
       value:
         personalization.publicReceiptCount > 0
           ? `${formatCount(personalization.publicReceiptCount)} live`
           : draftCount > 0
             ? `${formatCount(draftCount)} draft`
             : "publish",
-      body: "ship receipt",
+      body: "post a build",
       done: personalization.publicReceiptCount > 0,
-      href: draftCount > 0 ? "#feed-composer" : "/install",
+      href: draftCount > 0 ? "#feed-composer" : "/create",
     },
     {
       label: "Notifications",
@@ -2085,103 +2004,88 @@ function PersonalizationNudge({
   ];
 
   return (
-    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
-      <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b] shadow-[var(--trail-shadow-border)]">
-        <div className="border-b border-white/10 px-4 py-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-            Personalize Trail
-          </div>
-          <h2 className="mt-2 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
-            Make the daily feed feel like it was built for you.
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">
-            Trail learns from who you follow, what stacks you ship with, lessons you reuse, and
-            notifications you answer. Your notifications live in the top nav and at{" "}
-            <Link href="/notifications" className="text-[#a7f300] hover:underline">
-              /notifications
-            </Link>
-            .
-          </p>
-        </div>
-        <div className="grid gap-px bg-zinc-900 md:grid-cols-5">
-          {setupItems.map((item) => (
-            <Link
-              href={item.href}
-              key={item.label}
-              className="group bg-black/65 p-4 transition-colors hover:bg-zinc-950"
-            >
-              <div
-                className={`inline-flex min-h-6 items-center rounded-full px-2 font-mono text-[10px] uppercase tracking-[0.12em] ${
-                  item.done ? "bg-[#a7f300] text-black" : "bg-zinc-900 text-zinc-500"
-                }`}
-              >
-                {item.done ? "done" : "next"}
-              </div>
-              <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                {item.label}
-              </div>
-              <div className="mt-1 truncate text-[15px] font-medium tracking-[-0.03em] text-zinc-100 group-hover:text-[#a7f300]">
-                {item.value}
-              </div>
-              <div className="mt-1 text-[12px] leading-5 text-zinc-500">{item.body}</div>
-            </Link>
-          ))}
-        </div>
+    <section className="border-b border-white/[0.08] px-4 py-3 sm:px-5">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm marker:hidden">
+          <span className="min-w-0">
+            <span className="block font-medium tracking-[-0.01em] text-zinc-200">
+              Tune your feed
+            </span>
+            <span className="mt-0.5 block text-[12px] text-zinc-600">
+              Follow builders, choose stacks, reuse lessons, post builds.
+            </span>
+          </span>
+          <span className="shrink-0 text-[12px] text-zinc-600 group-open:hidden">Show</span>
+          <span className="hidden shrink-0 text-[12px] text-zinc-600 group-open:inline">Hide</span>
+        </summary>
 
-        {recommendations.length > 0 ? (
-          <div className="grid divide-y divide-zinc-900 md:grid-cols-3 md:divide-x md:divide-y-0">
-            {recommendations.map((builder) => (
-              <div className="p-4" key={builder.id}>
-                <Link className="flex items-center gap-3" href={`/u/${builder.handle}`}>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <div className="grid gap-px overflow-hidden rounded-2xl bg-white/[0.08] sm:grid-cols-5">
+            {setupItems.map((item) => (
+              <Link
+                href={item.href}
+                key={item.label}
+                className="group/item bg-[#0b0b0a] p-3 transition-colors hover:bg-white/[0.035]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[12px] text-zinc-600">{item.label}</div>
+                  <div
+                    className={
+                      item.done ? "text-[12px] text-[#a7f300]" : "text-[12px] text-zinc-700"
+                    }
+                  >
+                    {item.done ? "done" : "next"}
+                  </div>
+                </div>
+                <div className="mt-2 truncate text-sm text-zinc-200 group-hover/item:text-zinc-50">
+                  {item.value}
+                </div>
+                <div className="mt-1 text-[12px] leading-5 text-zinc-600">{item.body}</div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {recommendations.slice(0, 1).map((builder) => (
+              <div className="flex items-center justify-between gap-3" key={builder.id}>
+                <Link className="flex min-w-0 items-center gap-2.5" href={`/u/${builder.handle}`}>
                   <Avatar
                     src={builder.image ?? githubAvatar(builder.handle)}
                     alt={builder.name}
                     fallback={builder.handle}
-                    className="h-10 w-10 rounded-full"
+                    className="h-8 w-8 rounded-full"
                   />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-zinc-100">
-                      {builder.name}
-                    </span>
-                    <span className="block truncate font-mono text-[11px] text-zinc-600">
-                      @{builder.handle}
+                    <span className="block truncate text-sm text-zinc-200">{builder.name}</span>
+                    <span className="block truncate text-[12px] text-zinc-600">
+                      {formatCount(builder.shippedCount)} shipped
                     </span>
                   </span>
                 </Link>
-                <div className="mt-3 text-[12px] leading-5 text-zinc-500">
-                  {formatCount(builder.shippedCount)} shipped receipts ·{" "}
-                  {formatCount(builder.followerCount)} followers
-                </div>
                 <FollowButton
                   targetUserId={builder.id}
                   initialFollowing={builder.isFollowing}
-                  className="mt-3 h-8 px-3 text-[10px]"
+                  className="h-8 px-3 text-[10px]"
                 />
               </div>
             ))}
-          </div>
-        ) : null}
 
-        {stackSuggestions.length > 0 ? (
-          <div className="border-t border-white/10 px-4 py-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-              Browse stacks to follow the work you care about
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {stackSuggestions.map((stack) => (
-                <Link
-                  href={stackHref(stack)}
-                  key={`${stack.kind}:${stack.tag}`}
-                  className="inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
-                >
-                  {stack.label}
-                  <span className="ml-2 text-zinc-600">{formatCount(stack.receiptCount)}</span>
-                </Link>
-              ))}
-            </div>
+            {stackSuggestions.length > 0 ? (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-zinc-600">
+                {stackSuggestions.slice(0, 4).map((stack) => (
+                  <Link
+                    href={stackHref(stack)}
+                    key={`${stack.kind}:${stack.tag}`}
+                    className="hover:text-zinc-200"
+                  >
+                    #{stack.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
+      </details>
     </section>
   );
 }
@@ -2195,105 +2099,84 @@ function FeedDiscoveryPanel({
   radarSignals: FeedRadarSignal[];
   viewerId: string | null;
 }) {
-  return (
-    <div className="space-y-4">
-      <Link
-        href="/tools"
-        className="group block rounded-full bg-zinc-950 px-4 py-3 text-sm text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-zinc-200 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.18)]"
-      >
-        <span className="font-mono text-[11px] uppercase tracking-[0.14em]">
-          Search builders, tools, receipts
-        </span>
-        <span className="float-right text-[#a7f300] transition-transform group-hover:translate-x-0.5">
-          →
-        </span>
-      </Link>
+  const topBuilders = discovery.builders.slice(0, 4);
+  const topStacks = discovery.stacks.slice(0, 6);
 
+  return (
+    <div className="space-y-6 text-sm">
       <NetworkPulse stats={discovery.stats} />
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-              AI Radar
-            </div>
-            <h3 className="mt-1 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
-              Signals to test
-            </h3>
-          </div>
+      <section className="border-b border-white/[0.08] pb-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Signals</h3>
           <Link
             href="/radar"
-            className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition-colors hover:text-[#c8ff5e]"
+            className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
           >
-            Open
+            Radar
           </Link>
         </div>
 
         {radarSignals.length === 0 ? (
-          <div className="px-4 py-5">
-            <p className="text-sm leading-6 text-zinc-500">
-              Radar fills from curated X sources via the local xurl fetcher. No pasted URLs needed.
-            </p>
-            <Link
-              href="/radar"
-              className="mt-3 inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
-            >
-              View radar
-            </Link>
-          </div>
+          <p className="mt-3 text-[13px] leading-5 text-zinc-600">
+            Trail Picks fill from curated AI sources and point back to builder discussion.
+          </p>
         ) : (
-          <div className="divide-y divide-zinc-900">
-            {radarSignals.map((signal) => (
+          <div className="mt-3 space-y-3">
+            {radarSignals.slice(0, 4).map((signal) => (
               <Link
                 key={signal.id}
                 href={`/radar?category=${signal.category}`}
-                className="group block px-4 py-4 transition-colors hover:bg-black/45"
+                className="group block"
               >
-                <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                  <span className="text-[#a7f300]">{radarCategoryLabel(signal.category)}</span>
+                <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
+                  <span>{radarCategoryLabel(signal.category)}</span>
                   <span>@{signal.sourceHandle}</span>
                   <span>
                     <RelativeTime date={signal.publishedAt} />
                   </span>
                 </div>
-                <p className="mt-2 line-clamp-3 text-sm font-medium leading-5 text-zinc-200 group-hover:text-white">
+                <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-300 group-hover:text-zinc-50">
                   {signal.title}
                 </p>
-                <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-                  Needs Trail receipts
-                </div>
               </Link>
             ))}
           </div>
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
-        <div className="border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Who to follow</h3>
+      <section className="border-b border-white/[0.08] pb-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Builders</h3>
+          <Link
+            href="/discover"
+            className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
+          >
+            Discover
+          </Link>
         </div>
 
-        {discovery.builders.length === 0 ? (
-          <p className="px-4 py-5 text-sm leading-6 text-zinc-500">
-            Fresh builder recommendations appear here as more public receipts are published.
+        {topBuilders.length === 0 ? (
+          <p className="mt-3 text-[13px] leading-5 text-zinc-600">
+            Builder recommendations appear as more public build posts are published.
           </p>
         ) : (
-          <div className="divide-y divide-zinc-900">
-            {discovery.builders.map((builder) => (
-              <div key={builder.id} className="px-4 py-4 transition-colors hover:bg-black/45">
+          <div className="mt-3 space-y-3">
+            {topBuilders.map((builder) => (
+              <div key={builder.id}>
                 <div className="flex items-start gap-3">
                   <Link href={`/u/${builder.handle}`} className="shrink-0">
                     <Avatar
                       src={builder.image ?? githubAvatar(builder.handle)}
                       alt={builder.name}
                       fallback={builder.handle}
-                      className="h-10 w-10 rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                      className="h-8 w-8 rounded-full border-white/10 bg-black"
                     />
                   </Link>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <Link href={`/u/${builder.handle}`} className="min-w-0">
-                        <div className="truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-100">
+                        <div className="truncate text-[13px] font-medium text-zinc-200">
                           {builder.name}
                         </div>
                         <div className="truncate font-mono text-[11px] text-zinc-600">
@@ -2309,18 +2192,18 @@ function FeedDiscoveryPanel({
                       ) : (
                         <TrailLink
                           href={signInHref(`/u/${builder.handle}`)}
-                          className="inline-flex h-8 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+                          className="inline-flex h-7 items-center rounded-full bg-white/[0.05] px-2.5 text-[12px] text-zinc-300 transition-[background-color,transform] hover:bg-white/[0.08] hover:text-zinc-100 active:scale-[0.97]"
                         >
                           Follow
                         </TrailLink>
                       )}
                     </div>
-                    <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-500">
+                    <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-zinc-600">
                       {builder.bio ||
-                        `${formatCount(builder.shippedCount)} shipped receipts in public.`}
+                        `${formatCount(builder.shippedCount)} shipped posts in public.`}
                     </p>
-                    <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.11em] text-zinc-600">
-                      {formatCount(builder.receiptCount)} receipts ·{" "}
+                    <div className="mt-1 text-[12px] text-zinc-700">
+                      {formatCount(builder.receiptCount)} posts ·{" "}
                       {builder.latestAt ? <RelativeTime date={builder.latestAt} /> : "recent"}
                     </div>
                   </div>
@@ -2331,88 +2214,52 @@ function FeedDiscoveryPanel({
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Trending now</h3>
+      <section className="border-b border-white/[0.08] pb-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Stacks</h3>
           <Link
             href="/tools"
-            className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] transition-colors hover:text-[#c8ff5e]"
+            className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
           >
             Explore
           </Link>
         </div>
 
-        {discovery.stacks.length === 0 ? (
-          <p className="px-4 py-5 text-sm leading-6 text-zinc-500">
-            Stack trends will fill in as published receipts are tagged.
+        {topStacks.length === 0 ? (
+          <p className="mt-3 text-[13px] leading-5 text-zinc-600">
+            Stack trends will fill in as published build posts are tagged.
           </p>
         ) : (
-          <div className="divide-y divide-zinc-900">
-            {discovery.stacks.map((stack) => (
+          <div className="mt-3 space-y-2">
+            {topStacks.map((stack) => (
               <Link
                 key={`${stack.kind}:${stack.tag}`}
                 href={stackHref(stack)}
-                className="group block px-4 py-4 transition-colors hover:bg-black/45"
+                className="group flex items-baseline justify-between gap-4"
               >
-                <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
-                  {stack.kind} · {formatCount(stack.builderCount)} builders
-                </div>
-                <div className="mt-1 flex items-center justify-between gap-4">
-                  <div className="truncate text-[15px] font-medium tracking-[-0.02em] text-zinc-200">
-                    {stack.label}
-                  </div>
-                  <div className="font-mono text-[11px] text-zinc-600 tabular-nums group-hover:text-[#a7f300]">
-                    {formatCount(stack.receiptCount)}
-                  </div>
-                </div>
+                <span className="truncate text-[13px] text-zinc-400 group-hover:text-zinc-100">
+                  {stack.label}
+                </span>
+                <span className="font-mono text-[11px] text-zinc-700 tabular-nums">
+                  {formatCount(stack.receiptCount)}
+                </span>
               </Link>
             ))}
           </div>
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
-        <div className="border-b border-white/10 px-4 py-4">
-          <h3 className="text-[20px] font-medium tracking-[-0.04em] text-zinc-50">Explore</h3>
-        </div>
-        <div className="divide-y divide-zinc-900">
-          {discoveryLinks.map((link) => (
+      <section className="pb-2">
+        <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Explore</h3>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          {discoveryLinks.slice(0, 4).map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="group block px-4 py-4 transition-colors hover:bg-black/45"
+              className="text-[13px] text-zinc-600 hover:text-zinc-200"
             >
-              <div className="flex items-center justify-between gap-4">
-                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200">
-                  {link.label}
-                </span>
-                <span className="text-[#a7f300] transition-transform group-hover:translate-x-0.5">
-                  →
-                </span>
-              </div>
-              <p className="mt-2 text-pretty text-[12px] leading-[1.55] text-zinc-500">
-                {link.detail}
-              </p>
+              {link.label}
             </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[var(--trail-shadow-border)]">
-        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-          How Trail works
-        </div>
-        <div className="mt-4 space-y-3">
-          {onboardingSteps.map((step) => (
-            <div key={step.n} className="grid grid-cols-[28px_1fr] gap-3">
-              <span className="font-mono text-[11px] text-zinc-600 tabular-nums">{step.n}</span>
-              <div>
-                <div className="text-sm font-medium tracking-tight text-zinc-100">{step.title}</div>
-                <p className="mt-1 text-pretty text-[12px] leading-relaxed text-zinc-500">
-                  {step.body}
-                </p>
-              </div>
-            </div>
           ))}
         </div>
       </section>
@@ -2459,16 +2306,16 @@ export default async function FeedPage({
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
   const subtitle = isFollowingView
     ? "Read the builders you follow, steal one move, and reply while the thread is warm."
-    : "Read what shipped, steal reusable moves, follow useful builders, then publish your own proof.";
+    : "Read what shipped, steal reusable moves, follow useful builders, then post your own build.";
   const feedTitle = isFollowingView ? "Following" : "Today";
-  const feedCountLabel = `${rows.length} ${rows.length === 1 ? "receipt" : "receipts"}`;
+  const feedCountLabel = `${rows.length} ${rows.length === 1 ? "post" : "posts"}`;
 
   return (
-    <div className="min-h-screen bg-black text-zinc-50">
+    <div className="min-h-screen bg-[#080808] text-zinc-50">
       <SiteNav currentPath="/feed" />
 
-      <main className="min-h-[calc(100vh-3.5rem)] w-full bg-[radial-gradient(circle_at_10%_0%,rgba(167,243,0,0.045),transparent_24%),linear-gradient(180deg,rgba(24,24,27,0.24),rgba(0,0,0,0)_220px)]">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 lg:grid-cols-[208px_minmax(0,1fr)] lg:gap-6 lg:px-4 xl:grid-cols-[208px_minmax(0,680px)_320px] xl:gap-8">
+      <main className="min-h-[calc(100vh-3.5rem)] w-full">
+        <div className="mx-auto grid max-w-[1380px] grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-8 lg:px-4 xl:grid-cols-[190px_minmax(0,720px)_300px] xl:gap-10">
           <aside className="hidden lg:block">
             <FeedNavRail
               followingHref={followingHref}
@@ -2477,30 +2324,48 @@ export default async function FeedPage({
             />
           </aside>
 
-          <section className="min-w-0 border-x border-white/10 bg-black/72 lg:min-h-[calc(100vh-3.5rem)]">
-            <div className="border-b border-white/10 bg-black/86 shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
-              <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
-                <div className="min-w-0">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-                    Trail social
+          <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-white/[0.08] bg-[#0b0b0a]/95 backdrop-blur-xl md:sticky md:top-14 md:z-30">
+              <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h1 className="text-[24px] font-medium tracking-[-0.035em] text-zinc-50">
+                      {feedTitle === "Today" ? "Build feed" : feedTitle}
+                    </h1>
+                    <p className="mt-1 max-w-xl text-pretty text-[13px] leading-5 text-zinc-500">
+                      {subtitle}
+                    </p>
                   </div>
-                  <h1 className="mt-1 text-[24px] font-medium tracking-[-0.04em] text-zinc-50">
-                    {feedTitle}
-                  </h1>
-                  <p className="mt-1 max-w-xl text-pretty text-[13px] leading-5 text-zinc-500">
-                    {subtitle}
-                  </p>
+                  <span className="shrink-0 font-mono text-[12px] text-zinc-600 tabular-nums">
+                    {feedCountLabel}
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-zinc-950/75 px-3 py-2 font-mono text-[11px] text-zinc-500 tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
-                  {feedCountLabel}
-                </span>
+                <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
               </div>
-              <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
             </div>
 
-            <div id="feed-composer" className="border-b border-white/10 px-4 py-4 sm:px-5">
-              <FeedComposer viewer={viewer} drafts={composerDrafts} />
-            </div>
+            <details
+              id="feed-composer"
+              className="group border-b border-white/[0.08] px-4 py-3 sm:px-5"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 marker:hidden">
+                <div className="min-w-0">
+                  <span className="block text-sm font-medium tracking-[-0.01em] text-zinc-200">
+                    Post or publish
+                  </span>
+                  <span className="mt-0.5 block text-[12px] text-zinc-600">
+                    {composerDrafts.length > 0
+                      ? `${formatCount(composerDrafts.length)} proof draft${composerDrafts.length === 1 ? "" : "s"} ready`
+                      : "Write manually on Create, or import an agent run later"}
+                  </span>
+                </div>
+                <span className="text-[12px] text-zinc-600 group-open:hidden">Open</span>
+                <span className="hidden text-[12px] text-zinc-600 group-open:inline">Close</span>
+              </summary>
+              <div className="mt-4">
+                <FeedComposer viewer={viewer} drafts={composerDrafts} />
+              </div>
+            </details>
 
             {viewerId ? (
               <Suspense fallback={<DailyBuilderBriefSkeleton />}>
@@ -2519,35 +2384,39 @@ export default async function FeedPage({
             ) : null}
 
             {!viewerId && !isFollowingView ? (
-              <div className="border-b border-white/10 px-4 py-4 sm:px-5">
-                <div className="rounded-[24px] bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_44%),#09090b] p-4 shadow-[var(--trail-shadow-border)]">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
-                    Make it personal
-                  </div>
-                  <h2 className="mt-2 text-[20px] font-medium tracking-[-0.04em] text-zinc-50">
-                    Follow builders, react to receipts, and get notifications.
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                    The public timeline is open. GitHub sign-in unlocks the social graph and turns
-                    Trail into your builder network.
-                  </p>
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <TrailLink
-                      href={FOLLOWING_SIGN_IN_HREF}
-                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
-                    >
-                      Sign in to follow
-                    </TrailLink>
-                    <Link
-                      href="/install"
-                      className="inline-flex min-h-10 items-center justify-center rounded-full bg-black px-4 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.16)] active:scale-[0.96]"
-                    >
-                      Install Trail
-                    </Link>
-                  </div>
+              <div className="border-b border-white/[0.08] px-4 py-4 sm:px-5">
+                <h2 className="text-[17px] font-medium tracking-[-0.02em] text-zinc-100">
+                  Follow builders and post your own build.
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
+                  The public timeline is open. GitHub sign-in unlocks follows, reactions,
+                  notifications, and your own builder graph.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <TrailLink
+                    href={FOLLOWING_SIGN_IN_HREF}
+                    className="inline-flex min-h-9 items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+                  >
+                    Sign in to follow
+                  </TrailLink>
+                  <Link
+                    href="/create"
+                    className="inline-flex min-h-9 items-center justify-center rounded-full bg-white/[0.04] px-4 text-sm text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.08] hover:text-zinc-100 active:scale-[0.97]"
+                  >
+                    Post a build
+                  </Link>
                 </div>
               </div>
             ) : null}
+
+            <div className="border-b border-white/[0.08] px-4 py-2.5 sm:px-5">
+              <div className="flex items-center justify-between gap-4 text-[12px] text-zinc-600">
+                <span>Latest public build posts</span>
+                <span className="hidden sm:inline">
+                  Builder · Outcome · Proof · Lesson · Conversation
+                </span>
+              </div>
+            </div>
 
             {rows.length === 0 ? (
               <EmptyTimeline
@@ -2556,7 +2425,7 @@ export default async function FeedPage({
                 viewerId={viewerId}
               />
             ) : (
-              <div className="divide-y divide-zinc-900/90">
+              <div>
                 {rows.map((row) => (
                   <FeedPostCard key={row.id} row={row} viewerId={viewerId} />
                 ))}

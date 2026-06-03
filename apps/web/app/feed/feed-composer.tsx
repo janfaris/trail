@@ -45,7 +45,7 @@ const OUTCOME_OPTIONS: Array<{ value: NonNullable<FeedComposerOutcome>; label: s
 ];
 
 function defaultTitle(draft: FeedComposerDraft): string {
-  return draft.title ?? draft.repo ?? draft.linkedRepo ?? `Receipt from ${draft.tool}`;
+  return draft.title ?? draft.repo ?? draft.linkedRepo ?? `Build post from ${draft.tool}`;
 }
 
 function defaultSummary(draft: FeedComposerDraft): string {
@@ -104,7 +104,8 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         .catch((error: unknown) => {
           setResult({
             ok: false,
-            error: error instanceof Error ? error.message : "Trail could not publish this receipt.",
+            error:
+              error instanceof Error ? error.message : "Trail could not publish this build post.",
           });
         });
     });
@@ -113,7 +114,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
   async function copyShareUrl(shareUrl: string) {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopyStatus("Copied receipt link");
+      setCopyStatus("Copied post link");
     } catch (error) {
       setCopyStatus(error instanceof Error ? `Copy failed: ${error.message}` : "Copy failed");
     }
@@ -121,23 +122,21 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!viewer) {
     return (
-      <section className="overflow-hidden rounded-[2rem] border border-[#1f2a23] bg-[#07110c]/92 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-        <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.16),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)] px-5 py-4">
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-[#a7f300]">
-            Broadcast your proof
-          </p>
-          <h2 className="mt-2 text-xl font-black text-white">
-            Import a coding-agent session and post it here.
+      <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0a]">
+        <div className="border-b border-white/[0.08] px-4 py-4">
+          <p className="text-[12px] text-zinc-600">Join the build feed</p>
+          <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
+            Sign in to post builds and follow other builders.
           </h2>
         </div>
-        <div className="space-y-4 p-5 text-sm text-zinc-300">
+        <div className="space-y-4 p-4 text-sm text-zinc-400">
           <p>
-            Trail turns your agent logs into receipts with outcomes, files, tools, and proof
-            metrics. Sign in to publish directly into the feed.
+            Write manually, paste GitHub/X/demo links, or publish proof-backed agent runs when you
+            have them.
           </p>
           <Link
-            className="inline-flex rounded-full bg-[#a7f300] px-5 py-2 text-sm font-black text-zinc-950 shadow-[0_0_24px_rgba(167,243,0,0.28)] transition hover:bg-[#c7ff4a]"
-            href="/api/auth/sign-in/github?callbackURL=%2Ffeed"
+            className="inline-flex rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
+            href="/api/auth/sign-in/github?callbackURL=%2Fcreate"
           >
             Sign in with GitHub
           </Link>
@@ -148,19 +147,17 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!viewer.handle) {
     return (
-      <section className="rounded-[2rem] border border-amber-400/25 bg-amber-400/10 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.25)]">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-amber-200">
-          Finish your identity
-        </p>
-        <h2 className="mt-2 text-xl font-black text-white">
+      <section className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
+        <p className="text-[12px] text-amber-200/75">Finish your identity</p>
+        <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
           Claim a Trail handle before publishing.
         </h2>
         <p className="mt-2 text-sm text-amber-50/75">
-          Public receipts need a stable builder profile so people can follow, reply, and share your
-          work.
+          Public build posts need a stable builder profile so people can follow, reply, and share
+          your work.
         </p>
         <Link
-          className="mt-4 inline-flex rounded-full border border-amber-200/30 px-5 py-2 text-sm font-black text-amber-50 transition hover:bg-amber-200/10"
+          className="mt-4 inline-flex rounded-full border border-amber-200/25 px-4 py-2 text-sm font-medium text-amber-50 transition hover:bg-amber-200/10"
           href="/settings"
         >
           Add public handle
@@ -171,22 +168,22 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!selectedDraft && result?.ok) {
     return (
-      <section className="rounded-[2rem] border border-[#a7f300]/30 bg-[#a7f300]/10 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-[#a7f300]">
-          Published to the feed
-        </p>
-        <h2 className="mt-2 text-xl font-black text-white">{result.title}</h2>
-        <p className="mt-2 text-sm text-[#d9ff91]/75">Now share the proof while it is fresh.</p>
+      <section className="rounded-2xl border border-[#a7f300]/20 bg-[#a7f300]/[0.035] p-4">
+        <p className="text-[12px] text-[#a7f300]">Published to the feed</p>
+        <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
+          {result.title}
+        </h2>
+        <p className="mt-2 text-sm text-[#d9ff91]/75">Now share the post while it is fresh.</p>
         {copyStatus ? <p className="mt-2 text-xs text-[#a7f300]">{copyStatus}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            className="rounded-full bg-[#a7f300] px-5 py-2 text-sm font-black text-zinc-950 transition hover:bg-[#c7ff4a]"
+            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
             href={result.href}
           >
-            Open receipt
+            Open post
           </Link>
           <button
-            className="rounded-full border border-[#a7f300]/30 px-5 py-2 text-sm font-black text-[#d9ff91] transition hover:bg-[#a7f300]/10"
+            className="rounded-full border border-[#a7f300]/25 px-4 py-2 text-sm font-medium text-[#d9ff91] transition hover:bg-[#a7f300]/10"
             onClick={() => void copyShareUrl(result.shareUrl)}
             type="button"
           >
@@ -199,29 +196,27 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!selectedDraft) {
     return (
-      <section className="rounded-[2rem] border border-[#223126] bg-[#07110c] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-[#a7f300]">
-          Nothing private is ready
-        </p>
-        <h2 className="mt-2 text-xl font-black text-white">
-          Import your latest agent run, then publish from here.
+      <section className="rounded-2xl border border-white/[0.08] bg-[#0b0b0a] p-4">
+        <p className="text-[12px] text-zinc-600">No proof drafts ready</p>
+        <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
+          Post manually now, or import an agent run later.
         </h2>
         <p className="mt-2 text-sm text-zinc-400">
-          Reviewed private sessions show up as feed drafts. Pending or redacted logs stay out of the
-          composer until you clear their review state.
+          Manual build posts do not need logs. Reviewed private sessions show up here as optional
+          proof-backed drafts.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            className="rounded-full bg-[#a7f300] px-5 py-2 text-sm font-black text-zinc-950 transition hover:bg-[#c7ff4a]"
-            href="/dashboard"
+            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
+            href="/create"
           >
-            Import a session
+            Write a build post
           </Link>
           <Link
-            className="rounded-full border border-white/10 px-5 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white/5"
-            href={`/u/${viewer.handle}`}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-white/5"
+            href="/dashboard"
           >
-            View profile
+            Open Studio
           </Link>
         </div>
       </section>
@@ -229,40 +224,38 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-[#223126] bg-[#06100b]/95 shadow-[0_26px_90px_rgba(0,0,0,0.32)]">
-      <div className="border-b border-white/10 bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.2),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)] p-5">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0a]">
+      <div className="border-b border-white/[0.08] p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.28em] text-[#a7f300]">
-              Compose receipt
-            </p>
-            <h2 className="mt-2 text-xl font-black text-white">
-              Post proof from your latest agent run.
+            <p className="text-[12px] text-zinc-600">Proof-backed draft</p>
+            <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
+              Publish proof from your latest agent run.
             </h2>
           </div>
           <Link
-            className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-zinc-300 transition hover:bg-white/5 sm:inline-flex"
+            className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-white/5 sm:inline-flex"
             href="/dashboard"
           >
-            Import
+            Studio
           </Link>
         </div>
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {drafts.map((draft) => (
             <button
-              className={`min-w-[13rem] rounded-2xl border p-3 text-left transition ${
+              className={`min-w-[13rem] rounded-xl border p-3 text-left transition ${
                 draft.id === selectedDraft.id
-                  ? "border-[#a7f300]/70 bg-[#a7f300]/12"
+                  ? "border-[#a7f300]/45 bg-[#a7f300]/[0.045]"
                   : "border-white/10 bg-black/20 hover:border-white/25"
               }`}
               key={draft.id}
               onClick={() => selectDraft(draft)}
               type="button"
             >
-              <span className="block text-[0.65rem] font-black uppercase tracking-[0.2em] text-zinc-500">
+              <span className="block text-[12px] text-zinc-600">
                 {formatDraftDate(draft.startedAt)}
               </span>
-              <span className="mt-1 line-clamp-1 block text-sm font-black text-white">
+              <span className="mt-1 line-clamp-1 block text-sm font-medium text-zinc-100">
                 {draft.title ?? draft.slug}
               </span>
               <span className="mt-1 line-clamp-1 block text-xs text-zinc-400">
@@ -274,18 +267,16 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
       </div>
 
       <form
-        className="space-y-4 p-5"
+        className="space-y-4 p-4"
         onSubmit={(event) => {
           event.preventDefault();
           publish();
         }}
       >
         <label className="block">
-          <span className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-zinc-500">
-            Outcome headline
-          </span>
+          <span className="text-[12px] text-zinc-600">Outcome headline</span>
           <input
-            className="mt-2 w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-base font-black text-white outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/70"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-base font-medium text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/55"
             maxLength={120}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="What did you ship, debug, or learn?"
@@ -295,11 +286,9 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         </label>
 
         <label className="block">
-          <span className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-zinc-500">
-            Social caption
-          </span>
+          <span className="text-[12px] text-zinc-600">Social caption</span>
           <textarea
-            className="mt-2 min-h-28 w-full resize-y rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/70"
+            className="mt-2 min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/55"
             maxLength={700}
             onChange={(event) => setSummary(event.target.value)}
             placeholder="Add the context that makes this useful to other builders."
@@ -308,15 +297,13 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         </label>
 
         <div>
-          <span className="text-[0.68rem] font-black uppercase tracking-[0.24em] text-zinc-500">
-            Receipt status
-          </span>
+          <span className="text-[12px] text-zinc-600">Outcome</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {OUTCOME_OPTIONS.map((option) => (
               <button
-                className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   outcome === option.value
-                    ? "border-[#a7f300]/70 bg-[#a7f300] text-zinc-950"
+                    ? "border-zinc-100 bg-zinc-100 text-zinc-950"
                     : "border-white/10 text-zinc-300 hover:bg-white/5"
                 }`}
                 key={option.value}
@@ -350,7 +337,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
         {result ? (
           <div
-            className={`rounded-2xl border p-4 text-sm ${
+            className={`rounded-xl border p-4 text-sm ${
               result.ok
                 ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#d9ff91]"
                 : "border-red-400/25 bg-red-500/10 text-red-100"
@@ -359,19 +346,19 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
             {result.ok ? (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-black">Published to the feed.</p>
-                  <p className="text-[#d9ff91]/75">Now share the proof while it is fresh.</p>
+                  <p className="font-medium">Published to the feed.</p>
+                  <p className="text-[#d9ff91]/75">Now share the post while it is fresh.</p>
                   {copyStatus ? <p className="mt-1 text-xs text-[#a7f300]">{copyStatus}</p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    className="rounded-full bg-[#a7f300] px-4 py-2 font-black text-zinc-950"
+                    className="rounded-full bg-zinc-100 px-4 py-2 font-medium text-zinc-950"
                     href={result.href}
                   >
                     Open
                   </Link>
                   <button
-                    className="rounded-full border border-[#a7f300]/30 px-4 py-2 font-black text-[#d9ff91]"
+                    className="rounded-full border border-[#a7f300]/25 px-4 py-2 font-medium text-[#d9ff91]"
                     onClick={() => void copyShareUrl(result.shareUrl)}
                     type="button"
                   >
@@ -381,10 +368,10 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
               </div>
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="font-semibold">{result.error}</p>
+                <p className="font-medium">{result.error}</p>
                 {result.actionHref && result.actionLabel ? (
                   <Link
-                    className="rounded-full border border-red-200/25 px-4 py-2 text-center font-black text-red-50"
+                    className="rounded-full border border-red-200/25 px-4 py-2 text-center font-medium text-red-50"
                     href={result.actionHref}
                   >
                     {result.actionLabel}
@@ -400,11 +387,11 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
             Private and reviewed only. Pending/redacted sessions stay locked until you clear them.
           </p>
           <button
-            className="rounded-full bg-[#a7f300] px-6 py-3 text-sm font-black text-zinc-950 shadow-[0_0_28px_rgba(167,243,0,0.26)] transition hover:bg-[#c7ff4a] disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPending || !title.trim()}
             type="submit"
           >
-            {isPending ? "Publishing..." : "Publish receipt"}
+            {isPending ? "Publishing..." : "Publish proof"}
           </button>
         </div>
       </form>
