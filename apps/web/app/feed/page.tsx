@@ -1326,7 +1326,7 @@ function FeedTabs({
     "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-3 text-sm font-medium transition-[background-color,color] hover:bg-zinc-950/80";
 
   return (
-    <div className="grid grid-cols-2 border-t border-zinc-900/80">
+    <div className="grid grid-cols-2 border-t border-white/10">
       <Link
         href="/feed"
         className={`${tabClass} ${
@@ -1412,8 +1412,8 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
 
 function DailyBuilderBriefSkeleton() {
   return (
-    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
-      <div className="h-48 animate-pulse rounded-[28px] border border-zinc-900 bg-zinc-950/75" />
+    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
+      <div className="h-48 animate-pulse rounded-[28px] bg-zinc-950/75 shadow-[var(--trail-shadow-border)]" />
     </section>
   );
 }
@@ -1437,7 +1437,7 @@ async function DailyBuilderBrief({
   ];
 
   return (
-    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
+    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
       <div className="overflow-hidden rounded-[28px] border border-[#a7f300]/25 bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01)),#080908] shadow-[0_24px_90px_rgba(0,0,0,0.35)]">
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="p-4 sm:p-5">
@@ -1517,7 +1517,7 @@ async function DailyBuilderBrief({
                       />
                       <Link
                         href={`/u/${lesson.handle}/${lesson.slug}#lessons`}
-                        className="inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+                        className="inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
                       >
                         Proof
                       </Link>
@@ -1530,7 +1530,7 @@ async function DailyBuilderBrief({
                   </div>
                 ))
               ) : (
-                <p className="rounded-2xl border border-dashed border-zinc-800 bg-black/20 p-3 text-sm leading-6 text-zinc-500">
+                <p className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-500">
                   Publish or follow more builders and Trail will recommend specific moves to reuse.
                 </p>
               )}
@@ -1750,7 +1750,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           ) : !viewerId ? (
             <TrailLink
               href={signInHref(authorHref)}
-              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition-[border-color,color,transform] hover:border-[#a7f300] hover:text-[#a7f300] active:scale-[0.96]"
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.08] hover:text-[#a7f300] active:scale-[0.96]"
             >
               Follow
             </TrailLink>
@@ -1800,7 +1800,9 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-600">
                     Repo
                   </span>
-                  <span className="truncate font-mono text-[12.5px] text-zinc-300">{repoLabel}</span>
+                  <span className="truncate font-mono text-[12.5px] text-zinc-300">
+                    {repoLabel}
+                  </span>
                 </div>
               ) : null}
             </div>
@@ -1847,10 +1849,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
                 .slice()
                 .reverse()
                 .map((comment) => (
-                  <div
-                    className="grid grid-cols-[24px_minmax(0,1fr)] gap-2.5"
-                    key={comment.id}
-                  >
+                  <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-2.5" key={comment.id}>
                     <Avatar
                       src={commentAvatarSrc(comment)}
                       alt={comment.authorName}
@@ -1966,7 +1965,7 @@ function EmptyTimeline({
             <div className="mt-6 grid gap-3 text-left">
               {builders.map((builder) => (
                 <div
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-900 bg-zinc-950/70 p-3"
+                  className="flex items-center justify-between gap-3 rounded-2xl bg-zinc-950/70 p-3 shadow-[var(--trail-shadow-border)]"
                   key={builder.id}
                 >
                   <Link className="flex min-w-0 items-center gap-3" href={`/u/${builder.handle}`}>
@@ -2092,9 +2091,9 @@ function PersonalizationNudge({
   ];
 
   return (
-    <section className="border-b border-zinc-900 px-4 py-4 sm:px-5">
-      <div className="overflow-hidden rounded-[26px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b]">
-        <div className="border-b border-zinc-900 px-4 py-4">
+    <section className="border-b border-white/10 px-4 py-4 sm:px-5">
+      <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(135deg,rgba(167,243,0,0.08),transparent_46%),#09090b] shadow-[var(--trail-shadow-border)]">
+        <div className="border-b border-white/10 px-4 py-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
             Personalize Trail
           </div>
@@ -2170,7 +2169,7 @@ function PersonalizationNudge({
         ) : null}
 
         {stackSuggestions.length > 0 ? (
-          <div className="border-t border-zinc-900 px-4 py-4">
+          <div className="border-t border-white/10 px-4 py-4">
             <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-600">
               Browse stacks to follow the work you care about
             </div>
@@ -2179,7 +2178,7 @@ function PersonalizationNudge({
                 <Link
                   href={stackHref(stack)}
                   key={`${stack.kind}:${stack.tag}`}
-                  className="inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/60 hover:text-[#a7f300]"
+                  className="inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
                 >
                   {stack.label}
                   <span className="ml-2 text-zinc-600">{formatCount(stack.receiptCount)}</span>
@@ -2218,8 +2217,8 @@ function FeedDiscoveryPanel({
 
       <NetworkPulse stats={discovery.stats} />
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-900 px-4 py-4">
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
+        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
               AI Radar
@@ -2243,7 +2242,7 @@ function FeedDiscoveryPanel({
             </p>
             <Link
               href="/radar"
-              className="mt-3 inline-flex min-h-8 items-center rounded-full border border-zinc-800 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-[#a7f300]/50 hover:text-[#a7f300]"
+              className="mt-3 inline-flex min-h-8 items-center rounded-full bg-white/[0.04] px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 transition hover:bg-white/[0.08] hover:text-[#a7f300]"
             >
               View radar
             </Link>
@@ -2275,8 +2274,8 @@ function FeedDiscoveryPanel({
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="border-b border-zinc-900 px-4 py-4">
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
+        <div className="border-b border-white/10 px-4 py-4">
           <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
             Who to follow
           </h3>
@@ -2340,8 +2339,8 @@ function FeedDiscoveryPanel({
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-900 px-4 py-4">
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
+        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-4">
           <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">
             Trending now
           </h3>
@@ -2382,8 +2381,8 @@ function FeedDiscoveryPanel({
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="border-b border-zinc-900 px-4 py-4">
+      <section className="overflow-hidden rounded-[26px] bg-zinc-950 shadow-[var(--trail-shadow-border)]">
+        <div className="border-b border-white/10 px-4 py-4">
           <h3 className="text-[20px] font-semibold tracking-[-0.04em] text-zinc-50">Explore</h3>
         </div>
         <div className="divide-y divide-zinc-900">
@@ -2409,7 +2408,7 @@ function FeedDiscoveryPanel({
         </div>
       </section>
 
-      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+      <section className="rounded-[26px] bg-zinc-950 p-4 shadow-[var(--trail-shadow-border)]">
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
           How Trail works
         </div>
@@ -2488,8 +2487,8 @@ export default async function FeedPage({
             />
           </aside>
 
-          <section className="min-w-0 border-x border-zinc-900/80 bg-black/72 lg:min-h-[calc(100vh-3.5rem)]">
-            <div className="border-b border-zinc-900/90 bg-black/86 shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
+          <section className="min-w-0 border-x border-white/10 bg-black/72 lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-white/10 bg-black/86 shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl md:sticky md:top-14 md:z-30">
               <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
                 <div className="min-w-0">
                   <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
@@ -2509,7 +2508,7 @@ export default async function FeedPage({
               <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
             </div>
 
-            <div id="feed-composer" className="border-b border-zinc-900/90 px-4 py-4 sm:px-5">
+            <div id="feed-composer" className="border-b border-white/10 px-4 py-4 sm:px-5">
               <FeedComposer viewer={viewer} drafts={composerDrafts} />
             </div>
 
@@ -2530,8 +2529,8 @@ export default async function FeedPage({
             ) : null}
 
             {!viewerId && !isFollowingView ? (
-              <div className="border-b border-zinc-900 px-4 py-4 sm:px-5">
-                <div className="rounded-[24px] border border-zinc-900 bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_44%),#09090b] p-4">
+              <div className="border-b border-white/10 px-4 py-4 sm:px-5">
+                <div className="rounded-[24px] bg-[linear-gradient(135deg,rgba(167,243,0,0.09),transparent_44%),#09090b] p-4 shadow-[var(--trail-shadow-border)]">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
                     Make it personal
                   </div>
