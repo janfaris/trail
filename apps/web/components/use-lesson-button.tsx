@@ -61,7 +61,7 @@ export function UseLessonButton({
         "inline-flex min-h-9 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] transition-[background-color,border-color,color,opacity,transform] active:scale-[0.96]",
         used
           ? "border border-amber-300/50 bg-amber-300/10 text-amber-100"
-          : "border border-zinc-700 bg-transparent text-zinc-300 hover:border-amber-300/70 hover:text-amber-100",
+          : "border border-white/10 bg-transparent text-zinc-300 hover:border-amber-300/70 hover:text-amber-100",
         pending && "opacity-60",
         className,
       )}

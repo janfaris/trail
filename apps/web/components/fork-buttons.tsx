@@ -32,8 +32,7 @@ const TOOLS: ToolButton[] = [
     key: "cursor",
     label: "Open in Cursor",
     hint: "Deep-links the setup prompt into a new Cursor chat",
-    deepLink: (p) =>
-      `cursor://anysphere.cursor-deeplink/prompt?text=${encodeURIComponent(p)}`,
+    deepLink: (p) => `cursor://anysphere.cursor-deeplink/prompt?text=${encodeURIComponent(p)}`,
   },
   {
     key: "codex",
@@ -85,7 +84,7 @@ export function ForkButtons({ shareUrl, forkUrl, setupPrompt }: ForkButtonsProps
   }
 
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-900/40 p-4">
+    <div className="rounded border border-white/10 bg-zinc-900/40 p-4">
       <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
         Fork into your AI tool
       </div>
@@ -95,16 +94,12 @@ export function ForkButtons({ shareUrl, forkUrl, setupPrompt }: ForkButtonsProps
             key={t.key}
             type="button"
             onClick={() => handleClick(t)}
-            className="text-left rounded border border-zinc-800 hover:border-[#a7f300]/60 hover:bg-zinc-900 px-3 py-2 transition-colors"
+            className="text-left rounded border border-white/10 hover:border-[#a7f300]/60 hover:bg-zinc-900 px-3 py-2 transition-[color,background-color,border-color,transform] active:scale-[0.98]"
             title={t.hint}
           >
             <div className="text-sm font-medium text-zinc-100">{t.label}</div>
             <div className="text-[11px] font-mono text-zinc-500 mt-0.5">
-              {copied === t.key
-                ? "copied!"
-                : t.deepLink
-                  ? "open via deep-link"
-                  : "copy command"}
+              {copied === t.key ? "copied!" : t.deepLink ? "open via deep-link" : "copy command"}
             </div>
           </button>
         ))}

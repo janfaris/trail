@@ -14,7 +14,7 @@ export function Avatar({ src, alt, size = 48, fallback, className }: Props) {
   return (
     <div
       className={cn(
-        "relative inline-flex items-center justify-center overflow-hidden rounded-full border border-zinc-800 bg-zinc-900 text-zinc-400 font-mono outline outline-1 -outline-offset-1 outline-white/10",
+        "relative inline-flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-900 text-zinc-400 font-mono outline outline-1 -outline-offset-1 outline-white/10",
         className,
       )}
       style={{ width: size, height: size, fontSize: size * 0.42 }}

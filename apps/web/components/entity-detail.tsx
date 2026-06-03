@@ -70,7 +70,7 @@ export function EntityDetailView({
               <li key={b.handle}>
                 <Link
                   href={`/u/${b.handle}`}
-                  className="group flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 pl-1 pr-3 py-1 hover:border-zinc-700"
+                  className="group flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950 pl-1 pr-3 py-1 hover:border-white/20"
                 >
                   <Avatar
                     src={b.image}

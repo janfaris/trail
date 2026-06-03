@@ -54,7 +54,7 @@ export function TimelineEvent({
       return (
         <section id={anchor} className={`scroll-mt-24 ${grid}`}>
           <Rail at={data.at} idx={idx} />
-          <div className="rounded-md border border-zinc-800 border-l-2 border-l-zinc-700 bg-zinc-900/60 p-5">
+          <div className="rounded-md border border-white/10 border-l-2 border-l-zinc-700 bg-zinc-900/60 p-5">
             <Kind>prompt</Kind>
             <Markdown>{data.text}</Markdown>
           </div>
@@ -64,7 +64,7 @@ export function TimelineEvent({
       return (
         <section id={anchor} className={`scroll-mt-24 ${grid}`}>
           <Rail at={data.at} idx={idx} />
-          <div className="rounded-md border border-zinc-800 border-l-2 border-l-[#a7f300]/60 bg-zinc-900/40 p-5">
+          <div className="rounded-md border border-white/10 border-l-2 border-l-[#a7f300]/60 bg-zinc-900/40 p-5">
             <Kind>completion</Kind>
             <Markdown>{data.text}</Markdown>
           </div>
@@ -74,7 +74,7 @@ export function TimelineEvent({
       return (
         <section id={anchor} className={`scroll-mt-24 ${grid}`}>
           <Rail at={data.at} idx={idx} />
-          <details className="group rounded-md border border-zinc-800 bg-zinc-900/40 open:bg-zinc-900/60">
+          <details className="group rounded-md border border-white/10 bg-zinc-900/40 open:bg-zinc-900/60">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-sm font-mono text-zinc-400 hover:text-zinc-100">
               <svg
                 width="10"
@@ -83,19 +83,29 @@ export function TimelineEvent({
                 className="transition-transform duration-150 group-open:rotate-90"
                 aria-hidden
               >
-                <path d="M3 1.5l3.5 3.5L3 8.5" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+                <path
+                  d="M3 1.5l3.5 3.5L3 8.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  fill="none"
+                  strokeLinecap="round"
+                />
               </svg>
               <span className="text-zinc-500">→</span>
               <span className="text-zinc-200">{data.name}</span>
-              <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-wider">tool</span>
+              <span className="ml-auto text-[10px] text-zinc-600 uppercase tracking-wider">
+                tool
+              </span>
             </summary>
-            <div className="border-t border-zinc-800 px-4 py-3 space-y-2">
-              <pre className="text-xs font-mono text-zinc-300 bg-zinc-950/60 border border-zinc-800/60 p-3 rounded overflow-x-auto leading-relaxed">
+            <div className="border-t border-white/10 px-4 py-3 space-y-2">
+              <pre className="text-xs font-mono text-zinc-300 bg-zinc-950/60 border border-white/10 p-3 rounded overflow-x-auto leading-relaxed">
                 {JSON.stringify(data.args, null, 2)}
               </pre>
               {data.result !== undefined && (
-                <pre className="text-xs font-mono text-zinc-400 bg-zinc-950/60 border border-zinc-800/60 p-3 rounded overflow-x-auto leading-relaxed">
-                  {typeof data.result === "string" ? data.result : JSON.stringify(data.result, null, 2)}
+                <pre className="text-xs font-mono text-zinc-400 bg-zinc-950/60 border border-white/10 p-3 rounded overflow-x-auto leading-relaxed">
+                  {typeof data.result === "string"
+                    ? data.result
+                    : JSON.stringify(data.result, null, 2)}
                 </pre>
               )}
             </div>
@@ -113,7 +123,7 @@ export function TimelineEvent({
       return (
         <section id={anchor} className={`scroll-mt-24 ${grid}`}>
           <Rail at={data.at} idx={idx} />
-          <div className="px-4 py-3 border-l-2 border-zinc-800">
+          <div className="px-4 py-3 border-l-2 border-white/10">
             <Kind>decision</Kind>
             <p className="text-sm text-zinc-400 italic leading-relaxed">{data.note}</p>
           </div>

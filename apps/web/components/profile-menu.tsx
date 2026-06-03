@@ -58,7 +58,7 @@ export function ProfileMenu({
         aria-label="Account menu"
         className="group inline-flex items-center gap-1.5 text-zinc-300 hover:text-[#a7f300] transition-colors"
       >
-        <span className="inline-flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-900 ring-2 ring-transparent group-hover:ring-[#a7f300]/30 transition">
+        <span className="inline-flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-900 ring-2 ring-transparent group-hover:ring-[#a7f300]/30 transition">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" className="h-full w-full object-cover" />
@@ -76,7 +76,7 @@ export function ProfileMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-48 rounded-lg border border-zinc-800 bg-zinc-950/95 backdrop-blur-md p-1 shadow-xl shadow-black/40"
+          className="absolute right-0 mt-2 w-48 rounded-lg border border-white/10 bg-zinc-950/95 backdrop-blur-md p-1 shadow-xl shadow-black/40"
         >
           <div className="px-3 pt-2 pb-1.5 font-mono text-[12px] text-zinc-500 truncate">
             @{handle}

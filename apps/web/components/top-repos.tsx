@@ -11,7 +11,7 @@ export function TopRepos({ items }: { items: TopReposItem[] }) {
         return (
           <span
             key={r.repo}
-            className="inline-flex items-center gap-1.5 rounded border border-zinc-800 bg-zinc-900/60 px-1.5 py-0.5"
+            className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-zinc-900/60 px-1.5 py-0.5"
           >
             <span className="text-zinc-300">{short}</span>
             <span className="text-zinc-600">·</span>

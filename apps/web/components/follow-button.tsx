@@ -48,7 +48,7 @@ export function FollowButton({
       className={cn(
         "inline-flex min-h-9 items-center rounded-full border px-3 font-mono text-[11px] font-medium uppercase tracking-[0.12em] transition-[border-color,background-color,color,opacity,transform] active:scale-[0.96]",
         following
-          ? "border-zinc-700 text-zinc-300 hover:border-zinc-600 hover:text-white"
+          ? "border-white/10 text-zinc-300 hover:border-white/25 hover:text-white"
           : "border-[#a7f300] bg-[#a7f300] text-black hover:bg-[#b6ff14]",
         pending && "opacity-60",
         className,

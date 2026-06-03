@@ -9,7 +9,7 @@ const STEPS: { code: string; note?: string }[] = [
 
 export function ProfileIntroCard() {
   return (
-    <div className="relative border border-zinc-800 bg-zinc-900/40 rounded-md px-5 py-4 mb-8">
+    <div className="relative border border-white/10 bg-zinc-900/40 rounded-md px-5 py-4 mb-8">
       <form action={dismissIntro}>
         <button
           type="submit"
@@ -24,16 +24,16 @@ export function ProfileIntroCard() {
         This is a Trail portfolio
       </div>
       <p className="text-sm text-zinc-300 leading-relaxed pr-6 max-w-3xl">
-        Below is how this engineer actually works with AI — real sessions from Claude Code,
-        Cursor, Codex, Copilot, and Hermes. Anonymized, curated, embeddable. Three commands
-        and you&apos;ll have your own.
+        Below is how this engineer actually works with AI — real sessions from Claude Code, Cursor,
+        Codex, Copilot, and Hermes. Anonymized, curated, embeddable. Three commands and you&apos;ll
+        have your own.
       </p>
 
       <ol className="mt-4 space-y-2">
         {STEPS.map((s, i) => (
           <li
             key={s.code}
-            className="flex items-center gap-3 rounded border border-zinc-800 bg-zinc-950/60 px-3 py-2"
+            className="flex items-center gap-3 rounded border border-white/10 bg-zinc-950/60 px-3 py-2"
           >
             <span className="text-[10px] font-mono text-zinc-600 tabular-nums w-4 shrink-0">
               {i + 1}
@@ -53,11 +53,8 @@ export function ProfileIntroCard() {
       </ol>
 
       <p className="mt-3 text-xs font-mono text-zinc-500">
-        then{" "}
-        <code className="text-zinc-300">trail share latest</code>{" "}
-        to publish · drop{" "}
-        <code className="text-zinc-300">trail.dev/u/you</code>{" "}
-        in your bio →
+        then <code className="text-zinc-300">trail share latest</code> to publish · drop{" "}
+        <code className="text-zinc-300">trail.dev/u/you</code> in your bio →
       </p>
     </div>
   );

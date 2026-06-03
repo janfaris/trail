@@ -4,10 +4,10 @@
 // to drive a 4-stat row. Non-self viewers never see this band — vendor /
 // spend data is private.
 
-import Link from "next/link";
-import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import { aggregateCost } from "@/lib/recap/cost-aggregate";
+import { and, eq, inArray } from "drizzle-orm";
+import Link from "next/link";
 
 const VENDOR_SLOTS = ["anthropic", "openai", "cursor", "copilot"] as const;
 type VendorSlot = (typeof VENDOR_SLOTS)[number];
@@ -93,10 +93,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
       .where(
         and(
           eq(schema.vendorConnection.userId, userId),
-          inArray(
-            schema.vendorConnection.syncStatus,
-            ACTIVE_STATUSES as unknown as string[],
-          ),
+          inArray(schema.vendorConnection.syncStatus, ACTIVE_STATUSES as unknown as string[]),
         ),
       ),
   ]);
@@ -109,7 +106,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
   // a vendor — instead of an empty stat row.
   if (!hasCostData) {
     return (
-      <section className="mb-8 border border-zinc-800 rounded-lg bg-zinc-900/40 px-5 py-4">
+      <section className="mb-8 border border-white/10 rounded-lg bg-zinc-900/40 px-5 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">

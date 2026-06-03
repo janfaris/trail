@@ -3,8 +3,8 @@
 // have both a native row and one or more vendor fanout rows) and derives a
 // combined source label.
 
-import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
+import { and, eq } from "drizzle-orm";
 
 type Props = {
   sessionId: string;
@@ -55,10 +55,7 @@ export async function SessionCostBlock({
   // Prefer the summed attribution total — it's the canonical per-PR cost
   // basis. Fall back to the session's own estimatedCostUsd when no
   // attribution row exists yet (cron hasn't run, native-only session etc.).
-  const attribTotal = attribRows.reduce(
-    (n, r) => n + parseUsd(r.attributedCostUsd),
-    0,
-  );
+  const attribTotal = attribRows.reduce((n, r) => n + parseUsd(r.attributedCostUsd), 0);
   const sessionEstimate = parseUsd(estimatedCostUsd);
   const cost = attribTotal > 0 ? attribTotal : sessionEstimate;
 
@@ -73,7 +70,7 @@ export async function SessionCostBlock({
             Cost not available{" "}
             <span
               title="This agent doesn't expose tokens, or no vendor connection is wired."
-              className="inline-flex items-center justify-center h-4 w-4 rounded-full border border-zinc-800 text-zinc-500 text-[10px] cursor-help align-middle"
+              className="inline-flex items-center justify-center h-4 w-4 rounded-full border border-white/10 text-zinc-500 text-[10px] cursor-help align-middle"
               aria-label="why?"
             >
               ?
@@ -85,8 +82,8 @@ export async function SessionCostBlock({
   }
 
   const hasNative = attribRows.some((r) => r.source === "native");
-  const hasFanout = attribRows.some((r) =>
-    typeof r.source === "string" && r.source.startsWith("fanout_"),
+  const hasFanout = attribRows.some(
+    (r) => typeof r.source === "string" && r.source.startsWith("fanout_"),
   );
 
   let basisLabel: string | null = null;
@@ -110,13 +107,11 @@ export async function SessionCostBlock({
             <span className="text-lg font-semibold tabular-nums text-[#a7f300]">
               {fmtUsd(cost)}
             </span>
-            <span className="text-[11px] font-mono text-zinc-500">
-              estimated
-            </span>
+            <span className="text-[11px] font-mono text-zinc-500">estimated</span>
             {basisLabel && (
               <span
                 title={`Cost basis: ${basisLabel}`}
-                className="inline-flex items-center rounded-full border border-zinc-800 bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400"
+                className="inline-flex items-center rounded-full border border-white/10 bg-zinc-900/80 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400"
               >
                 {basisLabel}
               </span>

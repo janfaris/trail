@@ -49,6 +49,29 @@ pre,
   font-variant-numeric: tabular-nums;
 }
 
+/* Trail surface system — locked tokens for product (non-editorial) surfaces.
+ * Use these instead of ad-hoc `border border-zinc-800 bg-zinc-900` boxes so the
+ * app stays calm and consistent (Linear restraint). The calmer background is
+ * paired with the shadow-border ring so panels never flatten into a dark page.
+ * Editorial/marketing pages keep their own hairline `border-zinc-900` dividers. */
+.trail-surface {
+  background-color: rgba(9, 9, 11, 0.7);
+  box-shadow: var(--trail-shadow-border);
+}
+
+.trail-surface-hover {
+  transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+
+.trail-surface-hover:hover {
+  box-shadow: var(--trail-shadow-border-hover);
+}
+
+/* Hairline divider color for product surfaces — the de-facto calm border. */
+.trail-hairline {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 h1,
 h2,
 h3 {

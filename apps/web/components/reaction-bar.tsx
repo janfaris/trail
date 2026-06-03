@@ -172,7 +172,7 @@ export function ReactionBar({
                   "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] transition-[border-color,background-color,color,opacity,transform] active:scale-[0.96]",
                   isMine
                     ? "border-[#a7f300] bg-[#a7f300]/10 text-[#a7f300]"
-                    : "border-zinc-800 bg-black text-zinc-500 hover:border-zinc-700 hover:text-zinc-200",
+                    : "border-white/10 bg-black text-zinc-500 hover:border-white/20 hover:text-zinc-200",
                   pendingKind !== null && "opacity-60",
                 )}
               >
@@ -189,7 +189,7 @@ export function ReactionBar({
   }
 
   return (
-    <div className={cn("mt-6 rounded border border-zinc-800 bg-zinc-900/40 p-4", className)}>
+    <div className={cn("mt-6 rounded border border-white/10 bg-zinc-900/40 p-4", className)}>
       <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
         Did this work for you?
       </div>
@@ -208,7 +208,7 @@ export function ReactionBar({
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm font-medium transition-colors ${
                 isMine
                   ? "bg-[#a7f300]/10 border-[#a7f300] text-[#a7f300]"
-                  : "border-zinc-800 text-zinc-300 hover:border-zinc-600 hover:text-zinc-100"
+                  : "border-white/10 text-zinc-300 hover:border-white/25 hover:text-zinc-100"
               }`}
             >
               <span className="font-mono">{k.emoji}</span>

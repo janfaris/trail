@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import { RelativeTime } from "@/components/relative-time";
 import { ToolIcon } from "@/components/tool-icon";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 
 interface SearchHit {
   slug: string;
@@ -67,7 +67,7 @@ export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder='Try: "pricing research" or "how I fixed the cursor parser"'
           autoFocus
-          className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#a7f300] focus:ring-1 focus:ring-[#a7f300]/40 font-mono text-sm"
+          className="w-full bg-zinc-900/50 border border-white/10 rounded-md px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#a7f300] focus:ring-1 focus:ring-[#a7f300]/40 font-mono text-sm"
         />
       </form>
 
@@ -83,16 +83,13 @@ export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
           {hits.map((h) => (
             <li
               key={`${h.handle}/${h.slug}`}
-              className="border border-zinc-900 rounded-md p-4 hover:border-zinc-800 transition-colors"
+              className="border border-zinc-900 rounded-md p-4 hover:border-white/15 transition-colors"
             >
               <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 mb-2">
                 <ToolIcon name={h.tool} className="text-zinc-400" />
                 <span className="text-zinc-300">{h.tool}</span>
                 <span className="text-zinc-700">·</span>
-                <Link
-                  href={`/u/${h.handle}`}
-                  className="text-zinc-400 hover:text-zinc-100"
-                >
+                <Link href={`/u/${h.handle}`} className="text-zinc-400 hover:text-zinc-100">
                   @{h.handle}
                 </Link>
                 <span className="text-zinc-700">·</span>

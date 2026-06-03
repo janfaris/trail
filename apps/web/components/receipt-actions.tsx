@@ -23,13 +23,7 @@ type Props = {
  * Visibility (mark private) is handled in the dashboard bulk toolbar — see
  * /dashboard. We intentionally do not duplicate that control here.
  */
-export function ReceiptActions({
-  slug,
-  sessionId,
-  tldr,
-  isOwner,
-  existingRecapSlug,
-}: Props) {
+export function ReceiptActions({ slug, sessionId, tldr, isOwner, existingRecapSlug }: Props) {
   const [flash, setFlash] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [recapPending, startRecapTransition] = useTransition();
@@ -70,7 +64,7 @@ export function ReceiptActions({
   }
 
   const btn =
-    "font-mono text-[10.5px] uppercase tracking-wider px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors disabled:opacity-40 disabled:hover:text-zinc-400 disabled:hover:border-zinc-800";
+    "font-mono text-[10.5px] uppercase tracking-wider px-2 py-0.5 rounded border border-white/10 bg-zinc-900/40 text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition-[color,background-color,border-color,transform] active:scale-[0.97] disabled:opacity-40 disabled:hover:text-zinc-400 disabled:hover:border-white/15";
 
   return (
     <div className="flex items-center gap-1.5">
@@ -138,9 +132,7 @@ export function ReceiptActions({
           {recapPending ? "Generating…" : "Pulse Recap"}
         </button>
       ) : null}
-      {flash && (
-        <span className="font-mono text-[10.5px] text-[#a7f300] ml-1">{flash}</span>
-      )}
+      {flash && <span className="font-mono text-[10.5px] text-[#a7f300] ml-1">{flash}</span>}
     </div>
   );
 }

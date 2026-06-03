@@ -23,7 +23,7 @@ function Badge({ status }: { status: ShippedStatus }) {
   const s = (status ?? "unverified") as string;
   let label = "Unverified";
   let icon: ReactNode = "⚠";
-  let cls = "border-zinc-700 bg-zinc-800/60 text-zinc-400";
+  let cls = "border-white/10 bg-zinc-800/60 text-zinc-400";
   if (s === "shipped") {
     label = "Shipped";
     icon = "✓";
@@ -109,15 +109,11 @@ export function ReceiptBlock({
       </div>
 
       {outcome && (
-        <p className="text-[15px] leading-snug text-zinc-100 font-medium mb-2">
-          {outcome}
-        </p>
+        <p className="text-[15px] leading-snug text-zinc-100 font-medium mb-2">{outcome}</p>
       )}
 
       {tldr && (
-        <p className="text-sm text-zinc-400 leading-relaxed mb-4 whitespace-pre-line">
-          {tldr}
-        </p>
+        <p className="text-sm text-zinc-400 leading-relaxed mb-4 whitespace-pre-line">{tldr}</p>
       )}
 
       {decisions.length > 0 && (
@@ -147,13 +143,13 @@ export function ReceiptBlock({
             {visibleFiles.map((f) => (
               <li
                 key={f}
-                className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/60 text-zinc-300"
+                className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/10 bg-zinc-900/60 text-zinc-300"
               >
                 {f}
               </li>
             ))}
             {extraFiles > 0 && (
-              <li className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-zinc-800 bg-zinc-900/30 text-zinc-500">
+              <li className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/10 bg-zinc-900/30 text-zinc-500">
                 +{extraFiles} more
               </li>
             )}

@@ -34,7 +34,7 @@ export function CopyButton({
         }
       }}
       className={cn(
-        "inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950/70 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[background-color,border-color,color,opacity,transform] duration-150 ease-out hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f300]/60",
+        "inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/10 bg-zinc-950/70 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[background-color,border-color,color,opacity,transform] duration-150 ease-out hover:border-white/20 hover:bg-zinc-900 hover:text-zinc-100 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f300]/60",
         copied && "text-[#a7f300] border-[#a7f300]/30",
         failed && "border-red-300/40 text-red-200",
         className,

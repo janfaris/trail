@@ -202,7 +202,7 @@ function statusTone(tone: Lifecycle["tone"]): string {
   if (tone === "sky") return "border-sky-400/35 bg-sky-400/10 text-sky-200";
   if (tone === "amber") return "border-amber-400/35 bg-amber-400/10 text-amber-200";
   if (tone === "rose") return "border-rose-400/35 bg-rose-400/10 text-rose-200";
-  return "border-zinc-700 bg-zinc-900 text-zinc-400";
+  return "border-white/10 bg-zinc-900 text-zinc-400";
 }
 
 function visTone(visibility: string, sharedAt: string | null): string {
@@ -210,7 +210,7 @@ function visTone(visibility: string, sharedAt: string | null): string {
     return "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]";
   }
   if (visibility === "public") return "border-sky-400/30 bg-sky-400/10 text-sky-200";
-  if (visibility === "private") return "border-zinc-800 bg-zinc-900 text-zinc-400";
+  if (visibility === "private") return "border-white/10 bg-zinc-900 text-zinc-400";
   if (visibility === "pending") return "border-amber-500/30 bg-amber-500/10 text-amber-300";
   return "border-rose-500/30 bg-rose-500/10 text-rose-300";
 }
@@ -248,7 +248,7 @@ function ChecklistChip({
       className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
         good
           ? "border-[#a7f300]/25 bg-[#a7f300]/10 text-[#a7f300]"
-          : "border-zinc-800 bg-zinc-950 text-zinc-500"
+          : "border-white/10 bg-zinc-950 text-zinc-500"
       }`}
     >
       {good ? "✓" : "·"} {label}
@@ -488,7 +488,7 @@ export function DashboardClient({
       )}
 
       {filtered.length === 0 ? (
-        <div className="rounded-[2rem] border border-dashed border-zinc-800 bg-zinc-950/65 p-10 text-center font-mono text-sm text-zinc-500">
+        <div className="rounded-[2rem] border border-dashed border-white/10 bg-zinc-950/65 p-10 text-center font-mono text-sm text-zinc-500">
           no sessions match this studio view
         </div>
       ) : (

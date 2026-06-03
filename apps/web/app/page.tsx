@@ -668,9 +668,6 @@ export default async function Home() {
             <a href="https://www.npmjs.com/package/@gettrail/cli" className="hover:text-zinc-200">
               npm
             </a>
-            <Link href="/pricing" className="hover:text-zinc-200">
-              pricing
-            </Link>
           </div>
         </div>
       </footer>

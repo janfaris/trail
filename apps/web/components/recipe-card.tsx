@@ -35,7 +35,7 @@ export function RecipeCard({
   const duration = formatDuration(session.durationSeconds);
 
   return (
-    <section className="relative rounded-lg border border-zinc-800 bg-zinc-900/30 p-5 sm:p-6">
+    <section className="relative rounded-lg border border-white/10 bg-zinc-900/30 p-5 sm:p-6">
       {session.recipeOutcome ? (
         <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-zinc-900/50 px-2.5 py-0.5 text-xs font-mono text-[#a7f300] border border-[#a7f300]/20">
           {session.recipeOutcome}
@@ -48,25 +48,18 @@ export function RecipeCard({
 
       {keyPrompts.length > 0 ? (
         <div className="mt-6">
-          <h3 className="text-xs uppercase tracking-wide text-zinc-400 font-mono">
-            Key prompts
-          </h3>
+          <h3 className="text-xs uppercase tracking-wide text-zinc-400 font-mono">Key prompts</h3>
           <ul className="mt-3 space-y-2">
             {keyPrompts.map((p) => {
               const anchor = String(p.idx).padStart(2, "0");
               return (
-                <li
-                  key={p.idx}
-                  className="rounded-md border border-zinc-800 bg-zinc-950/40 p-3"
-                >
-                  <p className="text-sm text-zinc-200 line-clamp-3 whitespace-pre-wrap">
-                    {p.text}
-                  </p>
+                <li key={p.idx} className="rounded-md border border-white/10 bg-zinc-950/40 p-3">
+                  <p className="text-sm text-zinc-200 line-clamp-3 whitespace-pre-wrap">{p.text}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <CopyButton value={p.text} label="Copy" />
                     <a
                       href={`#${anchor}`}
-                      className="inline-flex items-center h-7 px-2.5 rounded-md border border-zinc-800 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
+                      className="inline-flex items-center h-7 px-2.5 rounded-md border border-white/10 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition-colors"
                     >
                       jump →
                     </a>
@@ -78,7 +71,7 @@ export function RecipeCard({
         </div>
       ) : null}
 
-      <div className="mt-6 pt-4 border-t border-zinc-800 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-zinc-500">
+      <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-zinc-500">
         <span className="uppercase tracking-wide text-zinc-400">Setup</span>
         <span className="inline-flex items-center gap-1.5 text-zinc-300">
           <ToolIcon name={session.tool} />

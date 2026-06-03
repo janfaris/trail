@@ -1,7 +1,7 @@
 "use client";
 
+import { type ExplainResult, requestExplanation } from "@/app/u/[user]/[slug]/explain-action";
 import { useState, useTransition } from "react";
-import { requestExplanation, type ExplainResult } from "@/app/u/[user]/[slug]/explain-action";
 
 interface Props {
   sessionId: string;
@@ -12,7 +12,7 @@ interface Props {
 
 function Callout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border border-zinc-800 bg-zinc-900/40 rounded-md p-5 my-8 animate-in fade-in duration-300">
+    <div className="border border-white/10 bg-zinc-900/40 rounded-md p-5 my-8 animate-in fade-in duration-300">
       <div className="text-[11px] font-mono uppercase tracking-wider text-[#a7f300] mb-2">
         ★ AI summary
       </div>
@@ -51,11 +51,11 @@ export function ExplainButton({
         type="button"
         onClick={onClick}
         disabled={pending}
-        className="inline-flex items-center gap-2 h-9 px-4 rounded-md border border-zinc-800 bg-zinc-900/50 text-sm font-mono text-zinc-200 hover:text-[#a7f300] hover:border-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-2 h-9 px-4 rounded-md border border-white/10 bg-zinc-900/50 text-sm font-mono text-zinc-200 hover:text-[#a7f300] hover:border-white/20 transition-[color,background-color,border-color,transform] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {pending ? (
           <>
-            <span className="inline-block h-3 w-3 rounded-full border-2 border-zinc-600 border-t-[#a7f300] animate-spin" />
+            <span className="inline-block h-3 w-3 rounded-full border-2 border-white/15 border-t-[#a7f300] animate-spin" />
             Generating…
           </>
         ) : (
