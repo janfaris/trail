@@ -11,6 +11,7 @@ import { sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { type RadarMediaPreview, RadarMediaViewer } from "./radar-media-viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -48,16 +49,6 @@ type RadarSignalRow = {
   tags: string[] | null;
   publishedAt: Date | string;
   fetchedAt: Date | string;
-};
-
-type RadarMediaPreview = {
-  mediaKey: string;
-  type: string;
-  url: string;
-  previewImageUrl?: string;
-  width?: number;
-  height?: number;
-  altText?: string;
 };
 
 type RadarStatsRaw = {
@@ -526,9 +517,13 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
           </a>
 
           {media.length > 0 ? (
-            <a href={signal.url} target="_blank" rel="noreferrer" className="mt-5 block">
-              <RadarMediaMosaic media={media} sourceHandle={signal.sourceHandle} />
-            </a>
+            <div className="mt-5">
+              <RadarMediaViewer
+                media={media}
+                sourceHandle={signal.sourceHandle}
+                signalUrl={signal.url}
+              />
+            </div>
           ) : null}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -599,57 +594,6 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
         </div>
       </div>
     </article>
-  );
-}
-
-function RadarMediaMosaic({
-  media,
-  sourceHandle,
-}: {
-  media: RadarMediaPreview[];
-  sourceHandle: string;
-}) {
-  const visible = media.slice(0, 4);
-  const extraCount = Math.max(media.length - visible.length, 0);
-
-  return (
-    <div className="overflow-hidden rounded-[26px] border border-[#a7f300]/20 bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.16),transparent_34%),linear-gradient(135deg,rgba(24,24,27,0.96),rgba(0,0,0,0.98))] p-2 shadow-[0_18px_65px_rgba(167,243,0,0.08)] transition hover:border-[#a7f300]/45">
-      <div className="mb-2 flex items-center justify-between gap-3 px-2 pt-1 font-mono text-[10px] uppercase tracking-[0.16em]">
-        <span className="text-[#a7f300]">Visual proof attached</span>
-        <span className="text-zinc-600">
-          {formatCount(media.length)} {media.length === 1 ? "asset" : "assets"}
-        </span>
-      </div>
-      <div className={visible.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
-        {visible.map((item, index) => {
-          const isFirstOfThree = visible.length === 3 && index === 0;
-          const aspectClass =
-            visible.length === 1 || isFirstOfThree ? "aspect-[16/9]" : "aspect-[4/3]";
-          const spanClass = isFirstOfThree ? "col-span-2" : "";
-          const label = item.type === "photo" ? "photo" : `${item.type} preview`;
-
-          return (
-            <figure
-              key={item.mediaKey}
-              className={`group relative overflow-hidden rounded-[20px] border border-white/10 bg-zinc-900 ${aspectClass} ${spanClass}`}
-            >
-              <img
-                src={item.url}
-                alt={item.altText || `Media preview from @${sourceHandle}'s X signal`}
-                loading="lazy"
-                width={item.width}
-                height={item.height}
-                className="h-full w-full object-cover saturate-[1.04] transition duration-500 group-hover:scale-[1.035]"
-              />
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_52%,rgba(0,0,0,0.76)_100%)] opacity-80" />
-              <div className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-white/10 bg-black/72 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-zinc-200">
-                {extraCount > 0 && index === visible.length - 1 ? `+${extraCount} more` : label}
-              </div>
-            </figure>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
