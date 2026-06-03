@@ -52,6 +52,7 @@ export async function checkPaywall(
     .where(
       and(
         eq(schema.trailSession.userId, userId),
+        eq(schema.trailSession.postKind, "agent_session"),
         eq(schema.trailSession.visibility, "public"),
         isNotNull(schema.trailSession.sharedAt),
         isNotNull(schema.trailSession.receiptGeneratedAt),

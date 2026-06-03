@@ -119,6 +119,10 @@ export const trailSession = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     tool: text("tool").notNull(),
+    // Rebuild pivot: legacy/imported agent sessions remain `agent_session`.
+    // No-install social posts use `manual_build` so feed/detail/paywall code can
+    // treat them as build posts without mistaking them for generated receipts.
+    postKind: text("post_kind").notNull().default("agent_session"),
     repo: text("repo"),
     summary: text("summary"),
     title: text("title"),
@@ -231,6 +235,23 @@ export const event = pgTable(
   },
   (t) => ({
     sessionIdx: index("event_session_idx").on(t.sessionId, t.idx),
+  }),
+);
+
+export const buildPostLink = pgTable(
+  "build_post_link",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trailSession.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // github | x | demo | website | other
+    url: text("url").notNull(),
+    label: text("label"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionKindIdx: index("build_post_link_session_kind_idx").on(t.sessionId, t.kind),
   }),
 );
 

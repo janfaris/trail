@@ -18,10 +18,10 @@ export function ForkButton({
         window.location.href = `/u/${user}/${slug}/fork`;
       }}
       className={cn(
-        "inline-flex items-center h-7 px-2.5 rounded-md border border-white/10 bg-zinc-900/50 text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:border-white/20 hover:bg-zinc-900 transition-[color,background-color,border-color,transform] active:scale-[0.97] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f300]/60",
+        "inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f300]/60",
       )}
     >
-      Fork setup ↓
+      Fork
     </button>
   );
 }

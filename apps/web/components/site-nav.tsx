@@ -7,19 +7,16 @@ type NavLink = { href: string; label: string; external?: boolean };
 
 const PRIMARY_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
-  { href: "/radar", label: "Radar" },
-  { href: "/learn", label: "Learn" },
-  { href: "/install", label: "Install" },
-  { href: "https://github.com/janfaris/trail", label: "GitHub", external: true },
+  { href: "/create", label: "Create" },
+  { href: "/discover", label: "Builders" },
+  { href: "/puerto-rico", label: "Puerto Rico" },
 ];
 
 const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
-  { href: "/radar", label: "Radar" },
-  { href: "/learn", label: "Learn" },
-  { href: "/saved", label: "Saved" },
-  { href: "/notifications", label: "Notifications" },
-  { href: "/dashboard", label: "Studio" },
+  { href: "/create", label: "Create" },
+  { href: "/discover", label: "Builders" },
+  { href: "/puerto-rico", label: "Puerto Rico" },
 ];
 
 function linkClass(href: string, currentPath?: string, className?: string) {
@@ -113,7 +110,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
     unreadNotifications >= 10 ? "9+" : unreadNotifications > 0 ? String(unreadNotifications) : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-zinc-950/86 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/86 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
           <span className="text-[#a7f300]">/</span>trail
@@ -147,7 +144,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
             </div>
           ) : (
             <a
-              href="/api/auth/sign-in/github?callbackURL=/feed"
+              href="/api/auth/sign-in/github?callbackURL=/create"
               className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-[12.5px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.96]"
             >
               Sign in

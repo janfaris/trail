@@ -246,8 +246,8 @@ export function CommentThread({
       <article
         key={comment.id}
         className={cn(
-          "rounded-[22px] border border-white/10 bg-white/[0.035] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)]",
-          level === "reply" && "ml-8 border-dashed bg-black/20",
+          "border-l border-white/10 py-1 pl-3",
+          level === "reply" && "ml-8 border-dashed border-white/[0.08]",
         )}
       >
         <div className="flex items-start gap-3">
@@ -261,11 +261,11 @@ export function CommentThread({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {href ? (
-                <Link href={href} className="font-semibold text-white hover:text-amber-100">
+                <Link href={href} className="font-medium text-zinc-200 hover:text-white">
                   {comment.author.name}
                 </Link>
               ) : (
-                <span className="font-semibold text-white">{comment.author.name}</span>
+                <span className="font-medium text-zinc-200">{comment.author.name}</span>
               )}
               {comment.author.handle ? (
                 <span className="text-neutral-500">@{comment.author.handle}</span>
@@ -277,12 +277,12 @@ export function CommentThread({
             {deleted ? (
               <p className="mt-2 text-sm italic text-neutral-500">Comment deleted.</p>
             ) : (
-              <p className="mt-2 whitespace-pre-wrap text-[0.95rem] leading-6 text-neutral-200">
+              <p className="mt-2 whitespace-pre-wrap text-[14px] leading-6 text-zinc-300">
                 {comment.body}
               </p>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em]">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px]">
               {level === "root" && !deleted ? (
                 <button
                   type="button"
@@ -290,7 +290,7 @@ export function CommentThread({
                     setReplyingTo((current) => (current === comment.id ? null : comment.id));
                     setError(null);
                   }}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-neutral-300 transition hover:border-white/25 hover:text-white"
+                  className="rounded-full px-2.5 py-1.5 text-zinc-600 transition-[background-color,color] hover:bg-white/[0.04] hover:text-zinc-200"
                 >
                   Reply
                 </button>
@@ -300,7 +300,7 @@ export function CommentThread({
                   type="button"
                   disabled={isPending}
                   onClick={() => void deleteComment(comment.id)}
-                  className="rounded-full border border-red-400/20 px-3 py-1.5 text-red-200 transition hover:border-red-300/40 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full px-2.5 py-1.5 text-red-300/70 transition-[background-color,color] hover:bg-red-400/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Delete
                 </button>
@@ -343,24 +343,18 @@ export function CommentThread({
   }
 
   return (
-    <section
-      id="conversation"
-      className="scroll-mt-24 overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(251,191,36,0.12),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-5 shadow-2xl shadow-black/30 sm:p-6"
-    >
-      <div className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <section className="scroll-mt-24">
+      <div className="flex flex-col gap-3 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-200">
-            Receipt thread
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+          <h2 className="text-[18px] font-medium tracking-[-0.025em] text-zinc-50">
             Turn this proof into a builder conversation
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">
+          <p className="mt-1 max-w-xl text-[13px] leading-5 text-zinc-500">
             Ask what changed, leave a proof check, or suggest the next fork so the receipt keeps
             moving through the network.
           </p>
         </div>
-        <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-neutral-300">
+        <div className="text-[12px] text-zinc-600">
           {visibleCount} {visibleCount === 1 ? "comment" : "comments"} · {visibleReplies}{" "}
           {visibleReplies === 1 ? "reply" : "replies"}
         </div>
@@ -375,7 +369,7 @@ export function CommentThread({
               placeholder="Add a note, question, or proof check..."
               disabled={pendingTarget === "root"}
             />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[12px] text-zinc-600">
               <span>{MAX_COMMENT_LENGTH - draft.length} characters left</span>
               <SubmitButton pending={pendingTarget === "root"}>Post comment</SubmitButton>
             </div>
@@ -385,7 +379,7 @@ export function CommentThread({
                   key={prompt}
                   type="button"
                   onClick={() => useThreadStarter(prompt)}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-left text-[11px] font-semibold text-neutral-400 transition hover:border-amber-200/40 hover:text-amber-100"
+                  className="rounded-full px-2.5 py-1.5 text-left text-[12px] text-zinc-600 transition-[background-color,color] hover:bg-white/[0.04] hover:text-zinc-200"
                 >
                   {prompt}
                 </button>
@@ -393,14 +387,14 @@ export function CommentThread({
             </div>
           </form>
         ) : (
-          <div className="rounded-[24px] border border-amber-300/20 bg-amber-300/10 p-4 text-sm text-amber-50">
-            <p className="font-semibold">Join the receipt conversation.</p>
-            <p className="mt-1 text-amber-100/75">
+          <div className="border-l border-white/10 pl-3 text-sm text-zinc-300">
+            <p className="font-medium text-zinc-100">Join the receipt conversation.</p>
+            <p className="mt-1 text-zinc-500">
               Sign in to ask a question, leave proof, or reply to the builder.
             </p>
             <a
               href={signInHref}
-              className="mt-3 inline-flex rounded-full bg-amber-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-black transition hover:bg-white"
+              className="mt-3 inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
             >
               Sign in to comment
             </a>
@@ -408,17 +402,15 @@ export function CommentThread({
         )}
 
         {error ? (
-          <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {error}
-          </div>
+          <div className="mt-4 border-l border-red-400/40 pl-3 text-sm text-red-100">{error}</div>
         ) : null}
 
         <div className="mt-6 space-y-3">
           {roots.length > 0 ? (
             roots.map((comment) => renderComment(comment, "root"))
           ) : (
-            <div className="rounded-[24px] border border-dashed border-white/10 bg-black/20 p-5 text-sm text-neutral-400">
-              <p className="font-semibold text-neutral-200">No thread yet.</p>
+            <div className="border-l border-dashed border-white/10 pl-3 text-sm text-zinc-500">
+              <p className="font-medium text-zinc-200">No thread yet.</p>
               <p className="mt-1">
                 Be the first builder to ask for context, leave a proof check, or suggest the next
                 fork.
@@ -429,7 +421,7 @@ export function CommentThread({
                     key={prompt}
                     type="button"
                     onClick={() => useThreadStarter(prompt)}
-                    className="rounded-full border border-white/10 px-3 py-1.5 text-left text-[11px] font-semibold text-neutral-400 transition hover:border-amber-200/40 hover:text-amber-100"
+                    className="rounded-full px-2.5 py-1.5 text-left text-[12px] text-zinc-600 transition-[background-color,color] hover:bg-white/[0.04] hover:text-zinc-200"
                   >
                     {prompt}
                   </button>
@@ -461,7 +453,7 @@ function CommentTextarea({
       placeholder={placeholder}
       disabled={disabled}
       rows={3}
-      className="w-full resize-none rounded-[22px] border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-neutral-600 focus:border-amber-200/60 focus:ring-4 focus:ring-amber-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+      className="w-full resize-none rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-700 focus:border-white/25 focus:ring-4 focus:ring-white/[0.04] disabled:cursor-not-allowed disabled:opacity-60"
       maxLength={MAX_COMMENT_LENGTH}
     />
   );
@@ -472,7 +464,7 @@ function SubmitButton({ pending, children }: { pending: boolean; children: strin
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-black transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-full bg-zinc-100 px-3 py-2 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Posting..." : children}
     </button>

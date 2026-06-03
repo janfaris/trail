@@ -22,25 +22,15 @@ type ReceiptBlockProps = {
 function Badge({ status }: { status: ShippedStatus }) {
   const s = (status ?? "unverified") as string;
   let label = "Unverified";
-  let icon: ReactNode = "⚠";
-  let cls = "border-white/10 bg-zinc-800/60 text-zinc-400";
+  let cls = "text-zinc-400";
   if (s === "shipped") {
     label = "Shipped";
-    icon = "✓";
-    cls = "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    cls = "text-[#a7f300]";
   } else if (s === "draft") {
     label = "Draft";
-    icon = "◐";
-    cls = "border-amber-500/40 bg-amber-500/10 text-amber-300";
+    cls = "text-amber-200";
   }
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border font-mono text-[11px] ${cls}`}
-    >
-      <span aria-hidden>{icon}</span>
-      {label}
-    </span>
-  );
+  return <span className={`font-mono text-[11px] ${cls}`}>{label}</span>;
 }
 
 export function ReceiptBlock({
@@ -59,13 +49,11 @@ export function ReceiptBlock({
   if (!generatedAt) {
     return (
       <section
-        className="mb-10 rounded-lg border border-zinc-900 bg-[#0c0d10] p-5"
+        className="border-b border-white/[0.08] px-4 py-5 sm:px-5"
         aria-label="Work receipt pending"
       >
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Work receipt
-          </span>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-[12px] text-zinc-600">Work receipt</span>
           <Badge status="unverified" />
         </div>
         <p className="text-sm text-zinc-400">
@@ -82,15 +70,10 @@ export function ReceiptBlock({
   const redactionCount = (validatorWarnings ?? []).length;
 
   return (
-    <section
-      className="mb-10 rounded-lg border border-[#1c1d22] bg-[#0c0d10] p-5"
-      aria-label="Work receipt"
-    >
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-            Work receipt
-          </span>
+    <section className="border-b border-white/[0.08] px-4 py-5 sm:px-5" aria-label="Work receipt">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[12px] text-zinc-600">Work receipt</span>
           <Badge status={shippedStatus} />
         </div>
         <div className="flex items-center gap-3">
@@ -99,7 +82,7 @@ export function ReceiptBlock({
               href={`https://github.com/${linkedRepo}/commit/${linkedCommitSha}`}
               target="_blank"
               rel="noreferrer noopener"
-              className="font-mono text-[11px] text-[#8a8fdc] hover:text-[#a5aaeb] transition-colors"
+              className="font-mono text-[11px] text-zinc-600 transition-colors hover:text-[#a7f300]"
             >
               {linkedRepo}@{linkedCommitSha.slice(0, 7)}
             </a>
@@ -109,23 +92,21 @@ export function ReceiptBlock({
       </div>
 
       {outcome && (
-        <p className="text-[15px] leading-snug text-zinc-100 font-medium mb-2">{outcome}</p>
+        <p className="mb-2 text-[15px] font-medium leading-snug text-zinc-100">{outcome}</p>
       )}
 
       {tldr && (
-        <p className="text-sm text-zinc-400 leading-relaxed mb-4 whitespace-pre-line">{tldr}</p>
+        <p className="mb-4 whitespace-pre-line text-[14px] leading-6 text-zinc-400">{tldr}</p>
       )}
 
       {decisions.length > 0 && (
         <div className="mb-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-            Key decisions
-          </div>
+          <div className="mb-2 text-[12px] text-zinc-600">Key decisions</div>
           <ul className="space-y-1.5">
-            {decisions.map((d, i) => (
-              <li key={i} className="text-sm text-zinc-300 leading-snug flex gap-2">
-                <span className="text-[#5e6ad2] mt-[2px]" aria-hidden>
-                  →
+            {decisions.map((d) => (
+              <li key={d} className="flex gap-2 text-[13px] leading-5 text-zinc-400">
+                <span className="mt-[2px] text-zinc-700" aria-hidden>
+                  -
                 </span>
                 <span>{d}</span>
               </li>
@@ -136,22 +117,15 @@ export function ReceiptBlock({
 
       {visibleFiles.length > 0 && (
         <div className="mb-2">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-            Changed files
-          </div>
-          <ul className="flex flex-wrap gap-1.5">
+          <div className="mb-2 text-[12px] text-zinc-600">Changed files</div>
+          <ul className="flex flex-wrap gap-x-3 gap-y-1">
             {visibleFiles.map((f) => (
-              <li
-                key={f}
-                className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/10 bg-zinc-900/60 text-zinc-300"
-              >
+              <li key={f} className="font-mono text-[11px] text-zinc-500">
                 {f}
               </li>
             ))}
             {extraFiles > 0 && (
-              <li className="font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/10 bg-zinc-900/30 text-zinc-500">
-                +{extraFiles} more
-              </li>
+              <li className="font-mono text-[11px] text-zinc-600">+{extraFiles} more</li>
             )}
           </ul>
         </div>
