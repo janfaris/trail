@@ -20,8 +20,20 @@ describe("fetchRadarTweetsForSource", () => {
               text: "New agent workflow guide",
               created_at: "2026-06-01T20:00:00.000Z",
               public_metrics: { like_count: 5 },
+              attachments: { media_keys: ["3_abc"] },
             },
           ],
+          includes: {
+            media: [
+              {
+                media_key: "3_abc",
+                type: "photo",
+                url: "https://pbs.twimg.com/media/agent-guide.jpg",
+                width: 1600,
+                height: 900,
+              },
+            ],
+          },
         }),
         {
           status: 200,
@@ -45,11 +57,26 @@ describe("fetchRadarTweetsForSource", () => {
     const [url, init] = fetchImpl.mock.calls[0] ?? [];
     expect(String(url)).toContain("tweets/search/recent");
     expect(String(url)).toContain("from%3Aswyx");
+    const requestUrl = new URL(String(url));
+    expect(requestUrl.searchParams.get("tweet.fields")).toContain("attachments");
+    expect(requestUrl.searchParams.get("expansions")).toBe("attachments.media_keys");
+    expect(requestUrl.searchParams.get("media.fields")).toContain("preview_image_url");
     expect((init as RequestInit).headers).toMatchObject({
       authorization: "Bearer token",
     });
     expect(result.tweets).toHaveLength(1);
     expect(result.tweets[0]?.id).toBe("123");
+    expect(result.tweets[0]?.entities.media).toEqual([
+      {
+        mediaKey: "3_abc",
+        type: "photo",
+        url: "https://pbs.twimg.com/media/agent-guide.jpg",
+        previewImageUrl: undefined,
+        width: 1600,
+        height: 900,
+        altText: undefined,
+      },
+    ]);
     expect(result.rateLimit.remaining).toBe(58);
   });
 

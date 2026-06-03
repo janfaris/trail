@@ -1,6 +1,7 @@
 import {
   type NormalizedRadarTweet,
   type RawRadarTweet,
+  type RawRadarTweetMedia,
   normalizeRadarTweet,
 } from "./radar-ingestion";
 import {
@@ -13,6 +14,7 @@ import {
 const DEFAULT_X_API_BASE_URL = "https://api.x.com/2";
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 const TWEET_FIELDS = [
+  "attachments",
   "author_id",
   "conversation_id",
   "created_at",
@@ -21,6 +23,16 @@ const TWEET_FIELDS = [
   "possibly_sensitive",
   "public_metrics",
   "referenced_tweets",
+].join(",");
+const TWEET_EXPANSIONS = ["attachments.media_keys"].join(",");
+const MEDIA_FIELDS = [
+  "alt_text",
+  "media_key",
+  "preview_image_url",
+  "type",
+  "url",
+  "width",
+  "height",
 ].join(",");
 
 export type RadarXApiRateLimit = {
@@ -47,6 +59,9 @@ export type FetchRadarTweetsForSourceResult = {
 type XApiSearchResponse = {
   data?: RawRadarTweet[];
   errors?: Array<{ title?: string; detail?: string; type?: string }>;
+  includes?: {
+    media?: RawRadarTweetMedia[];
+  };
   meta?: Record<string, unknown>;
 };
 
@@ -105,6 +120,16 @@ function errorMessageFromBody(status: number, body: string): string {
   }
 }
 
+function mediaByKeyFromResponse(response: XApiSearchResponse): Map<string, RawRadarTweetMedia> {
+  return new Map(
+    (response.includes?.media ?? [])
+      .filter((media): media is RawRadarTweetMedia & { media_key: string } => {
+        return typeof media.media_key === "string";
+      })
+      .map((media) => [media.media_key, media]),
+  );
+}
+
 export async function fetchRadarTweetsForSource({
   bearerToken,
   source,
@@ -122,6 +147,8 @@ export async function fetchRadarTweetsForSource({
   url.searchParams.set("query", query);
   url.searchParams.set("max_results", String(boundedLimit(limit)));
   url.searchParams.set("tweet.fields", TWEET_FIELDS);
+  url.searchParams.set("expansions", TWEET_EXPANSIONS);
+  url.searchParams.set("media.fields", MEDIA_FIELDS);
 
   const timeoutMs = boundedTimeoutMs(requestTimeoutMs);
   const controller = new AbortController();
@@ -177,9 +204,10 @@ export async function fetchRadarTweetsForSource({
 
   const parsed = body ? (JSON.parse(body) as XApiSearchResponse) : {};
   const data = Array.isArray(parsed.data) ? parsed.data : [];
+  const mediaByKey = mediaByKeyFromResponse(parsed);
   return {
     source,
-    tweets: data.map((item) => normalizeRadarTweet(item, source)),
+    tweets: data.map((item) => normalizeRadarTweet(item, source, "X API", mediaByKey)),
     rateLimit,
   };
 }

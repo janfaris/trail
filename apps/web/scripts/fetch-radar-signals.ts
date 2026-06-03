@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import {
   type RawRadarTweet,
+  type RawRadarTweetMedia,
   buildRadarSignalWrite,
   normalizeRadarTweet,
   radarSignalUpdateValues,
@@ -36,6 +37,9 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 type XUrlResponse = {
   data?: unknown;
+  includes?: {
+    media?: RawRadarTweetMedia[];
+  };
 };
 
 function optionValue(name: string, fallback: string): string {
@@ -91,7 +95,14 @@ function assertXurlReady() {
 function parseXurlTweets(stdout: string, source: RadarSource) {
   const parsed = JSON.parse(stdout) as XUrlResponse;
   const data = Array.isArray(parsed.data) ? parsed.data : [];
-  return data.map((item) => normalizeRadarTweet(item as RawRadarTweet, source, "xurl"));
+  const mediaByKey = new Map(
+    (parsed.includes?.media ?? [])
+      .filter((media): media is RawRadarTweetMedia & { media_key: string } => {
+        return typeof media.media_key === "string";
+      })
+      .map((media) => [media.media_key, media]),
+  );
+  return data.map((item) => normalizeRadarTweet(item as RawRadarTweet, source, "xurl", mediaByKey));
 }
 
 async function main() {

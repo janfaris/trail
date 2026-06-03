@@ -169,7 +169,7 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
         <div>
           <h1 className="text-2xl font-semibold text-zinc-100">Radar admin</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Monitor the hourly X ingestion cron and trigger a manual fetch.
+            Monitor the X ingestion cron and trigger a manual fetch.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -252,7 +252,8 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                   Using the current posted rate of {money(X_POST_READ_USD)} per Post read:{" "}
                   <span className="text-zinc-300">{money(apiCost.scheduledMax)} per day max</span>{" "}
                   if every scheduled request returns {data.xApiUsage.maxResultsPerSource} new or
-                  non-deduped posts. Confirm exact rates in your X billing dashboard.
+                  non-deduped posts. Image previews also request media metadata, which X may meter
+                  as separate media reads. Confirm exact rates in your X billing dashboard.
                 </p>
               </section>
               <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
