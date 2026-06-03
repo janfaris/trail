@@ -22,6 +22,7 @@ export type BuildPostInput = {
   xUrl: string;
   demoUrl: string;
   question: string;
+  community: string;
 };
 
 export type FeedPublishResult =
@@ -340,6 +341,7 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
   const xUrl = cleanUrl(input.xUrl);
   const demoUrl = cleanUrl(input.demoUrl);
   const question = cleanSummary(input.question, 260);
+  const community = input.community === "puerto-rico" ? "puerto-rico" : null;
   const tools = cleanCsv(input.tools, 8, 32);
   const stack = cleanCsv(input.stack, 10, 32);
   const github = parseGithubUrl(githubUrl);
@@ -411,26 +413,34 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     frameworks: stack,
     models: null,
   });
-  if (tags.length > 0) {
-    await db
-      .insert(schema.sessionTag)
-      .values(
-        tags.map((tag) => ({
-          id: crypto.randomUUID(),
-          sessionId,
-          tag: tag.tag,
-          label: tag.label,
-          kind: tag.kind,
-          confidence: tag.confidence.toFixed(3),
-          source: tag.source,
-        })),
-      )
-      .onConflictDoNothing();
+  const tagRows = tags.map((tag) => ({
+    id: crypto.randomUUID(),
+    sessionId,
+    tag: tag.tag,
+    label: tag.label,
+    kind: tag.kind,
+    confidence: tag.confidence.toFixed(3),
+    source: tag.source,
+  }));
+  if (community === "puerto-rico") {
+    tagRows.push({
+      id: crypto.randomUUID(),
+      sessionId,
+      tag: "puerto-rico",
+      label: "Puerto Rico",
+      kind: "community",
+      confidence: "1.000",
+      source: "heuristic",
+    });
+  }
+  if (tagRows.length > 0) {
+    await db.insert(schema.sessionTag).values(tagRows).onConflictDoNothing();
   }
 
   const href = `/u/${viewer.handle}/${slug}`;
   revalidatePath("/feed");
   revalidatePath("/create");
+  revalidatePath("/puerto-rico");
   revalidatePath(`/u/${viewer.handle}`);
   revalidatePath(href);
 
