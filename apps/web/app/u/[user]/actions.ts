@@ -247,7 +247,10 @@ export async function bulkDeleteSessions(ids: string[]) {
 
 export async function saveProfile(formData: FormData) {
   const u = await requireUser();
-  const bio = (formData.get("bio") ?? "").toString().slice(0, 160) || null;
+  const bio = (formData.get("bio") ?? "").toString().trim().slice(0, 160) || null;
+  const location = (formData.get("location") ?? "").toString().trim().slice(0, 80) || null;
+  const currentlyBuilding =
+    (formData.get("currentlyBuilding") ?? "").toString().trim().slice(0, 140) || null;
   const xHandle = (formData.get("xHandle") ?? "").toString().trim().replace(/^@/, "") || null;
   const githubHandle =
     (formData.get("githubHandle") ?? "").toString().trim().replace(/^@/, "") || null;
@@ -271,6 +274,8 @@ export async function saveProfile(formData: FormData) {
     .update(schema.user)
     .set({
       bio,
+      location,
+      currentlyBuilding,
       xHandle,
       githubHandle,
       linkedinHandle: linkedinHandleValue,

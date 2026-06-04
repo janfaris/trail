@@ -45,6 +45,8 @@ export const user = pgTable(
     // trail-specific
     handle: text("handle").unique(), // github login, used in /u/[handle]
     bio: text("bio"),
+    location: text("location"),
+    currentlyBuilding: text("currently_building"),
     xHandle: text("x_handle"),
     githubHandle: text("github_handle"),
     linkedinHandle: text("linkedin_handle"),

@@ -23,6 +23,8 @@ type PuertoRicoBuildRow = {
   sharedAt: Date | null;
   handle: string | null;
   authorName: string;
+  authorLocation: string | null;
+  authorCurrentlyBuilding: string | null;
   repo: string | null;
   linkedRepo: string | null;
   toolsUsed: string[] | null;
@@ -55,6 +57,8 @@ async function loadPuertoRicoBuilds(): Promise<PuertoRicoBuild[]> {
       sharedAt: schema.trailSession.sharedAt,
       handle: schema.user.handle,
       authorName: schema.user.name,
+      authorLocation: schema.user.location,
+      authorCurrentlyBuilding: schema.user.currentlyBuilding,
       repo: schema.trailSession.repo,
       linkedRepo: schema.trailSession.linkedRepo,
       toolsUsed: schema.trailSession.toolsUsed,
@@ -93,6 +97,24 @@ function promptHref(prompt: string): string {
 
 export default async function PuertoRicoPage() {
   const localBuilds = await loadPuertoRicoBuilds();
+  const localBuilders = Array.from(
+    localBuilds
+      .reduce((builders, build) => {
+        if (!builders.has(build.handle)) {
+          builders.set(build.handle, {
+            handle: build.handle,
+            name: build.authorName,
+            location: build.authorLocation,
+            currentlyBuilding: build.authorCurrentlyBuilding,
+          });
+        }
+        return builders;
+      }, new Map<
+        string,
+        { handle: string; name: string; location: string | null; currentlyBuilding: string | null }
+      >())
+      .values(),
+  ).slice(0, 6);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
@@ -179,6 +201,28 @@ export default async function PuertoRicoPage() {
               ))}
             </div>
           </div>
+
+          {localBuilders.length > 0 ? (
+            <div className="trail-surface px-5 py-6">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                Local builders
+              </div>
+              <div className="mt-4 divide-y divide-white/10">
+                {localBuilders.map((builder) => (
+                  <Link
+                    key={builder.handle}
+                    href={`/u/${builder.handle}`}
+                    className="block py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="text-sm font-medium text-zinc-200">@{builder.handle}</div>
+                    <div className="mt-1 text-xs leading-5 text-zinc-500">
+                      {builder.currentlyBuilding ?? builder.location ?? "Published a local build"}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </aside>
 
         <section className="lg:col-span-2">

@@ -46,6 +46,30 @@ export default async function SettingsPage() {
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Location" labelFor="profile-location" hint="City, region, or remote base.">
+            <input
+              id="profile-location"
+              name="location"
+              maxLength={80}
+              defaultValue={me.location ?? ""}
+              placeholder="San Juan, Puerto Rico"
+              className={inputClassName}
+            />
+          </Field>
+
+          <Field label="Currently building" labelFor="profile-currently-building">
+            <input
+              id="profile-currently-building"
+              name="currentlyBuilding"
+              maxLength={140}
+              defaultValue={me.currentlyBuilding ?? ""}
+              placeholder="AI meetup tools, agent workflows, community demos"
+              className={inputClassName}
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="GitHub handle" labelFor="profile-github">
             <input
               id="profile-github"
