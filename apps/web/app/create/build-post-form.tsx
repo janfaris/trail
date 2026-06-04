@@ -1,7 +1,14 @@
 "use client";
 
-import { importGithubBuildDraft, importXBuildDraft } from "@/app/create/actions";
+import {
+  importGithubBuildDraft,
+  importXBuildDraft,
+  improveBuildPostDraft,
+} from "@/app/create/actions";
 import { type BuildPostInput, createBuildPostFromFeed } from "@/app/feed/actions";
+import { validateBuildPostQuality } from "@/lib/build-post-quality";
+import { parseGithubBuildUrl } from "@/lib/github-url";
+import { parseXPostUrl } from "@/lib/x-url";
 import Link from "next/link";
 import { type ReactNode, useState, useTransition } from "react";
 
@@ -29,6 +36,7 @@ function createEmptyInput(
     githubUrl: "",
     xUrl: defaultXUrl,
     demoUrl: "",
+    proofNote: "",
     question: defaultQuestion,
     community: defaultCommunity,
   };
@@ -80,6 +88,24 @@ function proofUrlValue(input: BuildPostInput): string {
   return input.githubUrl || input.xUrl || input.demoUrl;
 }
 
+function isValidHttpUrl(value: string): boolean {
+  if (!value.trim()) return false;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function proofUrlCount(input: BuildPostInput): number {
+  return [
+    input.githubUrl.trim() && parseGithubBuildUrl(input.githubUrl) ? input.githubUrl : "",
+    input.xUrl.trim() && parseXPostUrl(input.xUrl) ? input.xUrl : "",
+    input.demoUrl.trim() && isValidHttpUrl(input.demoUrl) ? input.demoUrl : "",
+  ].filter(Boolean).length;
+}
+
 type BuildPostFormProps = {
   defaultCommunity?: string;
   defaultQuestion?: string;
@@ -100,6 +126,8 @@ export function BuildPostForm({
   const [githubImportError, setGithubImportError] = useState<string | null>(null);
   const [xImportStatus, setXImportStatus] = useState<string | null>(null);
   const [xImportError, setXImportError] = useState<string | null>(null);
+  const [assistStatus, setAssistStatus] = useState<string | null>(null);
+  const [assistError, setAssistError] = useState<string | null>(null);
   const [published, setPublished] = useState<{
     href: string;
     shareUrl: string;
@@ -108,6 +136,7 @@ export function BuildPostForm({
   const [isPending, startTransition] = useTransition();
   const [isImportPending, startImportTransition] = useTransition();
   const [isXImportPending, startXImportTransition] = useTransition();
+  const [isAssistPending, startAssistTransition] = useTransition();
 
   const update = (key: keyof BuildPostInput, value: string) => {
     setInput((current) => ({ ...current, [key]: value }));
@@ -117,6 +146,8 @@ export function BuildPostForm({
     setGithubImportStatus(null);
     setXImportError(null);
     setXImportStatus(null);
+    setAssistError(null);
+    setAssistStatus(null);
   };
 
   const updateProofUrl = (value: string) => {
@@ -133,6 +164,8 @@ export function BuildPostForm({
     setGithubImportStatus(null);
     setXImportError(null);
     setXImportStatus(null);
+    setAssistError(null);
+    setAssistStatus(null);
   };
 
   const publish = () => {
@@ -141,6 +174,19 @@ export function BuildPostForm({
       const title = input.title.trim() || deriveTitle(summary);
       if (!summary || !title) {
         setError("Write what shipped before publishing.");
+        setPublished(null);
+        return;
+      }
+      const quality = validateBuildPostQuality({
+        summary,
+        proofUrlCount: proofUrlCount(input),
+        proofNote: input.proofNote,
+        question: input.question,
+      });
+      if (!quality.ok) {
+        setError(
+          quality.issues[0]?.message ?? "Add a clear outcome, proof, and context before posting.",
+        );
         setPublished(null);
         return;
       }
@@ -158,6 +204,31 @@ export function BuildPostForm({
       setPublished({ href: result.href, shareUrl: result.shareUrl, title: result.title });
       setInput(createEmptyInput(defaultCommunity, defaultQuestion, defaultXUrl));
       setCopyStatus(null);
+    });
+  };
+
+  const improveDraft = () => {
+    setAssistError(null);
+    setAssistStatus(null);
+    startAssistTransition(async () => {
+      const result = await improveBuildPostDraft(input);
+      if (!result.ok) {
+        setAssistError(result.error);
+        return;
+      }
+
+      setInput((current) => ({
+        ...current,
+        title: result.draft.title || current.title,
+        summary: result.draft.summary || current.summary,
+        proofNote: result.draft.proofNote || current.proofNote,
+        question: result.draft.question || current.question,
+      }));
+      setAssistStatus(
+        result.missing.length > 0
+          ? `Polished draft. Still needed: ${result.missing.join(" ")}`
+          : "Polished draft. It now meets the minimum quality bar.",
+      );
     });
   };
 
@@ -218,7 +289,6 @@ export function BuildPostForm({
         `I just posted a build on Trail: ${published.title}`,
       )}&url=${encodeURIComponent(published.shareUrl)}`
     : null;
-  const hasSummary = input.summary.trim().length > 0;
   const generatedTitle = deriveTitle(input.summary);
   const publishTitle = input.title.trim() || generatedTitle;
   const proofUrl = proofUrlValue(input);
@@ -235,23 +305,46 @@ export function BuildPostForm({
         : proofKind === "demo"
           ? "Demo proof"
           : "No proof yet";
-  const proofCount = [input.githubUrl, input.xUrl, input.demoUrl].filter(
-    (value) => value.trim().length > 0,
-  ).length;
+  const proofCount = proofUrlCount(input);
+  const quality = validateBuildPostQuality({
+    summary: input.summary,
+    proofUrlCount: proofCount,
+    proofNote: input.proofNote,
+    question: input.question,
+  });
+  const proofDetailLabel = proofCount > 0 ? proofLabel : "Proof note";
   const detailsCount = [input.tools, input.stack, input.question, input.community].filter(
     (value) => value.trim().length > 0,
   ).length;
   const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim());
+  const canUseAssist = [
+    input.title,
+    input.summary,
+    input.proofNote,
+    input.question,
+    input.githubUrl,
+    input.xUrl,
+    input.demoUrl,
+  ].some((value) => value.trim().length > 0);
   const checklist = [
     {
-      label: "Write what shipped",
-      status: hasSummary ? "complete" : "open",
-      detail: hasSummary ? "The post has a story" : "One clear paragraph is enough",
+      label: "Clear shipped outcome",
+      status: quality.checks.outcome ? "complete" : "open",
+      detail: quality.checks.outcome
+        ? "The build is specific enough for the feed"
+        : "Name what shipped and who it helps",
     },
     {
-      label: "Proof link",
-      status: proofCount > 0 ? "complete" : "optional",
-      detail: proofCount > 0 ? proofLabel : "Optional: GitHub, X, or demo URL",
+      label: "Credible proof",
+      status: quality.checks.proof ? "complete" : "open",
+      detail: quality.checks.proof ? proofDetailLabel : "Add a proof URL or public note",
+    },
+    {
+      label: "Why it matters",
+      status: quality.checks.context ? "complete" : "open",
+      detail: quality.checks.context
+        ? "Readers have a reason to reply"
+        : "Add why it matters, a lesson, or a question",
     },
     {
       label: "Add details",
@@ -279,12 +372,25 @@ export function BuildPostForm({
                 60-second composer
               </div>
               <h1 className="mt-3 max-w-2xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-zinc-50 sm:text-6xl">
-                Post the build. Skip the homework.
+                Post a build worth reading.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400">
-                Write what shipped, paste one proof link if you have it, then publish. Details are
-                optional until the post needs them.
+                Trail now asks for the useful minimum: what shipped, proof people can trust, and why
+                another builder should care.
               </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={improveDraft}
+                  disabled={!canUseAssist || isAssistPending}
+                  className={secondaryButtonClassName}
+                >
+                  {isAssistPending ? "Polishing..." : "Improve with GPT-5.4 mini"}
+                </button>
+                <span className="max-w-sm text-xs leading-5 text-zinc-500">
+                  AI can tighten the draft, but the checklist still decides what can publish.
+                </span>
+              </div>
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -292,11 +398,28 @@ export function BuildPostForm({
               </div>
               <ol className="mt-3 space-y-2">
                 <li>1. Say what changed.</li>
-                <li>2. Add proof only if it helps.</li>
+                <li>2. Add proof link or note.</li>
                 <li>3. Publish, then let the thread grow.</li>
               </ol>
             </div>
           </div>
+
+          {assistStatus ? (
+            <div
+              aria-live="polite"
+              className="rounded-3xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-4 text-sm leading-6 text-zinc-200"
+            >
+              {assistStatus}
+            </div>
+          ) : null}
+          {assistError ? (
+            <div
+              aria-live="polite"
+              className="rounded-3xl border border-red-500/25 bg-red-500/10 p-4 text-sm leading-6 text-red-100"
+            >
+              {assistError}
+            </div>
+          ) : null}
 
           {hasStarterContext ? (
             <div className="rounded-3xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-4">
@@ -323,7 +446,7 @@ export function BuildPostForm({
                 onChange={(event) => update("summary", event.target.value)}
                 rows={7}
                 maxLength={1200}
-                placeholder="I shipped a cleaner /create flow so builders can post in under a minute. It keeps proof optional, hides advanced fields, and makes the first sentence do the work."
+                placeholder="I shipped a cleaner /create flow so builders can post proof-backed work without fighting a long form. It helps new builders share the actual outcome, then asks for feedback on the thread."
                 className={`${textareaClassName} text-base sm:text-lg`}
                 required
                 aria-required="true"
@@ -343,7 +466,7 @@ export function BuildPostForm({
               <Field
                 label="Proof link"
                 labelFor="build-proof"
-                hint="Optional. Paste GitHub, X/Twitter, or a demo/deploy URL."
+                hint="Paste GitHub, X/Twitter, or a demo/deploy URL. If the link is private, use the public proof note below instead."
               >
                 <input
                   id="build-proof"
@@ -369,6 +492,22 @@ export function BuildPostForm({
                 </div>
               ) : null}
             </div>
+
+            <Field
+              label="Proof note"
+              labelFor="build-proof-note"
+              hint="This is public on the post. Use it when the repo or demo is private, but never include secrets or customer details."
+            >
+              <textarea
+                id="build-proof-note"
+                value={input.proofNote}
+                onChange={(event) => update("proofNote", event.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Private repo. Demoed the flow to the support lead after deploy, and the rollout notes are in Linear."
+                className={`${textareaClassName} min-h-24`}
+              />
+            </Field>
 
             {proofStatus ? (
               <div
@@ -473,8 +612,8 @@ export function BuildPostForm({
                 Publish check
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                Only the first box is required. Proof and details make the post stronger, not harder
-                to publish.
+                Complete the first three checks before publishing. Details stay optional, but thin
+                posts do not enter the feed.
               </p>
             </div>
 
@@ -542,14 +681,14 @@ export function BuildPostForm({
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || !quality.ok}
               className={`${primaryButtonClassName} w-full`}
             >
-              {isPending ? "Publishing..." : "Publish build"}
+              {isPending ? "Publishing..." : quality.ok ? "Publish build" : "Complete minimum"}
             </button>
             <p className="text-xs leading-5 text-zinc-600">
-              Publishing creates a public post on your Trail profile. Proof links stay labeled as
-              proof, not fake activity.
+              Publishing creates a public post on your Trail profile. Proof links and proof notes
+              stay labeled as proof, not fake activity.
             </p>
           </div>
         </aside>

@@ -510,6 +510,7 @@ export default async function SessionView({
       : events;
   const changedFiles = sessionRow.receiptChangedFiles ?? [];
   const decisions = (sessionRow.receiptDecisionSummary ?? []).filter(Boolean);
+  const manualProofNote = manualPost ? sessionRow.manualProofNote?.trim() || null : null;
   const aiEvidenceFacts: ProofFactData[] =
     aiReview?.evidence.slice(0, 3).map((item) => ({
       label: item.label,
@@ -528,6 +529,9 @@ export default async function SessionView({
       </a>
     ),
   }));
+  const manualProofNoteFacts: ProofFactData[] = manualProofNote
+    ? [{ label: "Proof note", value: manualProofNote }]
+    : [];
   const fallbackProofFacts: ProofFactData[] = manualPost
     ? [
         {
@@ -569,23 +573,29 @@ export default async function SessionView({
             }
           : null,
       ].filter(Boolean) as ProofFactData[]);
-  const proofFacts = [...linkProofFacts, ...aiEvidenceFacts, ...fallbackProofFacts].slice(0, 3);
+  const proofFacts = [
+    ...linkProofFacts,
+    ...manualProofNoteFacts,
+    ...aiEvidenceFacts,
+    ...fallbackProofFacts,
+  ].slice(0, 3);
   const proofLinkCount = buildPostLinks.length;
+  const hasManualProof = proofLinkCount > 0 || Boolean(manualProofNote);
   const verdict = aiReview
     ? reviewVerdictLabel(aiReview.verdict)
     : manualPost
       ? "Build post"
       : statusLabel(sessionRow.receiptStatus);
   const primaryActionHref = manualPost
-    ? buildPostLinks.length > 0
+    ? hasManualProof
       ? "#reuse"
       : "#conversation"
     : lessonRows.length > 0
       ? "#lessons"
       : "#conversation";
   const primaryActionLabel = manualPost
-    ? buildPostLinks.length > 0
-      ? "Open proof links"
+    ? hasManualProof
+      ? "Review proof"
       : "Join the thread"
     : lessonRows.length > 0
       ? "Read lessons"
@@ -977,16 +987,21 @@ export default async function SessionView({
             ) : null}
 
             <section>
-              <SectionHeader
-                id="reuse"
-                title={manualPost ? "Proof links" : "What can I do with it?"}
-              >
+              <SectionHeader id="reuse" title={manualPost ? "Proof" : "What can I do with it?"}>
                 {manualPost
-                  ? "Open the source, demo, or social post the builder attached, then bring feedback back to the thread."
+                  ? "Open the source, demo, or social post the builder attached — or read their private-work proof note — then bring feedback back to the thread."
                   : "If the work is useful, copy the setup or open the recipe in another coding agent instead of reverse-engineering the timeline."}
               </SectionHeader>
               {manualPost ? (
                 <div className="divide-y divide-white/[0.08]">
+                  {manualProofNote ? (
+                    <div className="px-4 py-4 sm:px-5">
+                      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-600">
+                        Proof note
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-zinc-300">{manualProofNote}</p>
+                    </div>
+                  ) : null}
                   {buildPostLinks.length > 0 ? (
                     buildPostLinks.map((link) => (
                       <a
@@ -1004,12 +1019,12 @@ export default async function SessionView({
                         </div>
                       </a>
                     ))
-                  ) : (
+                  ) : !manualProofNote ? (
                     <div className="px-4 py-4 text-sm leading-6 text-zinc-500 sm:px-5">
                       No external links yet. Use the thread to ask the builder for a repo, demo, or
                       X post.
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="divide-y divide-white/[0.08]">

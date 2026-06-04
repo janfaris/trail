@@ -1,5 +1,8 @@
 "use server";
 
+import type { BuildPostInput } from "@/app/feed/actions";
+import { aiClient, textModel } from "@/lib/ai-client";
+import { normalizeBuildPostText, validateBuildPostQuality } from "@/lib/build-post-quality";
 import { type ParsedGithubBuildUrl, parseGithubBuildUrl } from "@/lib/github-url";
 import { canonicalLabel } from "@/lib/tags";
 import { parseXPostUrl } from "@/lib/x-url";
@@ -18,6 +21,8 @@ type XBuildDraft = {
   xUrl: string;
 };
 
+type BuildPostAssistDraft = Pick<BuildPostInput, "title" | "summary" | "proofNote" | "question">;
+
 type GitHubImportResult =
   | {
       ok: true;
@@ -34,6 +39,17 @@ type XImportResult =
       ok: true;
       sourceLabel: string;
       draft: XBuildDraft;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type BuildPostAssistResult =
+  | {
+      ok: true;
+      draft: BuildPostAssistDraft;
+      missing: string[];
     }
   | {
       ok: false;
@@ -101,6 +117,25 @@ function text(value: unknown): string | null {
 
 function truncate(value: string, maxLength: number): string {
   return value.replace(/\s+\n/g, "\n").trim().slice(0, maxLength);
+}
+
+function truncateUnknown(value: unknown, maxLength: number): string {
+  return typeof value === "string" ? truncate(value, maxLength) : "";
+}
+
+function assistProofUrlCount(input: BuildPostInput): number {
+  return [input.githubUrl, input.xUrl, input.demoUrl].filter((value) => value.trim()).length;
+}
+
+function parseAssistDraft(value: unknown): BuildPostAssistDraft | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  return {
+    title: truncateUnknown(record.title, 120),
+    summary: truncateUnknown(record.summary, 1200),
+    proofNote: truncateUnknown(record.proofNote, 500),
+    question: truncateUnknown(record.question, 260),
+  };
 }
 
 function firstParagraph(value: unknown): string | null {
@@ -555,4 +590,109 @@ export async function importXBuildDraft(xUrl: string): Promise<XImportResult> {
       xUrl: canonicalPost.normalizedUrl,
     },
   };
+}
+
+export async function improveBuildPostDraft(input: BuildPostInput): Promise<BuildPostAssistResult> {
+  if (!process.env.BETTER_AUTH_SECRET) {
+    return { ok: false, error: "Sign in before using the draft helper." };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in before using the draft helper." };
+  }
+
+  const seed = {
+    title: normalizeBuildPostText(input.title, 120),
+    summary: normalizeBuildPostText(input.summary, 1200),
+    proofNote: normalizeBuildPostText(input.proofNote, 500),
+    question: normalizeBuildPostText(input.question, 260),
+  };
+  if (!seed.title && !seed.summary && !seed.proofNote && !seed.question) {
+    return {
+      ok: false,
+      error:
+        "Write a rough outcome, proof note, or question first so Trail has something to improve.",
+    };
+  }
+
+  const client = aiClient();
+  if (!client) {
+    return {
+      ok: false,
+      error: "AI draft help is not configured yet. You can still complete the checklist manually.",
+    };
+  }
+
+  const proofUrls = [
+    input.githubUrl.trim() ? `GitHub: ${input.githubUrl.trim()}` : null,
+    input.xUrl.trim() ? `X/Twitter: ${input.xUrl.trim()}` : null,
+    input.demoUrl.trim() ? `Demo: ${input.demoUrl.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: textModel(),
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You improve short build-post drafts for Trail, a dark social feed for AI builders. Return only JSON with string fields: title, summary, proofNote, question. Keep the builder's meaning. Do not invent proof, links, metrics, users, customers, revenue, or launch results. If no proof note was supplied, leave proofNote empty unless the user already wrote a public proof note. The summary should be concrete, useful, and concise.",
+        },
+        {
+          role: "user",
+          content: [
+            "Improve this draft so it clearly says what shipped, why it matters, and what builders can discuss.",
+            "",
+            `Title: ${seed.title || "(none)"}`,
+            `Summary: ${seed.summary || "(none)"}`,
+            `Proof note: ${seed.proofNote || "(none)"}`,
+            `Question: ${seed.question || "(none)"}`,
+            "",
+            proofUrls ? `Existing proof URLs:\n${proofUrls}` : "Existing proof URLs: none",
+          ].join("\n"),
+        },
+      ],
+    });
+    const content = completion.choices[0]?.message.content;
+    if (!content) {
+      return { ok: false, error: "Trail could not improve the draft. Try again in a moment." };
+    }
+
+    const parsed = parseAssistDraft(JSON.parse(content) as unknown);
+    if (!parsed) {
+      return { ok: false, error: "Trail could not read the AI draft. Try again in a moment." };
+    }
+
+    const draft = {
+      title: parsed.title || seed.title,
+      summary: parsed.summary || seed.summary,
+      proofNote: parsed.proofNote || seed.proofNote,
+      question: parsed.question || seed.question,
+    };
+    const quality = validateBuildPostQuality({
+      summary: draft.summary,
+      proofUrlCount: assistProofUrlCount(input),
+      proofNote: draft.proofNote,
+      question: draft.question,
+    });
+
+    return {
+      ok: true,
+      draft,
+      missing: quality.issues.map((issue) => issue.message),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? `Trail could not improve the draft: ${error.message}`
+          : "Trail could not improve the draft. Try again in a moment.",
+    };
+  }
 }
