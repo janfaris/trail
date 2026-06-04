@@ -203,6 +203,7 @@ function feedReason(row: FeedRow): string {
     return `${pluralize(row.commentCount, "reply", "replies")} in the thread`;
   if (row.lessonCount > 0) return `${pluralize(row.lessonCount, "reusable lesson")} extracted`;
   if (row.positiveReactions + row.negativeReactions > 0) return reactionSummary(row);
+  if (isManualBuildPost(row) && row.xPostUrl) return "Discussion from X";
   if (isManualBuildPost(row)) return "New build post";
   if (row.receiptStatus === "shipped" || row.outcome === "shipped") return "Fresh shipping proof";
   if (row.linkedRepo ?? row.repo) return `Proof from ${row.linkedRepo ?? row.repo}`;
@@ -260,6 +261,7 @@ interface BaseFeedRow extends RankableSession {
   lessonPreviewWhatToSteal: string | null;
   commentCount: number;
   commentPreviews: FeedCommentPreview[];
+  xPostUrl: string | null;
 }
 
 interface FeedRow extends BaseFeedRow {
@@ -282,6 +284,7 @@ type FeedRowWithoutStats = Omit<
   | "lessonPreviewWhatToSteal"
   | "commentCount"
   | "commentPreviews"
+  | "xPostUrl"
 >;
 
 interface FeedCommentPreview {
@@ -818,82 +821,96 @@ async function attachEngagementStats(
 
   const { db, schema } = await import("@/db/client");
   const sessionIds = rows.map((row) => row.id);
-  const [statsRows, commentRows, commentPreviewRows, savedRows, lessonRows] = await Promise.all([
-    db
-      .select({
-        sessionId: schema.sessionReaction.sessionId,
-        kind: schema.sessionReaction.kind,
-        reactionCount: sql<number>`count(*)::int`,
-        viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
-      })
-      .from(schema.sessionReaction)
-      .where(inArray(schema.sessionReaction.sessionId, sessionIds))
-      .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind),
-    db
-      .select({
-        sessionId: schema.sessionComment.sessionId,
-        commentCount: sql<number>`count(*)::int`,
-      })
-      .from(schema.sessionComment)
-      .where(
-        and(
-          inArray(schema.sessionComment.sessionId, sessionIds),
-          isNull(schema.sessionComment.deletedAt),
+  const [statsRows, commentRows, commentPreviewRows, savedRows, lessonRows, xLinkRows] =
+    await Promise.all([
+      db
+        .select({
+          sessionId: schema.sessionReaction.sessionId,
+          kind: schema.sessionReaction.kind,
+          reactionCount: sql<number>`count(*)::int`,
+          viewerReacted: sql<boolean>`coalesce(bool_or(${schema.sessionReaction.userId} = ${viewerId}), false)`,
+        })
+        .from(schema.sessionReaction)
+        .where(inArray(schema.sessionReaction.sessionId, sessionIds))
+        .groupBy(schema.sessionReaction.sessionId, schema.sessionReaction.kind),
+      db
+        .select({
+          sessionId: schema.sessionComment.sessionId,
+          commentCount: sql<number>`count(*)::int`,
+        })
+        .from(schema.sessionComment)
+        .where(
+          and(
+            inArray(schema.sessionComment.sessionId, sessionIds),
+            isNull(schema.sessionComment.deletedAt),
+          ),
+        )
+        .groupBy(schema.sessionComment.sessionId),
+      db
+        .select({
+          sessionId: schema.sessionComment.sessionId,
+          id: schema.sessionComment.id,
+          body: schema.sessionComment.body,
+          createdAt: schema.sessionComment.createdAt,
+          authorName: schema.user.name,
+          authorHandle: schema.user.handle,
+          authorImage: schema.user.image,
+        })
+        .from(schema.sessionComment)
+        .innerJoin(schema.user, eq(schema.sessionComment.userId, schema.user.id))
+        .where(
+          and(
+            inArray(schema.sessionComment.sessionId, sessionIds),
+            isNull(schema.sessionComment.deletedAt),
+          ),
+        )
+        .orderBy(desc(schema.sessionComment.createdAt))
+        .limit(sessionIds.length * 3),
+      viewerId
+        ? db
+            .select({ sessionId: schema.savedReceipt.sessionId })
+            .from(schema.savedReceipt)
+            .where(
+              and(
+                eq(schema.savedReceipt.userId, viewerId),
+                inArray(schema.savedReceipt.sessionId, sessionIds),
+              ),
+            )
+        : Promise.resolve([]),
+      db
+        .select({
+          sessionId: schema.sessionLesson.sessionId,
+          title: schema.sessionLesson.title,
+          whatToSteal: schema.sessionLesson.whatToSteal,
+        })
+        .from(schema.sessionLesson)
+        .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
+        .where(
+          and(
+            inArray(schema.sessionLesson.sessionId, sessionIds),
+            eq(schema.trailSession.visibility, "public"),
+            isNotNull(schema.trailSession.sharedAt),
+            isNull(schema.trailSession.redactedAt),
+          ),
+        )
+        .orderBy(
+          desc(schema.sessionLesson.transferabilityScore),
+          asc(schema.sessionLesson.lessonIndex),
         ),
-      )
-      .groupBy(schema.sessionComment.sessionId),
-    db
-      .select({
-        sessionId: schema.sessionComment.sessionId,
-        id: schema.sessionComment.id,
-        body: schema.sessionComment.body,
-        createdAt: schema.sessionComment.createdAt,
-        authorName: schema.user.name,
-        authorHandle: schema.user.handle,
-        authorImage: schema.user.image,
-      })
-      .from(schema.sessionComment)
-      .innerJoin(schema.user, eq(schema.sessionComment.userId, schema.user.id))
-      .where(
-        and(
-          inArray(schema.sessionComment.sessionId, sessionIds),
-          isNull(schema.sessionComment.deletedAt),
-        ),
-      )
-      .orderBy(desc(schema.sessionComment.createdAt))
-      .limit(sessionIds.length * 3),
-    viewerId
-      ? db
-          .select({ sessionId: schema.savedReceipt.sessionId })
-          .from(schema.savedReceipt)
-          .where(
-            and(
-              eq(schema.savedReceipt.userId, viewerId),
-              inArray(schema.savedReceipt.sessionId, sessionIds),
-            ),
-          )
-      : Promise.resolve([]),
-    db
-      .select({
-        sessionId: schema.sessionLesson.sessionId,
-        title: schema.sessionLesson.title,
-        whatToSteal: schema.sessionLesson.whatToSteal,
-      })
-      .from(schema.sessionLesson)
-      .innerJoin(schema.trailSession, eq(schema.sessionLesson.sessionId, schema.trailSession.id))
-      .where(
-        and(
-          inArray(schema.sessionLesson.sessionId, sessionIds),
-          eq(schema.trailSession.visibility, "public"),
-          isNotNull(schema.trailSession.sharedAt),
-          isNull(schema.trailSession.redactedAt),
-        ),
-      )
-      .orderBy(
-        desc(schema.sessionLesson.transferabilityScore),
-        asc(schema.sessionLesson.lessonIndex),
-      ),
-  ]);
+      db
+        .select({
+          sessionId: schema.buildPostLink.sessionId,
+          url: schema.buildPostLink.url,
+        })
+        .from(schema.buildPostLink)
+        .where(
+          and(
+            inArray(schema.buildPostLink.sessionId, sessionIds),
+            eq(schema.buildPostLink.kind, "x"),
+          ),
+        )
+        .orderBy(asc(schema.buildPostLink.createdAt)),
+    ]);
 
   const statsBySession = new Map<
     string,
@@ -930,6 +947,10 @@ async function attachEngagementStats(
     commentRows.map((row) => [row.sessionId, Number(row.commentCount) || 0]),
   );
   const savedSessionIds = new Set(savedRows.map((row) => row.sessionId));
+  const xLinkBySession = new Map<string, string>();
+  for (const link of xLinkRows) {
+    if (!xLinkBySession.has(link.sessionId)) xLinkBySession.set(link.sessionId, link.url);
+  }
   const lessonsBySession = new Map<
     string,
     { count: number; title: string | null; whatToSteal: string | null }
@@ -976,6 +997,7 @@ async function attachEngagementStats(
     lessonPreviewWhatToSteal: lessonsBySession.get(row.id)?.whatToSteal ?? null,
     commentCount: commentsBySession.get(row.id) ?? 0,
     commentPreviews: commentPreviewsBySession.get(row.id) ?? [],
+    xPostUrl: xLinkBySession.get(row.id) ?? null,
   }));
 }
 
@@ -1691,6 +1713,24 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             </p>
           ) : null}
         </Link>
+
+        {r.xPostUrl ? (
+          <a
+            href={r.xPostUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-3 block border border-white/[0.08] bg-white/[0.025] px-3 py-3 transition-colors hover:border-white/[0.16] hover:bg-white/[0.04]"
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+              Curated from X
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] leading-5 text-zinc-300">
+              <span>Open X post</span>
+              <span className="text-zinc-700">→</span>
+              <span className="break-all font-mono text-[11px] text-zinc-600">{r.xPostUrl}</span>
+            </div>
+          </a>
+        ) : null}
 
         <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-1.5">
           {metrics.map((metric) => (
