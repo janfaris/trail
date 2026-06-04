@@ -1,6 +1,7 @@
 "use server";
 
 import { extractGithubLinkage } from "@/lib/github-url";
+import { parseXPostUrl } from "@/lib/x-url";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -315,7 +316,11 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
   }
 
   const githubUrl = cleanUrl(input.githubUrl);
-  const xUrl = cleanUrl(input.xUrl);
+  const parsedXUrl = parseXPostUrl(input.xUrl);
+  if (input.xUrl.trim() && !parsedXUrl) {
+    return { ok: false, error: "Paste a public X or Twitter status URL." };
+  }
+  const xUrl = parsedXUrl?.normalizedUrl ?? null;
   const demoUrl = cleanUrl(input.demoUrl);
   const question = cleanSummary(input.question, 260);
   const community = input.community === "puerto-rico" ? "puerto-rico" : null;

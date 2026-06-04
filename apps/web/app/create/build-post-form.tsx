@@ -1,6 +1,6 @@
 "use client";
 
-import { importGithubBuildDraft } from "@/app/create/actions";
+import { importGithubBuildDraft, importXBuildDraft } from "@/app/create/actions";
 import { type BuildPostInput, createBuildPostFromFeed } from "@/app/feed/actions";
 import Link from "next/link";
 import { type ReactNode, useState, useTransition } from "react";
@@ -55,8 +55,10 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
   );
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [githubImportStatus, setGithubImportStatus] = useState<string | null>(null);
+  const [githubImportError, setGithubImportError] = useState<string | null>(null);
+  const [xImportStatus, setXImportStatus] = useState<string | null>(null);
+  const [xImportError, setXImportError] = useState<string | null>(null);
   const [published, setPublished] = useState<{
     href: string;
     shareUrl: string;
@@ -64,13 +66,16 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isImportPending, startImportTransition] = useTransition();
+  const [isXImportPending, startXImportTransition] = useTransition();
 
   const update = (key: keyof BuildPostInput, value: string) => {
     setInput((current) => ({ ...current, [key]: value }));
     setError(null);
     setCopyStatus(null);
-    setImportError(null);
-    setImportStatus(null);
+    setGithubImportError(null);
+    setGithubImportStatus(null);
+    setXImportError(null);
+    setXImportStatus(null);
   };
 
   const publish = () => {
@@ -97,12 +102,12 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
   }
 
   const importFromGithub = () => {
-    setImportError(null);
-    setImportStatus(null);
+    setGithubImportError(null);
+    setGithubImportStatus(null);
     startImportTransition(async () => {
       const result = await importGithubBuildDraft(input.githubUrl);
       if (!result.ok) {
-        setImportError(result.error);
+        setGithubImportError(result.error);
         return;
       }
 
@@ -113,7 +118,29 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
         stack: mergeCsv(current.stack, result.draft.stack),
         githubUrl: result.draft.githubUrl,
       }));
-      setImportStatus(`Drafted from ${result.sourceLabel}. Review the copy before publishing.`);
+      setGithubImportStatus(
+        `Drafted from ${result.sourceLabel}. Review the copy before publishing.`,
+      );
+    });
+  };
+
+  const importFromX = () => {
+    setXImportError(null);
+    setXImportStatus(null);
+    startXImportTransition(async () => {
+      const result = await importXBuildDraft(input.xUrl);
+      if (!result.ok) {
+        setXImportError(result.error);
+        return;
+      }
+
+      setInput((current) => ({
+        ...current,
+        title: current.title.trim() ? current.title : result.draft.title,
+        summary: current.summary.trim() ? current.summary : result.draft.summary,
+        xUrl: result.draft.xUrl,
+      }));
+      setXImportStatus(`Drafted from ${result.sourceLabel}. Add your own take before publishing.`);
     });
   };
 
@@ -236,12 +263,12 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
                 Repo, PR, release, issue, discussion, or commit
               </span>
             </div>
-            {importError ? (
-              <div className="mt-3 text-xs leading-5 text-red-200">{importError}</div>
+            {githubImportError ? (
+              <div className="mt-3 text-xs leading-5 text-red-200">{githubImportError}</div>
             ) : null}
-            {importStatus ? (
+            {githubImportStatus ? (
               <div className="mt-3 text-xs leading-5 text-[var(--trail-orange)]">
-                {importStatus}
+                {githubImportStatus}
               </div>
             ) : null}
           </Field>
@@ -255,6 +282,25 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               placeholder="https://x.com/..."
               className={`${railInputClassName} font-mono text-xs`}
             />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={importFromX}
+                disabled={!input.xUrl.trim() || isXImportPending}
+                className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isXImportPending ? "Reading X..." : "Draft from X"}
+              </button>
+              <span className="text-[11px] leading-5 text-zinc-500">Public status posts only</span>
+            </div>
+            {xImportError ? (
+              <div className="mt-3 text-xs leading-5 text-red-200">{xImportError}</div>
+            ) : null}
+            {xImportStatus ? (
+              <div className="mt-3 text-xs leading-5 text-[var(--trail-orange)]">
+                {xImportStatus}
+              </div>
+            ) : null}
           </Field>
 
           <Field label="Demo / deploy" labelFor="build-demo" tone="rail">

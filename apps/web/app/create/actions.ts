@@ -2,6 +2,7 @@
 
 import { type ParsedGithubBuildUrl, parseGithubBuildUrl } from "@/lib/github-url";
 import { canonicalLabel } from "@/lib/tags";
+import { parseXPostUrl } from "@/lib/x-url";
 import { headers } from "next/headers";
 
 type GitHubBuildDraft = {
@@ -11,11 +12,28 @@ type GitHubBuildDraft = {
   githubUrl: string;
 };
 
+type XBuildDraft = {
+  title: string;
+  summary: string;
+  xUrl: string;
+};
+
 type GitHubImportResult =
   | {
       ok: true;
       sourceLabel: string;
       draft: GitHubBuildDraft;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type XImportResult =
+  | {
+      ok: true;
+      sourceLabel: string;
+      draft: XBuildDraft;
     }
   | {
       ok: false;
@@ -66,8 +84,16 @@ type GitHubCommitPayload = {
   };
 };
 
+type XOEmbedPayload = {
+  author_name?: unknown;
+  html?: unknown;
+  url?: unknown;
+};
+
 const GITHUB_API_BASE = "https://api.github.com";
 const GITHUB_FETCH_TIMEOUT_MS = 5000;
+const X_OEMBED_URL = "https://publish.twitter.com/oembed";
+const X_FETCH_TIMEOUT_MS = 5000;
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -81,6 +107,30 @@ function firstParagraph(value: unknown): string | null {
   const body = text(value);
   if (!body) return null;
   return truncate(body.split(/\n{2,}/)[0] ?? body, 700);
+}
+
+function decodeHtmlText(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function textFromHtml(value: unknown): string | null {
+  const html = text(value);
+  if (!html) return null;
+  const stripped = decodeHtmlText(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
+  return stripped ? truncate(stripped, 700) : null;
 }
 
 function stackFromRepo(repo: GitHubRepoPayload): string[] {
@@ -180,6 +230,45 @@ async function verifyGithubWebUrl(url: string): Promise<GitHubFetchResult<null>>
     };
   }
   return { ok: false, error: "GitHub could not verify that discussion link." };
+}
+
+async function fetchXOEmbed(url: string): Promise<GitHubFetchResult<XOEmbedPayload>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), X_FETCH_TIMEOUT_MS);
+  let response: Response;
+
+  try {
+    const oembedUrl = new URL(X_OEMBED_URL);
+    oembedUrl.searchParams.set("url", url);
+    oembedUrl.searchParams.set("omit_script", "1");
+    oembedUrl.searchParams.set("dnt", "1");
+
+    response = await fetch(oembedUrl, {
+      headers: { Accept: "application/json", "User-Agent": "TrailBuildImporter" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return { ok: false, error: "X took too long to respond. Try again in a moment." };
+    }
+    return { ok: false, error: "Trail could not reach X. Paste the details manually." };
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return {
+        ok: false,
+        error: "That public X post was not found. Private or deleted posts are not importable.",
+      };
+    }
+    return { ok: false, error: "X could not return metadata for that post." };
+  }
+
+  const data = (await response.json()) as XOEmbedPayload;
+  return { ok: true, data };
 }
 
 function repoPath(parsed: ParsedGithubBuildUrl): string {
@@ -418,5 +507,52 @@ export async function importGithubBuildDraft(githubUrl: string): Promise<GitHubI
     ok: true,
     sourceLabel: `GitHub repo ${parsed.repoFullName}`,
     draft: buildRepoDraft(parsed, repo),
+  };
+}
+
+export async function importXBuildDraft(xUrl: string): Promise<XImportResult> {
+  if (!process.env.BETTER_AUTH_SECRET) {
+    return { ok: false, error: "Sign in before importing X metadata." };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in before importing X metadata." };
+  }
+
+  const parsed = parseXPostUrl(xUrl);
+  if (!parsed) {
+    return { ok: false, error: "Paste a public X or Twitter status URL." };
+  }
+
+  const result = await fetchXOEmbed(parsed.normalizedUrl);
+  if (!result.ok) return result;
+
+  const canonicalPost = parseXPostUrl(text(result.data.url));
+  if (!canonicalPost || canonicalPost.statusId !== parsed.statusId) {
+    return { ok: false, error: "X could not verify the canonical post URL." };
+  }
+
+  const authorName = text(result.data.author_name);
+  const postText = textFromHtml(result.data.html);
+  const authorLabel = authorName
+    ? `${authorName} (@${canonicalPost.handle})`
+    : `@${canonicalPost.handle}`;
+
+  return {
+    ok: true,
+    sourceLabel: `X post by @${canonicalPost.handle}`,
+    draft: {
+      title: truncate(`Discussing @${canonicalPost.handle}'s X post`, 120),
+      summary: truncate(
+        [
+          `Imported from a public X post by ${authorLabel}.`,
+          postText ?? "Add your take: what should builders learn, test, or discuss from this post?",
+        ].join("\n\n"),
+        1200,
+      ),
+      xUrl: canonicalPost.normalizedUrl,
+    },
   };
 }
