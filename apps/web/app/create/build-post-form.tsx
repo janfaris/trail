@@ -53,6 +53,33 @@ function mergeCsv(existing: string, incoming: string[]): string {
     .join(", ");
 }
 
+function deriveTitle(summary: string): string {
+  const firstLine =
+    summary
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
+  const firstSentence = firstLine.match(/^(.+?[.!?])(\s|$)/)?.[1] ?? firstLine;
+  return firstSentence
+    .replace(/^[-*#\d.)\s]+/, "")
+    .slice(0, 120)
+    .trim();
+}
+
+type ProofKind = "empty" | "github" | "x" | "demo";
+
+function proofKindFromUrl(value: string): ProofKind {
+  const url = value.trim().toLowerCase();
+  if (!url) return "empty";
+  if (url.includes("github.com/")) return "github";
+  if (url.includes("x.com/") || url.includes("twitter.com/")) return "x";
+  return "demo";
+}
+
+function proofUrlValue(input: BuildPostInput): string {
+  return input.githubUrl || input.xUrl || input.demoUrl;
+}
+
 type BuildPostFormProps = {
   defaultCommunity?: string;
   defaultQuestion?: string;
@@ -92,9 +119,37 @@ export function BuildPostForm({
     setXImportStatus(null);
   };
 
+  const updateProofUrl = (value: string) => {
+    const kind = proofKindFromUrl(value);
+    setInput((current) => ({
+      ...current,
+      githubUrl: kind === "github" ? value : "",
+      xUrl: kind === "x" ? value : "",
+      demoUrl: kind === "demo" ? value : "",
+    }));
+    setError(null);
+    setCopyStatus(null);
+    setGithubImportError(null);
+    setGithubImportStatus(null);
+    setXImportError(null);
+    setXImportStatus(null);
+  };
+
   const publish = () => {
     startTransition(async () => {
-      const result = await createBuildPostFromFeed(input);
+      const summary = input.summary.trim();
+      const title = input.title.trim() || deriveTitle(summary);
+      if (!summary || !title) {
+        setError("Write what shipped before publishing.");
+        setPublished(null);
+        return;
+      }
+
+      const result = await createBuildPostFromFeed({
+        ...input,
+        summary,
+        title,
+      });
       if (!result.ok) {
         setError(result.error);
         setPublished(null);
@@ -163,38 +218,50 @@ export function BuildPostForm({
         `I just posted a build on Trail: ${published.title}`,
       )}&url=${encodeURIComponent(published.shareUrl)}`
     : null;
-  const hasTitle = input.title.trim().length > 0;
   const hasSummary = input.summary.trim().length > 0;
+  const generatedTitle = deriveTitle(input.summary);
+  const publishTitle = input.title.trim() || generatedTitle;
+  const proofUrl = proofUrlValue(input);
+  const proofKind = proofKindFromUrl(proofUrl);
+  const proofStatus = githubImportStatus ?? xImportStatus;
+  const proofError = githubImportError ?? xImportError;
+  const proofIsImportable = proofKind === "github" || proofKind === "x";
+  const proofImportPending = proofKind === "github" ? isImportPending : isXImportPending;
+  const proofLabel =
+    proofKind === "github"
+      ? "GitHub proof"
+      : proofKind === "x"
+        ? "X proof"
+        : proofKind === "demo"
+          ? "Demo proof"
+          : "No proof yet";
   const proofCount = [input.githubUrl, input.xUrl, input.demoUrl].filter(
     (value) => value.trim().length > 0,
   ).length;
-  const hasCommunityQuestion = input.question.trim().length > 0;
+  const detailsCount = [input.tools, input.stack, input.question, input.community].filter(
+    (value) => value.trim().length > 0,
+  ).length;
   const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim());
   const checklist = [
     {
-      label: "Name the build",
-      complete: hasTitle,
-      detail: hasTitle ? "Title is ready" : "Short, outcome-first title",
+      label: "Write what shipped",
+      status: hasSummary ? "complete" : "open",
+      detail: hasSummary ? "The post has a story" : "One clear paragraph is enough",
     },
     {
-      label: "Explain why it matters",
-      complete: hasSummary,
-      detail: hasSummary ? "Summary is ready" : "Who it helps, what changed, what you learned",
+      label: "Proof link",
+      status: proofCount > 0 ? "complete" : "optional",
+      detail: proofCount > 0 ? proofLabel : "Optional: GitHub, X, or demo URL",
     },
     {
-      label: "Attach proof",
-      complete: proofCount > 0,
+      label: "Add details",
+      status: detailsCount > 0 ? "complete" : "optional",
       detail:
-        proofCount > 0
-          ? `${proofCount} proof link${proofCount === 1 ? "" : "s"}`
-          : "GitHub, X, or demo URL",
+        detailsCount > 0
+          ? `${detailsCount} extra detail${detailsCount === 1 ? "" : "s"}`
+          : "Tools, stack, question, community",
     },
-    {
-      label: "Invite replies",
-      complete: hasCommunityQuestion,
-      detail: hasCommunityQuestion ? "Question added" : "Optional, but it starts the thread",
-    },
-  ];
+  ] satisfies Array<{ label: string; status: "complete" | "open" | "optional"; detail: string }>;
 
   return (
     <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950 text-zinc-50 shadow-[var(--trail-shadow-border)]">
@@ -203,30 +270,30 @@ export function BuildPostForm({
           event.preventDefault();
           publish();
         }}
-        className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
+        className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_340px]"
       >
-        <div className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_18rem)] px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="grid gap-4 border-b border-white/10 pb-5 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_20rem)] px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="grid gap-4 border-b border-white/10 pb-5 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div className="min-w-0">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
-                Workbench composer
+                60-second composer
               </div>
               <h1 className="mt-3 max-w-2xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-zinc-50 sm:text-6xl">
-                Make the ship obvious.
+                Post the build. Skip the homework.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400">
-                Three moves: say what changed, attach proof, ask for the next useful reply. Logs
-                stay optional.
+                Write what shipped, paste one proof link if you have it, then publish. Details are
+                optional until the post needs them.
               </p>
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                Good post shape
+                Fast path
               </div>
               <ol className="mt-3 space-y-2">
-                <li>1. Outcome, not a feature dump.</li>
-                <li>2. One proof link if you have it.</li>
-                <li>3. A question people can answer.</li>
+                <li>1. Say what changed.</li>
+                <li>2. Add proof only if it helps.</li>
+                <li>3. Publish, then let the thread grow.</li>
               </ol>
             </div>
           </div>
@@ -237,187 +304,166 @@ export function BuildPostForm({
                 Trail Pick starter
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                I carried the source link and discussion question into this draft. Rewrite it in
-                your voice before publishing.
+                The source link and discussion prompt are already here. Add your take in the big
+                box, then publish it as your own Trail post.
               </p>
             </div>
           ) : null}
 
-          <StepBlock
-            number="1"
-            title="Tell the story"
-            description="This becomes the top of the feed card, so lead with the outcome."
-          >
+          <section className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 sm:p-5">
             <Field
-              label="Build title"
-              labelFor="build-title"
-              hint="Keep it specific enough that another builder knows what shipped."
-              required
-            >
-              <input
-                id="build-title"
-                value={input.title}
-                onChange={(event) => update("title", event.target.value)}
-                maxLength={120}
-                placeholder="A Vercel cron monitor for AI Radar"
-                className={`${inputClassName} text-xl font-semibold tracking-[-0.04em] sm:text-2xl`}
-                required
-                aria-required="true"
-              />
-            </Field>
-
-            <Field
-              label="Why it matters"
+              label="What did you ship?"
               labelFor="build-summary"
-              hint="Name the user, the change, the lesson, and the feedback you want."
+              hint="Lead with the outcome. Add why it matters or what feedback you want if you know it."
               required
             >
               <textarea
                 id="build-summary"
                 value={input.summary}
                 onChange={(event) => update("summary", event.target.value)}
-                rows={6}
+                rows={7}
                 maxLength={1200}
-                placeholder="I built this because... The surprising part was... I want feedback on..."
-                className={textareaClassName}
+                placeholder="I shipped a cleaner /create flow so builders can post in under a minute. It keeps proof optional, hides advanced fields, and makes the first sentence do the work."
+                className={`${textareaClassName} text-base sm:text-lg`}
                 required
                 aria-required="true"
               />
             </Field>
-          </StepBlock>
 
-          <StepBlock
-            number="2"
-            title="Attach proof"
-            description="One strong source is enough. Draft buttons read public links and fill the story only when your fields are empty."
-          >
-            <div className="grid gap-3">
-              <ProofCard
-                label="GitHub"
-                description="Repo, PR, release, issue, discussion, or commit."
-                status={githubImportStatus}
-                error={githubImportError}
-                control={
-                  <input
-                    id="build-github"
-                    type="url"
-                    value={input.githubUrl}
-                    onChange={(event) => update("githubUrl", event.target.value)}
-                    placeholder="https://github.com/owner/repo/pull/12"
-                    className={`${inputClassName} font-mono text-xs`}
-                  />
-                }
-                action={
-                  <button
-                    type="button"
-                    onClick={importFromGithub}
-                    disabled={!input.githubUrl.trim() || isImportPending}
-                    className={secondaryButtonClassName}
-                  >
-                    {isImportPending ? "Reading..." : "Draft"}
-                  </button>
-                }
-              />
-
-              <ProofCard
-                label="X / Twitter"
-                description="Public status posts only. Great for a Trail Pick response."
-                status={xImportStatus}
-                error={xImportError}
-                control={
-                  <input
-                    id="build-x"
-                    type="url"
-                    value={input.xUrl}
-                    onChange={(event) => update("xUrl", event.target.value)}
-                    placeholder="https://x.com/..."
-                    className={`${inputClassName} font-mono text-xs`}
-                  />
-                }
-                action={
-                  <button
-                    type="button"
-                    onClick={importFromX}
-                    disabled={!input.xUrl.trim() || isXImportPending}
-                    className={secondaryButtonClassName}
-                  >
-                    {isXImportPending ? "Reading..." : "Draft"}
-                  </button>
-                }
-              />
-
-              <ProofCard
-                label="Demo / deploy"
-                description="Anything people can open to see the build."
-                control={
-                  <input
-                    id="build-demo"
-                    type="url"
-                    value={input.demoUrl}
-                    onChange={(event) => update("demoUrl", event.target.value)}
-                    placeholder="https://your-demo.vercel.app"
-                    className={`${inputClassName} font-mono text-xs`}
-                  />
-                }
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Tools used" labelFor="build-tools" hint="Comma-separated.">
-                <input
-                  id="build-tools"
-                  value={input.tools}
-                  onChange={(event) => update("tools", event.target.value)}
-                  placeholder="Claude Code, Cursor, v0"
-                  className={inputClassName}
-                />
-              </Field>
-              <Field label="Stack / tags" labelFor="build-stack" hint="Comma-separated.">
-                <input
-                  id="build-stack"
-                  value={input.stack}
-                  onChange={(event) => update("stack", event.target.value)}
-                  placeholder="Next.js, Postgres, Vercel"
-                  className={inputClassName}
-                />
-              </Field>
-            </div>
-          </StepBlock>
-
-          <StepBlock
-            number="3"
-            title="Invite the right replies"
-            description="A useful question turns a post into a thread."
-          >
-            <Field label="Question for the community" labelFor="build-question">
-              <input
-                id="build-question"
-                value={input.question}
-                onChange={(event) => update("question", event.target.value)}
-                maxLength={260}
-                placeholder="What would you improve before I demo this?"
-                className={inputClassName}
-              />
-            </Field>
-
-            <label className="flex gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
-              <input
-                type="checkbox"
-                checked={input.community === "puerto-rico"}
-                onChange={(event) => update("community", event.target.checked ? "puerto-rico" : "")}
-                className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-green)]"
-              />
-              <span>
-                <span className="block font-medium text-zinc-100">
-                  Add to Puerto Rico AI builders
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                  Use this for local meetup demos, island-built projects, and PR/USA collaboration
-                  posts.
-                </span>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs leading-5 text-zinc-500">
+              <span className="font-mono uppercase tracking-[0.18em] text-zinc-600">
+                Feed title
               </span>
-            </label>
-          </StepBlock>
+              <span className="mt-1 block text-sm font-medium text-zinc-300">
+                {publishTitle || "Trail will use your first clear sentence."}
+              </span>
+            </div>
+
+            <div className="grid gap-3 rounded-3xl border border-white/10 bg-black/25 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <Field
+                label="Proof link"
+                labelFor="build-proof"
+                hint="Optional. Paste GitHub, X/Twitter, or a demo/deploy URL."
+              >
+                <input
+                  id="build-proof"
+                  type="url"
+                  value={proofUrl}
+                  onChange={(event) => updateProofUrl(event.target.value)}
+                  placeholder="https://github.com/owner/repo/pull/12"
+                  className={`${inputClassName} font-mono text-xs`}
+                />
+              </Field>
+              {proofIsImportable ? (
+                <button
+                  type="button"
+                  onClick={proofKind === "github" ? importFromGithub : importFromX}
+                  disabled={!proofUrl.trim() || proofImportPending}
+                  className={secondaryButtonClassName}
+                >
+                  {proofImportPending ? "Reading..." : "Draft from URL"}
+                </button>
+              ) : proofKind === "demo" ? (
+                <div className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 px-4 text-xs font-medium text-zinc-400">
+                  Demo attached
+                </div>
+              ) : null}
+            </div>
+
+            {proofStatus ? (
+              <div
+                aria-live="polite"
+                className="rounded-2xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] px-4 py-3 text-sm leading-6 text-zinc-200"
+              >
+                {proofStatus}
+              </div>
+            ) : null}
+            {proofError ? (
+              <div
+                aria-live="polite"
+                className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100"
+              >
+                {proofError}
+              </div>
+            ) : null}
+
+            <details className="group rounded-3xl border border-white/10 bg-black/20 open:bg-black/25">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-sm font-semibold text-zinc-100 outline-none transition-colors hover:text-zinc-50 focus-visible:ring-2 focus-visible:ring-[var(--trail-green)]">
+                <span>Add details</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  Optional
+                </span>
+              </summary>
+              <div className="space-y-4 border-t border-white/10 px-4 pb-4 pt-4">
+                <Field
+                  label="Post title override"
+                  labelFor="build-title"
+                  hint="Leave blank to use the first sentence above."
+                >
+                  <input
+                    id="build-title"
+                    value={input.title}
+                    onChange={(event) => update("title", event.target.value)}
+                    maxLength={120}
+                    placeholder={generatedTitle || "A concise feed title"}
+                    className={inputClassName}
+                  />
+                </Field>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Tools used" labelFor="build-tools" hint="Comma-separated.">
+                    <input
+                      id="build-tools"
+                      value={input.tools}
+                      onChange={(event) => update("tools", event.target.value)}
+                      placeholder="Claude Code, Cursor, v0"
+                      className={inputClassName}
+                    />
+                  </Field>
+                  <Field label="Stack / tags" labelFor="build-stack" hint="Comma-separated.">
+                    <input
+                      id="build-stack"
+                      value={input.stack}
+                      onChange={(event) => update("stack", event.target.value)}
+                      placeholder="Next.js, Postgres, Vercel"
+                      className={inputClassName}
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Question for the community" labelFor="build-question">
+                  <input
+                    id="build-question"
+                    value={input.question}
+                    onChange={(event) => update("question", event.target.value)}
+                    maxLength={260}
+                    placeholder="What would you improve before I demo this?"
+                    className={inputClassName}
+                  />
+                </Field>
+
+                <label className="flex gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
+                  <input
+                    type="checkbox"
+                    checked={input.community === "puerto-rico"}
+                    onChange={(event) =>
+                      update("community", event.target.checked ? "puerto-rico" : "")
+                    }
+                    className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-green)]"
+                  />
+                  <span>
+                    <span className="block font-medium text-zinc-100">
+                      Add to Puerto Rico AI builders
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                      Use this for local meetup demos, island-built projects, and PR/USA
+                      collaboration posts.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </details>
+          </section>
         </div>
 
         <aside className="border-t border-white/10 bg-black/35 px-4 py-5 text-zinc-50 sm:px-6 lg:border-l lg:border-t-0 lg:px-6 lg:py-8">
@@ -427,18 +473,18 @@ export function BuildPostForm({
                 Publish check
               </div>
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                A build post can be lightweight. The checklist just helps it land in the feed with
-                context.
+                Only the first box is required. Proof and details make the post stronger, not harder
+                to publish.
               </p>
             </div>
 
             <div className="space-y-2">
               {checklist.map((item) => (
                 <ChecklistItem
-                  complete={item.complete}
                   detail={item.detail}
                   key={item.label}
                   label={item.label}
+                  status={item.status}
                 />
               ))}
             </div>
@@ -512,88 +558,30 @@ export function BuildPostForm({
   );
 }
 
-function StepBlock({
-  number,
-  title,
-  description,
-  children,
-}: {
-  number: string;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 sm:p-5 lg:grid-cols-[132px_minmax(0,1fr)]">
-      <div>
-        <div className="flex size-9 items-center justify-center rounded-full bg-[var(--trail-green)] font-mono text-xs font-semibold text-black">
-          {number}
-        </div>
-        <h2 className="mt-4 font-display text-2xl leading-none tracking-[-0.05em] text-zinc-50">
-          {title}
-        </h2>
-        <p className="mt-2 text-xs leading-5 text-zinc-500">{description}</p>
-      </div>
-      <div className="min-w-0 space-y-5">{children}</div>
-    </section>
-  );
-}
-
-function ProofCard({
-  label,
-  description,
-  control,
-  action,
-  status,
-  error,
-}: {
-  label: string;
-  description: string;
-  control: ReactNode;
-  action?: ReactNode;
-  status?: string | null;
-  error?: string | null;
-}) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-black/20 p-3.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            {label}
-          </div>
-          <p className="mt-1 text-xs leading-5 text-zinc-500">{description}</p>
-        </div>
-        {action}
-      </div>
-      <div className="mt-3">{control}</div>
-      {error ? <div className="mt-2 text-xs leading-5 text-red-200">{error}</div> : null}
-      {status ? (
-        <div className="mt-2 text-xs leading-5 text-[var(--trail-green)]">{status}</div>
-      ) : null}
-    </div>
-  );
-}
-
 function ChecklistItem({
   label,
   detail,
-  complete,
+  status,
 }: {
   label: string;
   detail: string;
-  complete: boolean;
+  status: "complete" | "open" | "optional";
 }) {
+  const complete = status === "complete";
+  const optional = status === "optional";
   return (
     <div className="flex gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3">
       <div
         className={
           complete
             ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--trail-green)] text-[11px] font-bold text-black"
-            : "mt-0.5 size-5 shrink-0 rounded-full border border-white/15"
+            : optional
+              ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[10px] text-zinc-500"
+              : "mt-0.5 size-5 shrink-0 rounded-full border border-white/15"
         }
         aria-hidden
       >
-        {complete ? "✓" : null}
+        {complete ? "✓" : optional ? "-" : null}
       </div>
       <div className="min-w-0">
         <div className="text-sm font-medium text-zinc-100">{label}</div>

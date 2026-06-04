@@ -14,9 +14,9 @@ export const dynamic = "force-dynamic";
 const PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gettrail.vercel.app";
 
 export const metadata: Metadata = {
-  title: "Discover AI builders shipping in public | Trail",
+  title: "Find AI builders to follow | Trail",
   description:
-    "Find trending build posts, builders, stacks, and repos on Trail's AI builder network.",
+    "Find real builders on Trail, follow their profiles, and open the build posts behind their work.",
   alternates: {
     canonical: "/discover",
   },
@@ -230,10 +230,16 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
   const [statsResult, receiptsResult, buildersResult, stacksResult, reposResult] =
     await Promise.all([
       db.execute(sql`
-        with public_sessions as (${publicSessions})
+        with public_sessions as (${publicSessions}),
+        public_builders as (
+          select id
+          from "user"
+          where handle is not null
+            and handle <> ''
+        )
         select
-          count(distinct ps.id)::int as "receiptCount",
-          count(distinct ps.user_id)::int as "builderCount",
+          (select count(distinct id)::int from public_sessions) as "receiptCount",
+          (select count(distinct id)::int from public_builders) as "builderCount",
           count(distinct sr.id)::int as "reactionCount",
           count(distinct sc.id)::int as "commentCount"
         from public_sessions ps
@@ -329,18 +335,20 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
             u.github_handle as "githubHandle",
             u.location,
             u.currently_building as "currentlyBuilding",
-            count(*)::int as "receiptCount",
+            count(ps.id)::int as "receiptCount",
             (count(*) filter (
               where ps.receipt_status = 'shipped' or ps.outcome = 'shipped'
             ))::int as "shippedCount",
             coalesce(sum(ps.event_count), 0)::int as "eventCount",
             coalesce(sum(ss.reactions), 0)::int as "reactionCount",
             coalesce(sum(ss.comments), 0)::int as "commentCount",
-            max(ps.shared_at) as "latestSharedAt"
-          from public_sessions ps
-          join "user" u on u.id = ps.user_id
+            coalesce(max(ps.shared_at), u.created_at at time zone 'UTC') as "latestSharedAt"
+          from "user" u
+          left join public_sessions ps on ps.user_id = u.id
           left join session_social ss on ss.id = ps.id
-          where ps.shared_at >= now() - interval '180 days'
+          where u.handle is not null
+            and u.handle <> ''
+            and (${viewerId}::text is null or u.id <> ${viewerId})
           group by
             u.id,
             u.handle,
@@ -348,7 +356,8 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
             u.image,
             u.github_handle,
             u.location,
-            u.currently_building
+            u.currently_building,
+            u.created_at
         ),
         followers as (
           select following_id, count(distinct follower_id)::int as "followerCount"
@@ -376,7 +385,6 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
         left join follow vf
           on vf.following_id = br.id
          and vf.follower_id = ${viewerId}
-        where (${viewerId}::text is null or br.id <> ${viewerId})
         order by
           br."receiptCount" * 2
           + br."shippedCount" * 3
@@ -480,7 +488,7 @@ export default async function DiscoverPage() {
     console.error("Failed to load discovery data", error);
   }
 
-  const topReceipt = data.receipts[0];
+  const hasBuilders = data.builders.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#070806] text-zinc-50">
@@ -494,132 +502,172 @@ export default async function DiscoverPage() {
             <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#a7f300]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
-                  Build network
+                  Builder directory
                 </div>
                 <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.06em] text-white sm:text-6xl">
-                  Discover builders shipping with agents right now.
+                  Find real builders to follow.
                 </h1>
                 <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-zinc-300">
-                  Trending build posts, rising builders, hot stacks, and repos with proof attached.
-                  Every link opens real builder work, not a marketing claim.
+                  This is the people screen: open profiles, follow builders, and use their public
+                  build posts as proof when they have shipped something.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <StatCard label="build posts" value={formatCount(data.stats.receiptCount)} />
                 <StatCard label="builders" value={formatCount(data.stats.builderCount)} />
+                <StatCard label="build posts" value={formatCount(data.stats.receiptCount)} />
                 <StatCard label="reactions" value={formatCount(data.stats.reactionCount)} />
                 <StatCard label="comments" value={formatCount(data.stats.commentCount)} />
               </div>
             </div>
           </div>
 
-          {topReceipt ? (
-            <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+          {hasBuilders ? (
+            <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
               <div className="space-y-6">
                 <SectionHeader
-                  kicker="Trending build posts"
-                  title="What the network is opening"
-                  description="Ranked from recent public build posts, reactions, comments, shipped outcomes, and build depth."
+                  kicker="People"
+                  title="Builders you can follow now"
+                  description="Real Trail profiles. A builder can appear here even before publishing their first clean build post."
                 />
-                <div className="grid gap-4">
-                  {data.receipts.map((receipt, index) => (
-                    <ReceiptCard
-                      key={receipt.id}
-                      receipt={receipt}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.builders.map((builder, index) => (
+                    <BuilderCard
+                      key={builder.id}
+                      builder={builder}
                       rank={index + 1}
                       viewerId={viewerId}
                     />
                   ))}
                 </div>
 
-                <section className="rounded-[1.75rem] bg-zinc-950/72 p-5 shadow-[var(--trail-shadow-border)] sm:p-6">
-                  <SectionHeader
-                    kicker="Stack heat"
-                    title="Tools and frameworks with momentum"
-                    description="These tags are appearing in recent public build posts with real engagement."
-                    compact
-                  />
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {data.stacks.map((stack) => (
-                      <Link
-                        key={`${stack.kind}:${stack.tag}`}
-                        href={stackHref(stack)}
-                        className="group rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                            {stack.kind}
-                          </span>
-                          <span className="rounded-full bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-zinc-300">
-                            {formatCount(stack.builderCount)} builders
-                          </span>
-                        </div>
-                        <div className="mt-3 text-lg font-semibold text-white group-hover:text-lime-100">
-                          {stack.label}
-                        </div>
-                        <p className="mt-2 text-sm text-zinc-400">
-                          {formatCount(stack.receiptCount)} posts ·{" "}
-                          {formatCount(
-                            toNumber(stack.reactionCount) + toNumber(stack.commentCount),
-                          )}{" "}
-                          social signals
-                        </p>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
+                {data.receipts.length > 0 ? (
+                  <section className="rounded-[1.75rem] bg-zinc-950/72 p-5 shadow-[var(--trail-shadow-border)] sm:p-6">
+                    <SectionHeader
+                      kicker="Recent proof"
+                      title="Build posts behind the network"
+                      description="Optional context from public posts. The main action here is still to find and follow people."
+                      compact
+                    />
+                    <div className="mt-5 grid gap-4">
+                      {data.receipts.slice(0, 4).map((receipt, index) => (
+                        <ReceiptCard
+                          key={receipt.id}
+                          receipt={receipt}
+                          rank={index + 1}
+                          viewerId={viewerId}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ) : (
+                  <section className="rounded-[1.75rem] border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-5 shadow-[var(--trail-shadow-border)] sm:p-6">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
+                      Clean slate
+                    </p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-[-0.05em] text-white">
+                      No public build posts yet.
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-zinc-300">
+                      Users are still here. New posts created from the simpler composer will fill
+                      this section without bringing back old CLI logs.
+                    </p>
+                    <Link
+                      href="/create"
+                      className="mt-5 inline-flex min-h-10 items-center rounded-full bg-[var(--trail-green)] px-4 text-sm font-semibold text-zinc-950 transition-[filter,transform] hover:brightness-110 active:scale-[0.96]"
+                    >
+                      Post first clean build
+                    </Link>
+                  </section>
+                )}
+
+                {data.stacks.length > 0 ? (
+                  <section className="rounded-[1.75rem] bg-zinc-950/72 p-5 shadow-[var(--trail-shadow-border)] sm:p-6">
+                    <SectionHeader
+                      kicker="Shared interests"
+                      title="Tools and frameworks builders use"
+                      description="Use these as context for who to follow, not as a separate product surface."
+                      compact
+                    />
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {data.stacks.map((stack) => (
+                        <Link
+                          key={`${stack.kind}:${stack.tag}`}
+                          href={stackHref(stack)}
+                          className="group rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                              {stack.kind}
+                            </span>
+                            <span className="rounded-full bg-white/[0.04] px-2 py-0.5 font-mono text-[10px] text-zinc-300">
+                              {formatCount(stack.builderCount)} builders
+                            </span>
+                          </div>
+                          <div className="mt-3 text-lg font-semibold text-white group-hover:text-lime-100">
+                            {stack.label}
+                          </div>
+                          <p className="mt-2 text-sm text-zinc-400">
+                            {formatCount(stack.receiptCount)} posts ·{" "}
+                            {formatCount(
+                              toNumber(stack.reactionCount) + toNumber(stack.commentCount),
+                            )}{" "}
+                            social signals
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
               </div>
 
               <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                 <section className="rounded-[1.75rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)]">
                   <SectionHeader
-                    kicker="Builder radar"
-                    title="Follow people shipping"
-                    description="Profiles ranked by public build posts, followers, and conversation."
+                    kicker="How it works"
+                    title="Follow people first"
+                    description="Builders is a directory. Posts, stacks, and repos are only supporting signals."
                     compact
                   />
-                  <div className="mt-5 space-y-3">
-                    {data.builders.map((builder, index) => (
-                      <BuilderCard
-                        key={builder.id}
-                        builder={builder}
-                        rank={index + 1}
-                        viewerId={viewerId}
-                      />
-                    ))}
+                  <div className="mt-5 space-y-3 text-sm leading-6 text-zinc-400">
+                    <p>1. Open a profile to see who they are and what they are building.</p>
+                    <p>2. Follow them so their future posts land in your feed.</p>
+                    <p>3. Publish your own clean build post to appear here.</p>
                   </div>
                 </section>
 
-                <section className="rounded-[1.75rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)]">
-                  <SectionHeader
-                    kicker="Repo momentum"
-                    title="Projects with proof"
-                    description="Repositories attached to recent public build posts."
-                    compact
-                  />
-                  <div className="mt-5 space-y-3">
-                    {data.repos.map((repo) => (
-                      <a
-                        key={repo.repo}
-                        href={githubRepoUrl(repo.repo)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group block rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
-                      >
-                        <div className="text-sm font-semibold text-white group-hover:text-lime-100">
-                          {repo.repo}
-                        </div>
-                        <p className="mt-2 text-xs text-zinc-500">
-                          {formatCount(repo.receiptCount)} posts · {formatCount(repo.builderCount)}{" "}
-                          builders · {formatCount(repo.reactionCount)} reactions
-                        </p>
-                        <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-zinc-600">
-                          updated <RelativeTime date={repo.latestSharedAt} />
-                        </p>
-                      </a>
-                    ))}
-                  </div>
-                </section>
+                {data.repos.length > 0 ? (
+                  <section className="rounded-[1.75rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)]">
+                    <SectionHeader
+                      kicker="Repo proof"
+                      title="Projects builders link"
+                      description="Repositories attached to recent public build posts."
+                      compact
+                    />
+                    <div className="mt-5 space-y-3">
+                      {data.repos.map((repo) => (
+                        <a
+                          key={repo.repo}
+                          href={githubRepoUrl(repo.repo)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group block rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+                        >
+                          <div className="text-sm font-semibold text-white group-hover:text-lime-100">
+                            {repo.repo}
+                          </div>
+                          <p className="mt-2 text-xs text-zinc-500">
+                            {formatCount(repo.receiptCount)} posts ·{" "}
+                            {formatCount(repo.builderCount)} builders ·{" "}
+                            {formatCount(repo.reactionCount)} reactions
+                          </p>
+                          <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-zinc-600">
+                            updated <RelativeTime date={repo.latestSharedAt} />
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
 
                 <section className="overflow-hidden rounded-[1.75rem] bg-[#a7f300] text-zinc-950 shadow-[0_0_0_1px_rgba(167,243,0,0.22),0_20px_56px_rgba(0,0,0,0.26)]">
                   <div className="p-5">
@@ -627,11 +675,11 @@ export default async function DiscoverPage() {
                       Become discoverable
                     </p>
                     <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">
-                      Publish a build post, earn a slot in the network.
+                      Ship one clean post. Show up as a builder.
                     </h2>
                     <p className="mt-3 text-sm leading-6 text-zinc-800">
-                      Write what you built, attach proof links if you have them, then publish it to
-                      feed, profile, and discovery.
+                      The new composer is the fast path: write what changed, add proof if useful,
+                      and publish to your profile.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Link
@@ -823,24 +871,28 @@ function BuilderCard({
   rank: number;
   viewerId: string | null;
 }) {
+  const buildCount = toNumber(builder.receiptCount);
+  const followerCount = toNumber(builder.followerCount);
+  const signalCount = toNumber(builder.reactionCount) + toNumber(builder.commentCount);
+
   return (
-    <div className="group rounded-2xl bg-black/30 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]">
-      <div className="flex items-center gap-3">
+    <article className="group rounded-[1.5rem] bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] transition-[background-color,box-shadow] hover:bg-black/42 hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]">
+      <div className="flex items-start gap-3">
         <Link
           href={`/u/${builder.handle}`}
-          className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-zinc-900 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-900 shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
         >
           <img
             src={builderAvatar(builder)}
             alt=""
             className="h-full w-full object-cover"
-            width={44}
-            height={44}
+            width={48}
+            height={48}
           />
         </Link>
         <Link href={`/u/${builder.handle}`} className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-white group-hover:text-lime-100">
+            <span className="truncate text-base font-semibold tracking-[-0.03em] text-white group-hover:text-lime-100">
               {builderLabel(builder)}
             </span>
             <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-mono text-zinc-500">
@@ -855,15 +907,21 @@ function BuilderCard({
             {builderReason(builder)}
           </p>
         </Link>
-        <div className="text-right text-[11px] text-zinc-500">
-          <div className="font-semibold text-zinc-200">{formatCount(builder.receiptCount)}</div>
-          <div>builds</div>
-        </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
-        <span className="text-[11px] text-zinc-500">
-          {builder.isFollowing ? "In your graph" : "Add to Following"}
-        </span>
+
+      <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-white/10 text-center">
+        <BuilderMetric label="posts" value={formatCount(buildCount)} />
+        <BuilderMetric label="followers" value={formatCount(followerCount)} />
+        <BuilderMetric label="signals" value={formatCount(signalCount)} />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+        <Link
+          href={`/u/${builder.handle}`}
+          className="inline-flex min-h-10 items-center rounded-full px-3 text-xs font-semibold text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,color,transform] hover:bg-white/[0.06] hover:text-white active:scale-[0.96]"
+        >
+          Open profile
+        </Link>
         {viewerId ? (
           <FollowButton
             targetUserId={builder.id}
@@ -879,6 +937,15 @@ function BuilderCard({
           </Link>
         )}
       </div>
+    </article>
+  );
+}
+
+function BuilderMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-zinc-950/80 px-2 py-2">
+      <div className="text-sm font-semibold text-zinc-100">{value}</div>
+      <div className="mt-0.5 text-[9px] uppercase tracking-[0.16em] text-zinc-600">{label}</div>
     </div>
   );
 }
@@ -887,14 +954,14 @@ function EmptyDiscoverState() {
   return (
     <section className="mt-6 rounded-[1.75rem] bg-zinc-950/84 p-10 text-center shadow-[var(--trail-shadow-border)]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-lime-300/80">
-        Discovery is waiting on build posts
+        Builders is waiting on profiles
       </p>
       <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white">
-        Publish the first build post.
+        Sign in to claim the first builder profile.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">
-        Write what you built, add proof links if they help, and publish it so builders can react,
-        comment, follow, fork, and share it.
+        Once users have handles, they appear here even before the first clean build post. Posts are
+        proof; people are the point of this screen.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link
