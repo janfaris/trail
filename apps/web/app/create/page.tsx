@@ -14,6 +14,10 @@ function getSingleSearchParam(value: string | string[] | undefined): string | un
   return typeof value === "string" ? value : undefined;
 }
 
+function signInHref(callbackURL: string): string {
+  return `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(callbackURL)}`;
+}
+
 export default async function CreatePage({
   searchParams,
 }: {
@@ -28,6 +32,15 @@ export default async function CreatePage({
   const defaultQuestion = prompt ? prompt.slice(0, 260) : "";
   const parsedXUrl = source === "x" ? parseXPostUrl(url) : null;
   const defaultXUrl = parsedXUrl?.normalizedUrl ?? "";
+  const callbackParams = new URLSearchParams();
+  if (defaultCommunity) callbackParams.set("community", defaultCommunity);
+  if (defaultQuestion) callbackParams.set("prompt", defaultQuestion);
+  if (defaultXUrl) {
+    callbackParams.set("source", "x");
+    callbackParams.set("url", defaultXUrl);
+  }
+  const callbackQuery = callbackParams.toString();
+  const createCallbackPath = callbackQuery ? `/create?${callbackQuery}` : "/create";
   const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
     import("next/headers"),
     import("drizzle-orm"),
@@ -43,34 +56,31 @@ export default async function CreatePage({
     : null;
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-50">
+    <main className="min-h-screen overflow-x-clip bg-zinc-950 text-zinc-50">
       <SiteNav currentPath="/create" />
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 space-y-6 text-sm text-zinc-500">
-            <div className="rounded-[1.5rem] bg-[var(--trail-paper)] p-5 text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
-                Trail loop
-              </div>
-              <div className="mt-3 space-y-3 leading-6 text-black/65">
-                <p>Post what you built.</p>
-                <p>Add proof links.</p>
-                <p>Get comments, follows, saves, and collaborators.</p>
-              </div>
+      <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-5 flex flex-col gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
+              Create
             </div>
-            <div className="border-t border-white/10 pt-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
-                Good posts include
-              </div>
-              <ul className="mt-3 space-y-2 leading-6">
-                <li>Outcome, not feature list.</li>
-                <li>Tools and stack.</li>
-                <li>GitHub, demo, or X proof.</li>
-                <li>A question for the community.</li>
-              </ul>
-            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+              Post what shipped, add proof links when you have them, and start a thread other
+              builders can answer.
+            </p>
           </div>
-        </aside>
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
+            <span className="rounded-full px-3 py-1.5 shadow-[var(--trail-shadow-border)]">
+              No install
+            </span>
+            <span className="rounded-full px-3 py-1.5 shadow-[var(--trail-shadow-border)]">
+              GitHub / X / demo proof
+            </span>
+            <span className="rounded-full px-3 py-1.5 shadow-[var(--trail-shadow-border)]">
+              Public profile post
+            </span>
+          </div>
+        </div>
 
         <section>
           {!session?.user ? (
@@ -78,7 +88,7 @@ export default async function CreatePage({
               eyebrow="Create"
               title="Sign in to post a build."
               body="Trail uses GitHub identity so builders know who shipped the work."
-              actionHref="/api/auth/sign-in/github?callbackURL=%2Fcreate"
+              actionHref={signInHref(createCallbackPath)}
               actionLabel="Sign in with GitHub"
             />
           ) : !viewer?.handle ? (
@@ -116,20 +126,32 @@ function GateCard({
   actionLabel: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] px-5 py-12 text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)] sm:px-8">
-      <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
-        {eyebrow}
+    <div className="grid overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)] lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="px-5 py-10 sm:px-8 sm:py-12">
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
+          {eyebrow}
+        </div>
+        <h1 className="mt-3 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
+          {title}
+        </h1>
+        <p className="mt-4 max-w-xl text-sm leading-6 text-black/60">{body}</p>
+        <Link
+          href={actionHref}
+          className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:translate-y-px"
+        >
+          {actionLabel}
+        </Link>
       </div>
-      <h1 className="mt-3 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
-        {title}
-      </h1>
-      <p className="mt-4 max-w-xl text-sm leading-6 text-black/60">{body}</p>
-      <Link
-        href={actionHref}
-        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:scale-[0.98]"
-      >
-        {actionLabel}
-      </Link>
+      <div className="bg-[var(--trail-ink)] px-5 py-6 text-zinc-50 sm:px-8 lg:px-6 lg:py-8">
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
+          Before publishing
+        </div>
+        <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-400">
+          <p>1. Sign in with the identity other builders already trust.</p>
+          <p>2. Write the outcome in plain language.</p>
+          <p>3. Add GitHub, X, or demo proof when it helps.</p>
+        </div>
+      </div>
     </div>
   );
 }

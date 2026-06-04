@@ -94,6 +94,20 @@ function publicReceiptUrl(row: BaseFeedRow): string {
   return shareUrl(row.handle ?? "anon", row.slug, PUBLIC_APP_URL);
 }
 
+function trailPickCreateHref(signal: FeedRadarSignal): string {
+  const params = new URLSearchParams();
+  const prompt = signal.testPrompt.trim().slice(0, 260);
+
+  if (signal.source === "x") {
+    params.set("source", "x");
+    params.set("url", signal.url);
+  }
+  if (prompt) params.set("prompt", prompt);
+
+  const query = params.toString();
+  return query ? `/create?${query}` : "/create";
+}
+
 function avatarSrc(row: BaseFeedRow): string | null {
   return row.image ?? (row.handle ? githubAvatar(row.handle) : null);
 }
@@ -1930,10 +1944,8 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
 function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
   const sourceLabel = signal.source === "x" ? "Curated from X" : "Curated signal";
   const openLabel = signal.source === "x" ? "Open X post" : "Open source";
-  const createHref =
-    signal.source === "x"
-      ? `/create?source=x&url=${encodeURIComponent(signal.url)}`
-      : `/create?url=${encodeURIComponent(signal.url)}`;
+  const createHref = trailPickCreateHref(signal);
+  const discussionPrompt = signal.testPrompt.trim();
 
   return (
     <article className="border-b border-white/[0.08] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),#0b0b0a] px-4 py-5 sm:px-5">
@@ -1970,6 +1982,13 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
             </p>
           </div>
 
+          {discussionPrompt ? (
+            <div className="mt-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-3">
+              <div className="text-[12px] text-zinc-500">Question to bring back to Trail</div>
+              <p className="mt-1 text-[13px] leading-5 text-zinc-300">{discussionPrompt}</p>
+            </div>
+          ) : null}
+
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3.5">
             <a
               href={signal.url}
@@ -1979,12 +1998,21 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
             >
               {openLabel}
             </a>
+            <CopyButton
+              value={signal.url}
+              label="Copy source"
+              copiedLabel="Copied source"
+              className="min-h-8 rounded-full border-transparent bg-transparent px-2.5 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-200"
+            />
             <Link
               href={createHref}
               className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
             >
               Post your take
             </Link>
+            <span className="basis-full text-[11px] leading-5 text-zinc-700 sm:basis-auto">
+              Creates your own Trail post; the external author stays external.
+            </span>
           </div>
         </div>
       </div>
