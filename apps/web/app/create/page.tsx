@@ -109,7 +109,7 @@ function GateCard({
       <p className="mt-4 max-w-xl text-sm leading-6 text-black/60">{body}</p>
       <Link
         href={actionHref}
-        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-orange)] hover:text-black active:scale-[0.98]"
+        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:scale-[0.98]"
       >
         {actionLabel}
       </Link>

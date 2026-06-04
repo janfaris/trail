@@ -6,10 +6,10 @@ import Link from "next/link";
 import { type ReactNode, useState, useTransition } from "react";
 
 const inputClassName =
-  "w-full border-0 border-b border-black/15 bg-transparent px-0 py-3 text-sm text-[var(--trail-ink)] outline-none transition-colors placeholder:text-black/35 focus:border-[color:var(--trail-orange)]";
+  "w-full border-0 border-b border-black/15 bg-transparent px-0 py-3 text-sm text-[var(--trail-ink)] outline-none transition-colors placeholder:text-black/35 focus:border-[color:var(--trail-green)]";
 
 const railInputClassName =
-  "w-full border-0 border-b border-white/15 bg-transparent px-0 py-3 text-sm text-zinc-50 outline-none transition-colors placeholder:text-zinc-600 focus:border-[color:var(--trail-orange)]";
+  "w-full border-0 border-b border-white/15 bg-transparent px-0 py-3 text-sm text-zinc-50 outline-none transition-colors placeholder:text-zinc-600 focus:border-[color:var(--trail-green)]";
 
 function createEmptyInput(defaultCommunity = "", defaultQuestion = ""): BuildPostInput {
   return {
@@ -233,7 +233,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
 
         <aside className="space-y-6 bg-[var(--trail-ink)] px-5 py-6 text-zinc-50 sm:px-6 sm:py-8">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-orange)]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
               Proof links
             </div>
             <p className="mt-2 text-xs leading-5 text-zinc-400">
@@ -267,7 +267,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               <div className="mt-3 text-xs leading-5 text-red-200">{githubImportError}</div>
             ) : null}
             {githubImportStatus ? (
-              <div className="mt-3 text-xs leading-5 text-[var(--trail-orange)]">
+              <div className="mt-3 text-xs leading-5 text-[var(--trail-green)]">
                 {githubImportStatus}
               </div>
             ) : null}
@@ -297,7 +297,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               <div className="mt-3 text-xs leading-5 text-red-200">{xImportError}</div>
             ) : null}
             {xImportStatus ? (
-              <div className="mt-3 text-xs leading-5 text-[var(--trail-orange)]">
+              <div className="mt-3 text-xs leading-5 text-[var(--trail-green)]">
                 {xImportStatus}
               </div>
             ) : null}
@@ -319,7 +319,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               type="checkbox"
               checked={input.community === "puerto-rico"}
               onChange={(event) => update("community", event.target.checked ? "puerto-rico" : "")}
-              className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-orange)]"
+              className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-green)]"
             />
             <span>
               <span className="block font-medium text-zinc-100">
@@ -339,9 +339,9 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
           )}
 
           {published && (
-            <div className="space-y-4 border border-[color:var(--trail-orange-border)] bg-[var(--trail-orange-soft)] px-4 py-4 text-sm leading-6 text-zinc-100">
+            <div className="space-y-4 border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] px-4 py-4 text-sm leading-6 text-zinc-100">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-orange)]">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
                   Build is live
                 </div>
                 <div className="mt-1 font-medium text-zinc-50">{published.title}</div>
@@ -352,7 +352,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={published.href}
-                  className="rounded-full bg-[var(--trail-orange)] px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-white"
+                  className="rounded-full bg-[var(--trail-green)] px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-white"
                 >
                   Open post
                 </Link>
@@ -386,7 +386,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--trail-orange)] px-5 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isPending ? "Posting..." : "Publish build"}
           </button>
