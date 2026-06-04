@@ -245,6 +245,35 @@ export async function bulkDeleteSessions(ids: string[]) {
   return { ok: true, deleted: owned.length };
 }
 
+export async function deleteOwnPost(
+  sessionId: string,
+): Promise<{ ok: true; handle: string | null } | { ok: false; error: string }> {
+  let user: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "Sign in to delete this post." };
+  }
+
+  const owned = await ownedSessionIds(user.id, [sessionId]);
+  if (owned.length === 0) {
+    return { ok: false, error: "You can only delete your own posts." };
+  }
+
+  // ON DELETE CASCADE on child tables (events, reactions, comments, links,
+  // tags, …) sweeps related rows. Ownership is asserted above.
+  await db.delete(schema.trailSession).where(inArray(schema.trailSession.id, owned));
+
+  const me = await db.query.user.findFirst({ where: eq(schema.user.id, user.id) });
+  if (me?.handle) {
+    revalidatePath(`/u/${me.handle}`);
+    revalidatePath(`/u/${me.handle}/interview`);
+    revalidatePath("/dashboard");
+    revalidatePath("/feed");
+  }
+  return { ok: true, handle: me?.handle ?? null };
+}
+
 export async function saveProfile(formData: FormData) {
   const u = await requireUser();
   const bio = (formData.get("bio") ?? "").toString().trim().slice(0, 160) || null;
