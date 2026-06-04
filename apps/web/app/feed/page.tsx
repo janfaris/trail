@@ -322,12 +322,21 @@ interface FeedDiscovery {
 interface FeedRadarSignal {
   [key: string]: unknown;
   id: string;
+  source: string;
   title: string;
+  summary: string;
+  whyBuildersCare: string;
+  testPrompt: string;
+  url: string;
   category: RadarCategory;
   sourceHandle: string;
   score: unknown;
   publishedAt: Date | string;
 }
+
+type TimelineItem =
+  | { kind: "post"; row: FeedRow }
+  | { kind: "trail_pick"; signal: FeedRadarSignal };
 
 interface DailyBriefSummaryRaw {
   [key: string]: unknown;
@@ -1109,7 +1118,12 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
     const rows = await db.execute<FeedRadarSignal>(sql`
       SELECT
         id,
+        source,
         title,
+        summary,
+        why_builders_care AS "whyBuildersCare",
+        test_prompt AS "testPrompt",
+        url,
         category,
         source_handle AS "sourceHandle",
         score,
@@ -1117,13 +1131,45 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
       FROM radar_signal
       WHERE status <> 'dismissed'
       ORDER BY score DESC, published_at DESC
-      LIMIT 3
+      LIMIT 6
     `);
     return rowsOf<FeedRadarSignal>(rows);
   } catch (error) {
     console.error("Failed to load feed radar signals", error);
     return [];
   }
+}
+
+function buildTimelineItems(
+  rows: FeedRow[],
+  radarSignals: FeedRadarSignal[],
+  isFollowingView: boolean,
+): TimelineItem[] {
+  if (isFollowingView) return rows.map((row) => ({ kind: "post", row }));
+
+  const maxPicks = rows.length < 6 ? 4 : 3;
+  const picks = radarSignals.slice(0, maxPicks);
+  if (rows.length === 0) {
+    return picks.map((signal) => ({ kind: "trail_pick", signal }));
+  }
+
+  const items: TimelineItem[] = [];
+  const remainingPicks = [...picks];
+
+  rows.forEach((row, index) => {
+    items.push({ kind: "post", row });
+    const shouldInsertPick = index === 0 || (index + 1) % 4 === 0;
+    if (shouldInsertPick) {
+      const signal = remainingPicks.shift();
+      if (signal) items.push({ kind: "trail_pick", signal });
+    }
+  });
+
+  if (rows.length < 5) {
+    for (const signal of remainingPicks) items.push({ kind: "trail_pick", signal });
+  }
+
+  return items;
 }
 
 async function loadDailyBuilderBrief(
@@ -1881,6 +1927,71 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   );
 }
 
+function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
+  const sourceLabel = signal.source === "x" ? "Curated from X" : "Curated signal";
+  const openLabel = signal.source === "x" ? "Open X post" : "Open source";
+  const createHref =
+    signal.source === "x"
+      ? `/create?source=x&url=${encodeURIComponent(signal.url)}`
+      : `/create?url=${encodeURIComponent(signal.url)}`;
+
+  return (
+    <article className="border-b border-white/[0.08] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),#0b0b0a] px-4 py-5 sm:px-5">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#a7f300]/10 font-mono text-[11px] font-semibold text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
+          TP
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
+            <span className="font-medium text-[#a7f300]">Trail Pick</span>
+            <span className="text-zinc-800">·</span>
+            <span>{sourceLabel}</span>
+            <span className="text-zinc-800">·</span>
+            <span>@{signal.sourceHandle}</span>
+            <span className="text-zinc-800">·</span>
+            <span>{radarCategoryLabel(signal.category)}</span>
+            <span className="text-zinc-800">·</span>
+            <RelativeTime date={signal.publishedAt} className="font-mono tabular-nums" />
+          </div>
+
+          <a href={signal.url} target="_blank" rel="noreferrer noopener" className="mt-2.5 block">
+            <h3 className="break-words text-pretty text-[17px] font-medium leading-[1.42] tracking-[-0.012em] text-zinc-50 transition-colors hover:text-white">
+              {signal.title}
+            </h3>
+            <p className="mt-2 line-clamp-3 break-words text-pretty text-[14px] leading-[1.55] text-zinc-400">
+              {signal.summary}
+            </p>
+          </a>
+
+          <div className="mt-3 border-l border-[#a7f300]/30 pl-3">
+            <div className="text-[12px] text-zinc-500">Why builders care</div>
+            <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-400">
+              {signal.whyBuildersCare}
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3.5">
+            <a
+              href={signal.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex min-h-8 items-center rounded-full px-2.5 text-[13px] text-zinc-600 transition-[background-color,color,transform] hover:bg-white/[0.04] hover:text-zinc-200 active:scale-[0.97]"
+            >
+              {openLabel}
+            </a>
+            <Link
+              href={createHref}
+              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+            >
+              Post your take
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function EmptyTimeline({
   isFollowingView,
   recommendations,
@@ -2318,12 +2429,17 @@ export default async function FeedPage({
   }
 
   const isFollowingView = view === "following";
+  const timelineItems = buildTimelineItems(rows, radarSignals, isFollowingView);
+  const trailPickCount = timelineItems.filter((item) => item.kind === "trail_pick").length;
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
   const subtitle = isFollowingView
     ? "Read the builders you follow, steal one move, and reply while the thread is warm."
     : "Read what shipped, steal reusable moves, follow useful builders, then post your own build.";
   const feedTitle = isFollowingView ? "Following" : "Today";
-  const feedCountLabel = `${rows.length} ${rows.length === 1 ? "post" : "posts"}`;
+  const feedCountLabel =
+    trailPickCount > 0 && !isFollowingView
+      ? `${rows.length} ${rows.length === 1 ? "post" : "posts"} · ${trailPickCount} picks`
+      : `${rows.length} ${rows.length === 1 ? "post" : "posts"}`;
 
   return (
     <div className="min-h-screen bg-[#080808] text-zinc-50">
@@ -2433,7 +2549,7 @@ export default async function FeedPage({
               </div>
             </div>
 
-            {rows.length === 0 ? (
+            {timelineItems.length === 0 ? (
               <EmptyTimeline
                 isFollowingView={isFollowingView}
                 recommendations={discovery.builders}
@@ -2441,9 +2557,13 @@ export default async function FeedPage({
               />
             ) : (
               <div>
-                {rows.map((row) => (
-                  <FeedPostCard key={row.id} row={row} viewerId={viewerId} />
-                ))}
+                {timelineItems.map((item) =>
+                  item.kind === "post" ? (
+                    <FeedPostCard key={item.row.id} row={item.row} viewerId={viewerId} />
+                  ) : (
+                    <TrailPickFeedCard key={`trail-pick-${item.signal.id}`} signal={item.signal} />
+                  ),
+                )}
               </div>
             )}
           </section>

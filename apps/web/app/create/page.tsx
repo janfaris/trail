@@ -1,11 +1,18 @@
 import { BuildPostForm } from "@/app/create/build-post-form";
 import SiteNav from "@/components/site-nav";
+import { parseXPostUrl } from "@/lib/x-url";
 import Link from "next/link";
 
 type CreateSearchParams = {
-  community?: string;
-  prompt?: string;
+  community?: string | string[];
+  prompt?: string | string[];
+  source?: string | string[];
+  url?: string | string[];
 };
+
+function getSingleSearchParam(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
 
 export default async function CreatePage({
   searchParams,
@@ -13,8 +20,14 @@ export default async function CreatePage({
   searchParams: Promise<CreateSearchParams>;
 }) {
   const sp = await searchParams;
-  const defaultCommunity = sp.community === "puerto-rico" ? "puerto-rico" : "";
-  const defaultQuestion = typeof sp.prompt === "string" ? sp.prompt.slice(0, 260) : "";
+  const community = getSingleSearchParam(sp.community);
+  const prompt = getSingleSearchParam(sp.prompt);
+  const source = getSingleSearchParam(sp.source);
+  const url = getSingleSearchParam(sp.url);
+  const defaultCommunity = community === "puerto-rico" ? "puerto-rico" : "";
+  const defaultQuestion = prompt ? prompt.slice(0, 260) : "";
+  const parsedXUrl = source === "x" ? parseXPostUrl(url) : null;
+  const defaultXUrl = parsedXUrl?.normalizedUrl ?? "";
   const [{ headers }, { eq }, { auth }, { db, schema }] = await Promise.all([
     import("next/headers"),
     import("drizzle-orm"),
@@ -77,7 +90,11 @@ export default async function CreatePage({
               actionLabel="Edit profile"
             />
           ) : (
-            <BuildPostForm defaultCommunity={defaultCommunity} defaultQuestion={defaultQuestion} />
+            <BuildPostForm
+              defaultCommunity={defaultCommunity}
+              defaultQuestion={defaultQuestion}
+              defaultXUrl={defaultXUrl}
+            />
           )}
         </section>
       </div>

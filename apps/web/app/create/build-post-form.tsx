@@ -11,14 +11,18 @@ const inputClassName =
 const railInputClassName =
   "w-full border-0 border-b border-white/15 bg-transparent px-0 py-3 text-sm text-zinc-50 outline-none transition-colors placeholder:text-zinc-600 focus:border-[color:var(--trail-green)]";
 
-function createEmptyInput(defaultCommunity = "", defaultQuestion = ""): BuildPostInput {
+function createEmptyInput(
+  defaultCommunity = "",
+  defaultQuestion = "",
+  defaultXUrl = "",
+): BuildPostInput {
   return {
     title: "",
     summary: "",
     tools: "",
     stack: "",
     githubUrl: "",
-    xUrl: "",
+    xUrl: defaultXUrl,
     demoUrl: "",
     question: defaultQuestion,
     community: defaultCommunity,
@@ -47,11 +51,16 @@ function mergeCsv(existing: string, incoming: string[]): string {
 type BuildPostFormProps = {
   defaultCommunity?: string;
   defaultQuestion?: string;
+  defaultXUrl?: string;
 };
 
-export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: BuildPostFormProps) {
+export function BuildPostForm({
+  defaultCommunity = "",
+  defaultQuestion = "",
+  defaultXUrl = "",
+}: BuildPostFormProps) {
   const [input, setInput] = useState<BuildPostInput>(() =>
-    createEmptyInput(defaultCommunity, defaultQuestion),
+    createEmptyInput(defaultCommunity, defaultQuestion, defaultXUrl),
   );
   const [error, setError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
@@ -87,7 +96,7 @@ export function BuildPostForm({ defaultCommunity = "", defaultQuestion = "" }: B
         return;
       }
       setPublished({ href: result.href, shareUrl: result.shareUrl, title: result.title });
-      setInput(createEmptyInput(defaultCommunity, defaultQuestion));
+      setInput(createEmptyInput(defaultCommunity, defaultQuestion, defaultXUrl));
       setCopyStatus(null);
     });
   };
