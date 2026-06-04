@@ -44,6 +44,7 @@ type ReceiptRow = {
   sharedAt: Date;
   receiptStatus: string | null;
   outcome: string | null;
+  postKind: string | null;
   handle: string;
   name: string | null;
   image: string | null;
@@ -60,6 +61,8 @@ type BuilderRow = {
   name: string | null;
   image: string | null;
   githubHandle: string | null;
+  location: string | null;
+  currentlyBuilding: string | null;
   receiptCount: unknown;
   shippedCount: unknown;
   eventCount: unknown;
@@ -176,15 +179,17 @@ function receiptReason(row: ReceiptRow): string {
   if (comments >= 3) return `${formatCount(comments)} comments in the thread`;
   if (reactions >= 3) return `${formatCount(reactions)} builder reactions`;
   if (isShipped(row)) return "shipped outcome with public proof";
+  if (row.postKind === "manual_build") return "native build post";
   return `${formatCount(row.eventCount)} agent events captured`;
 }
 
 function builderReason(row: BuilderRow): string {
   const followers = toNumber(row.followerCount);
   const reactions = toNumber(row.reactionCount);
+  if (row.currentlyBuilding) return row.currentlyBuilding;
   if (followers > 0) return `${formatCount(followers)} followers watching`;
-  if (reactions > 0) return `${formatCount(reactions)} receipt reactions`;
-  return `${formatCount(row.shippedCount)} shipped receipts`;
+  if (reactions > 0) return `${formatCount(reactions)} build reactions`;
+  return `${formatCount(row.shippedCount)} shipped builds`;
 }
 
 function stackHref(row: StackRow): string {
@@ -218,7 +223,7 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
     join "user" u on u.id = ts.user_id
     where ts.visibility = 'public'
       and ts.shared_at is not null
-      and ts.event_count > 0
+      and (ts.event_count > 0 or ts.post_kind = 'manual_build')
       and u.handle is not null
       and u.handle <> ''
   `;
@@ -253,6 +258,7 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
           ps.shared_at as "sharedAt",
           ps.receipt_status as "receiptStatus",
           ps.outcome,
+          ps.post_kind as "postKind",
           u.handle,
           u.name,
           u.image,
@@ -266,7 +272,10 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
               and sv.user_id = ${viewerId}
           ) as "viewerHasSaved",
           (
-            ln(ps.event_count + 1)
+            ln(greatest(
+              ps.event_count,
+              case when ps.post_kind = 'manual_build' then 1 else 0 end
+            ) + 1)
               * exp(-extract(epoch from (now() - ps.shared_at)) / 86400.0 / 14.0)
             + (count(distinct sr.id) filter (where sr.created_at >= now() - interval '30 days')) * 0.45
             + (count(distinct sc.id) filter (where sc.created_at >= now() - interval '30 days')) * 0.75
@@ -292,6 +301,7 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
           ps.shared_at,
           ps.receipt_status,
           ps.outcome,
+          ps.post_kind,
           u.handle,
           u.name,
           u.image,
@@ -318,6 +328,8 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
             u.name,
             u.image,
             u.github_handle as "githubHandle",
+            u.location,
+            u.currently_building as "currentlyBuilding",
             count(*)::int as "receiptCount",
             (count(*) filter (
               where ps.receipt_status = 'shipped' or ps.outcome = 'shipped'
@@ -330,7 +342,14 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
           join "user" u on u.id = ps.user_id
           left join session_social ss on ss.id = ps.id
           where ps.shared_at >= now() - interval '180 days'
-          group by u.id, u.handle, u.name, u.image, u.github_handle
+          group by
+            u.id,
+            u.handle,
+            u.name,
+            u.image,
+            u.github_handle,
+            u.location,
+            u.currently_building
         ),
         followers as (
           select following_id, count(distinct follower_id)::int as "followerCount"
@@ -343,6 +362,8 @@ async function loadDiscoverData(viewerId: string | null): Promise<DiscoverData> 
           br.name,
           br.image,
           br."githubHandle",
+          br.location,
+          br."currentlyBuilding",
           br."receiptCount",
           br."shippedCount",
           br."eventCount",
@@ -828,12 +849,17 @@ function BuilderCard({
               #{rank}
             </span>
           </div>
-          <p className="mt-1 truncate text-xs text-zinc-500">@{builder.handle}</p>
-          <p className="mt-1 text-xs text-zinc-400">{builderReason(builder)}</p>
+          <p className="mt-1 truncate text-xs text-zinc-500">
+            @{builder.handle}
+            {builder.location ? <span> · {builder.location}</span> : null}
+          </p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
+            {builderReason(builder)}
+          </p>
         </Link>
         <div className="text-right text-[11px] text-zinc-500">
           <div className="font-semibold text-zinc-200">{formatCount(builder.receiptCount)}</div>
-          <div>receipts</div>
+          <div>builds</div>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">

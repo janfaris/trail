@@ -300,7 +300,15 @@ export default async function UserProfile({ params }: PageProps) {
   const x = userRow.xHandle;
   const li = userRow.linkedinHandle;
   const site = userRow.website;
+  const location = userRow.location;
+  const currentlyBuilding = userRow.currentlyBuilding;
   const hasSocials = Boolean(gh || x || li || site);
+  const missingIdentityFields = [
+    !userRow.bio ? "bio" : null,
+    !location ? "location" : null,
+    !currentlyBuilding ? "current build" : null,
+  ].filter((field): field is string => Boolean(field));
+  const showIdentityStrip = Boolean(location || currentlyBuilding || isSelf);
   const base = baseUrl;
 
   const viewerId = sessionInfo?.user?.id ?? null;
@@ -552,18 +560,40 @@ export default async function UserProfile({ params }: PageProps) {
                 <p className="mt-6 max-w-3xl text-xl leading-snug text-zinc-200 sm:text-2xl">
                   {userRow.bio}
                 </p>
-              ) : isSelf ? (
-                <Link
-                  href="/settings"
-                  className="mt-6 inline-flex min-h-10 items-center rounded-full bg-zinc-900 px-4 text-sm font-mono text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)] active:scale-[0.96]"
-                >
-                  Add a bio so your proof has a voice →
-                </Link>
               ) : (
                 <p className="mt-6 max-w-3xl text-xl leading-snug text-zinc-400 sm:text-2xl">
-                  AI-native builder publishing session receipts as proof of work.
+                  AI-native builder publishing build posts and proof of work.
                 </p>
               )}
+
+              {showIdentityStrip ? (
+                <div className="mt-6 grid max-w-4xl overflow-hidden rounded-[1.25rem] bg-black/28 shadow-[0_0_0_1px_rgba(255,255,255,0.07)] sm:grid-cols-2">
+                  <div className="border-b border-white/10 px-4 py-3 sm:border-b-0 sm:border-r">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+                      Based in
+                    </div>
+                    <div className="mt-1 text-sm leading-6 text-zinc-200">
+                      {location ?? "Add your city, region, or remote base"}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+                      Currently building
+                    </div>
+                    <div className="mt-1 text-sm leading-6 text-zinc-200">
+                      {currentlyBuilding ?? "Tell builders what to ask you about"}
+                    </div>
+                  </div>
+                  {isSelf && missingIdentityFields.length > 0 ? (
+                    <Link
+                      href="/settings"
+                      className="border-t border-white/10 px-4 py-3 text-xs font-mono text-[#a7f300] transition-colors hover:text-zinc-50 sm:col-span-2"
+                    >
+                      Complete profile: {missingIdentityFields.join(", ")} →
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
