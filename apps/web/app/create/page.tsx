@@ -65,8 +65,8 @@ export default async function CreatePage({
               Create
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Post what shipped, add proof links when you have them, and start a thread other
-              builders can answer.
+              Post what shipped with enough proof and context that another builder can trust it,
+              learn from it, and reply.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
@@ -149,7 +149,7 @@ function GateCard({
         <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-400">
           <p>1. Sign in with the identity other builders already trust.</p>
           <p>2. Write the outcome in plain language.</p>
-          <p>3. Add GitHub, X, or demo proof when it helps.</p>
+          <p>3. Add a proof link, or write a public proof note if the link is private.</p>
         </div>
       </div>
     </div>

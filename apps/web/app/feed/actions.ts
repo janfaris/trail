@@ -1,6 +1,7 @@
 "use server";
 
-import { extractGithubLinkage } from "@/lib/github-url";
+import { normalizeBuildPostText, validateBuildPostQuality } from "@/lib/build-post-quality";
+import { extractGithubLinkage, parseGithubBuildUrl } from "@/lib/github-url";
 import { parseXPostUrl } from "@/lib/x-url";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -23,6 +24,7 @@ export type BuildPostInput = {
   githubUrl: string;
   xUrl: string;
   demoUrl: string;
+  proofNote: string;
   question: string;
   community: string;
 };
@@ -310,19 +312,43 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
   }
 
   const title = cleanText(input.title, 120);
-  const summary = cleanSummary(input.summary, 1200);
+  const summary = normalizeBuildPostText(input.summary, 1200);
   if (!title || !summary) {
     return { ok: false, error: "Add a title and a short summary before publishing." };
   }
 
   const githubUrl = cleanUrl(input.githubUrl);
+  if (input.githubUrl.trim() && (!githubUrl || !parseGithubBuildUrl(githubUrl))) {
+    return {
+      ok: false,
+      error: "Paste a public GitHub repo, PR, release, issue, discussion, or commit URL.",
+    };
+  }
   const parsedXUrl = parseXPostUrl(input.xUrl);
   if (input.xUrl.trim() && !parsedXUrl) {
     return { ok: false, error: "Paste a public X or Twitter status URL." };
   }
   const xUrl = parsedXUrl?.normalizedUrl ?? null;
   const demoUrl = cleanUrl(input.demoUrl);
-  const question = cleanSummary(input.question, 260);
+  if (input.demoUrl.trim() && !demoUrl) {
+    return { ok: false, error: "Paste a valid demo or deployment URL." };
+  }
+  const question = normalizeBuildPostText(input.question, 260);
+  const proofNote = normalizeBuildPostText(input.proofNote, 500);
+  const proofUrlCount = [githubUrl, xUrl, demoUrl].filter(Boolean).length;
+  const quality = validateBuildPostQuality({
+    summary,
+    proofUrlCount,
+    proofNote,
+    question,
+  });
+  if (!quality.ok) {
+    return {
+      ok: false,
+      error:
+        quality.issues[0]?.message ?? "Add a clear outcome, proof, and context before posting.",
+    };
+  }
   const community = input.community === "puerto-rico" ? "puerto-rico" : null;
   const tools = cleanCsv(input.tools, 8, 32);
   const stack = cleanCsv(input.stack, 10, 32);
@@ -372,6 +398,7 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     linkedRepo: github.linkedRepo,
     receiptTldr: question ? `${summary}\n\nQuestion for the community: ${question}` : summary,
     recipeTldr: summary,
+    manualProofNote: proofNote || null,
   });
 
   const links = [

@@ -194,6 +194,7 @@ export const trailSession = pgTable(
     receiptAiReviewGeneratedAt: timestamp("receipt_ai_review_generated_at"),
     receiptAiReviewModel: text("receipt_ai_review_model"),
     receiptAiReviewError: text("receipt_ai_review_error"),
+    manualProofNote: text("manual_proof_note"),
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
     cachedTokens: integer("cached_tokens"),
