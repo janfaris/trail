@@ -1419,7 +1419,7 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
       href: "/notifications",
       label: "Open inbox",
       title: "Answer the network",
-      body: `${pluralize(data.unreadNotifications, "unread signal")} waiting: replies, follows, reactions, or moves reused.`,
+      body: `${pluralize(data.unreadNotifications, "unread signal")} waiting: replies, follows, reactions, or ideas reused.`,
     };
   }
 
@@ -1427,9 +1427,9 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
   if (firstLesson) {
     return {
       href: `/u/${firstLesson.handle}/${firstLesson.slug}#lessons`,
-      label: "Steal move",
-      title: "Steal one proven move",
-      body: "Mark a move used when it helps your own work. That is the habit loop.",
+      label: "Save idea",
+      title: "Save one proven idea",
+      body: "Save an idea when it helps your own work — that is the loop.",
     };
   }
 
@@ -1445,8 +1445,8 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
   return {
     href: "/feed",
     label: "Read builds",
-    title: "Find one move to reuse",
-    body: "Open a build post, reuse one move, and answer the thread while it is warm.",
+    title: "Find one idea to reuse",
+    body: "Open a build, reuse one idea, and reply while the thread is fresh.",
   };
 }
 
@@ -1469,12 +1469,13 @@ async function DailyBuilderBrief({
 
   const data = await loadDailyBuilderBrief(viewer.id, draftCount);
   const action = dailyBriefAction(data);
-  const stats = [
-    { label: "Ship", value: formatCount(data.draftCount), detail: "ready drafts" },
-    { label: "Read", value: formatCount(data.followingReceipts), detail: "followed this week" },
-    { label: "Notifications", value: formatCount(data.unreadNotifications), detail: "unread" },
-    { label: "Signal", value: formatCount(data.reputation.score), detail: data.reputation.label },
+  const statItems = [
+    { label: "Drafts", value: data.draftCount },
+    { label: "Following", value: data.followingReceipts },
+    { label: "Inbox", value: data.unreadNotifications },
+    { label: "Reputation", value: data.reputation.score },
   ];
+  const hasStats = statItems.some((stat) => stat.value > 0);
 
   return (
     <section className="border-b border-white/[0.08] px-4 py-3 sm:px-5">
@@ -1492,16 +1493,18 @@ async function DailyBuilderBrief({
             </Link>
           </div>
           <p className="mt-1 max-w-2xl text-[13px] leading-5 text-zinc-500">{action.body}</p>
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[13px] text-zinc-200 tabular-nums">
-                  {stat.value}
-                </span>
-                <span className="text-[12px] text-zinc-600">{stat.label}</span>
-              </div>
-            ))}
-          </div>
+          {hasStats ? (
+            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+              {statItems.map((stat) => (
+                <div key={stat.label} className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-[13px] text-zinc-200 tabular-nums">
+                    {formatCount(stat.value)}
+                  </span>
+                  <span className="text-[12px] text-zinc-600">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {data.lessons.length > 0 ? (
@@ -1510,7 +1513,7 @@ async function DailyBuilderBrief({
               <div key={lesson.id} className="min-w-0">
                 <Link href={`/u/${lesson.handle}/${lesson.slug}#lessons`} className="group block">
                   <div className="text-[12px] text-zinc-600">
-                    Move to steal · {lesson.transferabilityScore}/5 · @{lesson.handle}
+                    Idea to save · {lesson.transferabilityScore}/5 · @{lesson.handle}
                   </div>
                   <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-300 group-hover:text-zinc-100">
                     {lesson.title}
@@ -1541,91 +1544,55 @@ async function DailyBuilderBrief({
   );
 }
 
-function FeedNavRail({
-  followingHref,
-  isFollowingView,
-  viewerId,
-}: {
-  followingHref: string;
-  isFollowingView: boolean;
-  viewerId: string | null;
-}) {
-  const notificationsHref = viewerId ? "/notifications" : signInHref("/notifications");
+function FeedNavRail({ viewerId }: { viewerId: string | null }) {
   const publishHref = viewerId ? "/create" : signInHref("/create");
-  const navItems = [
-    {
-      href: "/feed",
-      label: "Today",
-      detail: "Builds and threads",
-      active: !isFollowingView,
-    },
-    {
-      href: followingHref,
-      label: "Following",
-      detail: "Builders you track",
-      active: isFollowingView,
-    },
-    {
-      href: "/create",
-      label: "Create",
-      detail: "Post a build",
-      active: false,
-    },
-    {
-      href: notificationsHref,
-      label: "Notifications",
-      detail: "Replies and reactions",
-      active: false,
-    },
-    {
-      href: "/discover",
-      label: "Builders",
-      detail: "People and stacks",
-      active: false,
-    },
-  ];
+  const quickLinks = viewerId
+    ? [
+        {
+          href: "/notifications",
+          label: "Notifications",
+          detail: "Replies and reactions",
+        },
+        {
+          href: "/saved",
+          label: "Saved",
+          detail: "Ideas and builds you kept",
+        },
+      ]
+    : [];
 
   return (
     <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6 pr-2">
       <div>
-        <Link href="/" className="inline-flex items-baseline gap-2 px-2 text-sm">
-          <span className="font-medium tracking-[-0.02em] text-zinc-100">trail</span>
-          <span className="font-mono text-[11px] text-zinc-600">build network</span>
-        </Link>
-
-        <nav className="mt-8 space-y-0.5">
-          {navItems.map((item) => (
-            <TrailLink
-              key={item.label}
-              href={item.href}
-              className={`group block border-l px-3 py-2.5 transition-[border-color,color] ${
-                item.active
-                  ? "border-zinc-100 text-zinc-100"
-                  : "border-white/0 text-zinc-500 hover:border-white/20 hover:text-zinc-200"
-              }`}
-            >
-              <span className="block text-[14px] font-medium tracking-[-0.01em]">{item.label}</span>
-              <span
-                className={`mt-0.5 block text-[12px] leading-4 ${
-                  item.active ? "text-zinc-500" : "text-zinc-700 group-hover:text-zinc-600"
-                }`}
-              >
-                {item.detail}
-              </span>
-            </TrailLink>
-          ))}
-        </nav>
-
         <TrailLink
           href={publishHref}
-          className="mt-6 inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+          className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
         >
-          Post
+          Post a build
         </TrailLink>
+
+        {quickLinks.length > 0 ? (
+          <nav className="mt-8 space-y-0.5">
+            {quickLinks.map((item) => (
+              <TrailLink
+                key={item.label}
+                href={item.href}
+                className="group block border-l border-white/0 px-3 py-2.5 text-zinc-500 transition-[border-color,color] hover:border-white/20 hover:text-zinc-200"
+              >
+                <span className="block text-[14px] font-medium tracking-[-0.01em]">
+                  {item.label}
+                </span>
+                <span className="mt-0.5 block text-[12px] leading-4 text-zinc-700 group-hover:text-zinc-600">
+                  {item.detail}
+                </span>
+              </TrailLink>
+            ))}
+          </nav>
+        ) : null}
       </div>
 
       <div className="border-l border-white/10 px-3 text-[12px] leading-5 text-zinc-600">
-        Daily loop: read one build, steal one move, post one update, answer one thread.
+        Your daily loop: read a build, save an idea, post an update, reply to a thread.
       </div>
     </div>
   );
@@ -1633,24 +1600,36 @@ function FeedNavRail({
 
 function NetworkPulse({ stats }: { stats: FeedStats }) {
   const items = [
-    ["Builders", formatCount(stats.builders)],
-    ["Posts", formatCount(stats.receipts)],
-    ["Shipped", formatCount(stats.shipped)],
-    ["Reactions", formatCount(stats.reactions)],
-    ["Comments", formatCount(stats.comments)],
-  ];
+    { label: "Builders", value: stats.builders },
+    { label: "Builds", value: stats.receipts },
+    { label: "Shipped", value: stats.shipped },
+    { label: "Reactions", value: stats.reactions },
+    { label: "Comments", value: stats.comments },
+  ].filter((item) => item.value > 0);
 
   return (
     <section className="border-b border-white/[0.08] pb-5">
       <div className="text-sm font-medium tracking-[-0.01em] text-zinc-200">Network pulse</div>
-      <dl className="mt-3 space-y-1.5">
-        {items.map(([label, value]) => (
-          <div key={label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-[12px] text-zinc-600">{label}</dt>
-            <dd className="font-mono text-sm text-zinc-100 tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      {items.length > 0 ? (
+        <dl className="mt-3 space-y-1.5">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-baseline justify-between gap-3">
+              <dt className="text-[12px] text-zinc-600">{item.label}</dt>
+              <dd className="font-mono text-sm text-zinc-100 tabular-nums">
+                {formatCount(item.value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {stats.receipts === 0 ? (
+        <p className="mt-3 text-[13px] leading-5 text-zinc-500">
+          No public builds yet.{" "}
+          <Link href="/create" className="text-[#a7f300] hover:underline">
+            Post the first build.
+          </Link>
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -1984,7 +1963,7 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
 
           {discussionPrompt ? (
             <div className="mt-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3.5 py-3">
-              <div className="text-[12px] text-zinc-500">Question to bring back to Trail</div>
+              <div className="text-[12px] text-zinc-500">Start a Trail thread about this</div>
               <p className="mt-1 text-[13px] leading-5 text-zinc-300">{discussionPrompt}</p>
             </div>
           ) : null}
@@ -2083,9 +2062,28 @@ function EmptyTimeline({
           )}
         </div>
       ) : (
-        <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-400">
-          No public build posts yet. Be first to post what you built this week.
-        </p>
+        <div className="mx-auto max-w-xl">
+          <h3 className="text-[17px] font-medium tracking-[-0.02em] text-zinc-100">
+            Be the first to share a build.
+          </h3>
+          <p className="mt-2 text-pretty text-sm leading-relaxed text-zinc-400">
+            Post what you built with AI — the outcome, proof, and one idea other builders can reuse.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Link
+              href={viewerId ? "/create" : signInHref("/create")}
+              className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+            >
+              Share a build
+            </Link>
+            <Link
+              href="/discover"
+              className="inline-flex min-h-9 items-center rounded-full bg-white/[0.04] px-4 text-sm text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.08] hover:text-zinc-100 active:scale-[0.97]"
+            >
+              Browse builders
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2129,17 +2127,17 @@ function PersonalizationNudge({
         personalization.topTags.length > 0
           ? personalization.topTags.slice(0, 2).map(formatToolName).join(" + ")
           : "pick one",
-      body: "teach For you",
+      body: "shape your feed",
       done: personalization.topTags.length > 0,
       href: stackSuggestions[0] ? stackHref(stackSuggestions[0]) : "/discover",
     },
     {
-      label: "Moves",
+      label: "Ideas",
       value:
         personalization.usedLessonCount > 0
-          ? `${formatCount(personalization.usedLessonCount)} used`
-          : "0 used",
-      body: "reuse a move",
+          ? `${formatCount(personalization.usedLessonCount)} saved`
+          : "none yet",
+      body: "save an idea",
       done: personalization.usedLessonCount > 0,
       href: "/feed",
     },
@@ -2161,7 +2159,7 @@ function PersonalizationNudge({
         personalization.unreadNotifications > 0
           ? `${formatCount(personalization.unreadNotifications)} unread`
           : "clear",
-      body: "answer signals",
+      body: "reply to activity",
       done: personalization.unreadNotifications === 0,
       href: "/notifications",
     },
@@ -2176,7 +2174,7 @@ function PersonalizationNudge({
               Tune your feed
             </span>
             <span className="mt-0.5 block text-[12px] text-zinc-600">
-              Follow builders, choose stacks, reuse moves, post builds.
+              Follow builders, pick stacks, save ideas, post builds.
             </span>
           </span>
           <span className="shrink-0 text-[12px] text-zinc-600 group-open:hidden">Show</span>
@@ -2274,10 +2272,13 @@ function FeedDiscoveryPanel({
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Trail Picks</h3>
         </div>
+        <p className="mt-1 text-[12px] leading-5 text-zinc-600">
+          Curated AI updates — post your take to start a Trail thread.
+        </p>
 
         {radarSignals.length === 0 ? (
           <p className="mt-3 text-[13px] leading-5 text-zinc-600">
-            Trail Picks fill from curated AI sources and point back to builder discussion.
+            Nothing curated right now. Check back soon.
           </p>
         ) : (
           <div className="mt-3 space-y-3">
@@ -2311,9 +2312,17 @@ function FeedDiscoveryPanel({
         </div>
 
         {topBuilders.length === 0 ? (
-          <p className="mt-3 text-[13px] leading-5 text-zinc-600">
-            Builder recommendations appear as more public build posts are published.
-          </p>
+          <div className="mt-3 space-y-2 text-[13px] leading-5 text-zinc-600">
+            <p>No builders to recommend yet — be one of the first.</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              <Link href="/create" className="text-[#a7f300] hover:underline">
+                Post a build
+              </Link>
+              <Link href="/discover" className="text-zinc-400 hover:text-zinc-200">
+                Browse builders
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="mt-3 space-y-3">
             {topBuilders.map((builder) => (
@@ -2461,13 +2470,11 @@ export default async function FeedPage({
   const trailPickCount = timelineItems.filter((item) => item.kind === "trail_pick").length;
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
   const subtitle = isFollowingView
-    ? "Read the builders you follow, steal one move, and reply while the thread is warm."
-    : "Read what shipped, steal reusable moves, follow useful builders, then post your own build.";
+    ? "Read the builders you follow, save an idea, and reply while the thread is fresh."
+    : "See what builders shipped, save ideas you can reuse, then post your own build.";
   const feedTitle = isFollowingView ? "Following" : "Today";
   const feedCountLabel =
-    trailPickCount > 0 && !isFollowingView
-      ? `${rows.length} ${rows.length === 1 ? "post" : "posts"} · ${trailPickCount} picks`
-      : `${rows.length} ${rows.length === 1 ? "post" : "posts"}`;
+    rows.length > 0 ? `${rows.length} ${rows.length === 1 ? "build" : "builds"}` : null;
 
   return (
     <div className="min-h-screen bg-[#080808] text-zinc-50">
@@ -2476,11 +2483,7 @@ export default async function FeedPage({
       <main className="min-h-[calc(100vh-3.5rem)] w-full">
         <div className="mx-auto grid max-w-[1380px] grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-8 lg:px-4 xl:grid-cols-[190px_minmax(0,720px)_300px] xl:gap-10">
           <aside className="hidden lg:block">
-            <FeedNavRail
-              followingHref={followingHref}
-              isFollowingView={isFollowingView}
-              viewerId={viewerId}
-            />
+            <FeedNavRail viewerId={viewerId} />
           </aside>
 
           <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
@@ -2495,9 +2498,11 @@ export default async function FeedPage({
                       {subtitle}
                     </p>
                   </div>
-                  <span className="shrink-0 font-mono text-[12px] text-zinc-600 tabular-nums">
-                    {feedCountLabel}
-                  </span>
+                  {feedCountLabel ? (
+                    <span className="shrink-0 font-mono text-[12px] text-zinc-600 tabular-nums">
+                      {feedCountLabel}
+                    </span>
+                  ) : null}
                 </div>
                 <FeedTabs followingHref={followingHref} isFollowingView={isFollowingView} />
               </div>
@@ -2506,16 +2511,17 @@ export default async function FeedPage({
             <details
               id="feed-composer"
               className="group border-b border-white/[0.08] px-4 py-3 sm:px-5"
+              open={timelineItems.length === 0}
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 marker:hidden">
                 <div className="min-w-0">
                   <span className="block text-sm font-medium tracking-[-0.01em] text-zinc-200">
-                    Post or publish
+                    Share a build
                   </span>
                   <span className="mt-0.5 block text-[12px] text-zinc-600">
                     {composerDrafts.length > 0
                       ? `${formatCount(composerDrafts.length)} proof draft${composerDrafts.length === 1 ? "" : "s"} ready`
-                      : "Write manually on Create, or import an agent run later"}
+                      : "Write a build post, or turn an agent run into proof."}
                   </span>
                 </div>
                 <span className="text-[12px] text-zinc-600 group-open:hidden">Open</span>
@@ -2570,10 +2576,10 @@ export default async function FeedPage({
 
             <div className="border-b border-white/[0.08] px-4 py-2.5 sm:px-5">
               <div className="flex items-center justify-between gap-4 text-[12px] text-zinc-600">
-                <span>Latest public build posts</span>
-                <span className="hidden sm:inline">
-                  Builder · Outcome · Proof · Lesson · Conversation
+                <span>
+                  {rows.length === 0 && trailPickCount > 0 ? "Curated picks" : "Latest builds"}
                 </span>
+                <span className="hidden sm:inline">Newest first</span>
               </div>
             </div>
 
