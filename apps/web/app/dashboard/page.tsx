@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Builder Studio · Trail",
-  description: "Review, publish, and share your AI coding receipts.",
+  description: "Review, publish, and share what you built.",
 };
 
 export default async function DashboardPage() {
@@ -38,6 +38,7 @@ export default async function DashboardPage() {
         title: schema.trailSession.title,
         summary: schema.trailSession.summary,
         tool: schema.trailSession.tool,
+        postKind: schema.trailSession.postKind,
         eventCount: schema.trailSession.eventCount,
         startedAt: schema.trailSession.startedAt,
         endedAt: schema.trailSession.endedAt,
@@ -121,8 +122,8 @@ export default async function DashboardPage() {
                 Decide what ships to the network.
               </h1>
               <p className="mt-4 max-w-2xl text-pretty text-sm leading-6 text-zinc-400 sm:text-[15px]">
-                Review raw agent sessions, publish the receipts with proof, and keep your public
-                profile from feeling like a file dump.
+                Review what you've built, publish the posts with proof, and keep your public profile
+                sharp instead of a feed of half-finished drafts.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link
@@ -141,8 +142,8 @@ export default async function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Sessions" value={totals.all} />
-              <Stat label="Live receipts" value={totals.public} tone="lime" />
+              <Stat label="Posts" value={totals.all} />
+              <Stat label="Live posts" value={totals.public} tone="lime" />
               <Stat
                 label="Needs review"
                 value={totals.review}
@@ -155,11 +156,24 @@ export default async function DashboardPage() {
 
         {sessions.length === 0 ? (
           <div className="rounded-[2rem] border border-dashed border-zinc-800 bg-zinc-950/75 p-10 text-center">
-            <div className="mb-2 font-mono text-sm text-zinc-400">No sessions yet.</div>
-            <div className="text-xs text-zinc-600">
-              Record one with{" "}
-              <code className="rounded bg-zinc-900 px-1.5 py-0.5 text-zinc-300">trail record</code>,
-              then refresh.
+            <div className="mb-2 font-mono text-sm text-zinc-400">No posts yet.</div>
+            <div className="mb-5 text-xs text-zinc-600">
+              Share what you built with AI — post the outcome, add proof, and start a thread other
+              builders can answer.
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link
+                href="/create"
+                className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+              >
+                Post a build
+              </Link>
+              <Link
+                href="/feed"
+                className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
+              >
+                Browse the feed
+              </Link>
             </div>
           </div>
         ) : (
