@@ -16,6 +16,7 @@ export type SessionRow = {
   title: string | null;
   summary: string | null;
   tool: string | null;
+  postKind: string;
   eventCount: number;
   startedAt: string;
   endedAt: string | null;
@@ -74,11 +75,11 @@ type DashboardClientProps = {
 
 const FILTER_LABEL: Record<Filter, string> = {
   queue: "Publishing queue",
-  live: "Live receipts",
+  live: "Live posts",
   private: "Private drafts",
   blocked: "Needs attention",
   featured: "Featured",
-  all: "All sessions",
+  all: "All posts",
 };
 
 const VIS_LABEL: Record<string, string> = {
@@ -94,6 +95,7 @@ function getLifecycle(
   livePublicCount: number,
   publicReceiptLimit: number,
 ): Lifecycle {
+  const isManual = session.postKind === "manual_build";
   const hasReviewBlockers = (session.pendingReviewReasons?.length ?? 0) > 0;
   const isLive = session.visibility === "public" && session.sharedAt !== null;
   const freeLimitReached = plan !== "pro" && livePublicCount >= publicReceiptLimit;
@@ -122,11 +124,25 @@ function getLifecycle(
     };
   }
 
+  // Manual build posts are written by the builder and don't run through the
+  // agent-receipt pipeline (no recording, events, or generated receipt). A
+  // private/unpublished one is simply ready to share again.
+  if (isManual) {
+    return {
+      key: "ready",
+      label: "Ready to publish",
+      detail: "Written and ready to share on your profile and the feed.",
+      tone: "sky",
+      canPublish: true,
+      priority: 2,
+    };
+  }
+
   if (session.endedAt === null) {
     return {
       key: "recording",
       label: "Still recording",
-      detail: "Finish the session before publishing the receipt.",
+      detail: "Finish the session before you can publish it.",
       tone: "zinc",
       canPublish: false,
       priority: 42,
@@ -137,7 +153,7 @@ function getLifecycle(
     return {
       key: "empty",
       label: "Empty session",
-      detail: "No agent events were captured for this receipt.",
+      detail: "No activity was captured in this session.",
       tone: "zinc",
       canPublish: false,
       priority: 43,
@@ -147,8 +163,8 @@ function getLifecycle(
   if (session.receiptGeneratedAt === null) {
     return {
       key: "receipt",
-      label: "Receipt missing",
-      detail: "Open it and generate the proof artifact before sharing.",
+      label: "Proof not ready",
+      detail: "Open it and generate the proof before sharing.",
       tone: "amber",
       canPublish: false,
       priority: 12,
@@ -170,7 +186,7 @@ function getLifecycle(
     return {
       key: "limit",
       label: "Public limit reached",
-      detail: `Free plans can keep ${publicReceiptLimit} live receipts public.`,
+      detail: `Free plans can keep ${publicReceiptLimit} posts public.`,
       tone: "sky",
       canPublish: false,
       priority: 18,
@@ -180,7 +196,7 @@ function getLifecycle(
   return {
     key: "ready",
     label: "Ready to publish",
-    detail: "Reviewed, generated, and eligible for the feed.",
+    detail: "Reviewed and eligible for your profile and the feed.",
     tone: "sky",
     canPublish: true,
     priority: 0,
@@ -337,7 +353,7 @@ export function DashboardClient({
 
   function run(label: string, selectedIds: string[], fn: () => Promise<ActionResult>) {
     if (selectedIds.length === 0) {
-      showFlash("No eligible sessions selected.");
+      showFlash("No eligible posts selected.");
       return;
     }
 
@@ -347,8 +363,8 @@ export function DashboardClient({
         const updated = result.updated ?? result.deleted ?? 0;
         showFlash(
           result.error
-            ? `${label}: ${updated} session(s) updated. ${result.error}`
-            : `${label}: ${updated} session(s) updated`,
+            ? `${label}: ${updated} post(s) updated. ${result.error}`
+            : `${label}: ${updated} post(s) updated`,
         );
         setSelected(new Set());
         router.refresh();
@@ -362,7 +378,7 @@ export function DashboardClient({
     const count = ids.length;
     if (count === 0) return;
     const ok = window.confirm(
-      `Delete ${count} session(s)? This permanently removes them and all linked events. This cannot be undone.`,
+      `Delete ${count} post(s)? This permanently removes them and their threads. This cannot be undone.`,
     );
     if (!ok) return;
     run("Deleted", ids, () => bulkDeleteSessions(ids));
@@ -372,7 +388,7 @@ export function DashboardClient({
     startTransition(async () => {
       const result = await toggleFeatured(sessionId);
       if (result.ok) {
-        showFlash("Featured receipts updated.");
+        showFlash("Featured posts updated.");
         router.refresh();
       } else {
         showFlash(`error: ${result.error ?? "feature update failed"}`);
@@ -382,8 +398,8 @@ export function DashboardClient({
 
   function copyReceiptLink(href: string) {
     navigator.clipboard.writeText(new URL(href, window.location.origin).toString()).then(
-      () => showFlash("Receipt link copied."),
-      () => showFlash("error: could not copy receipt link"),
+      () => showFlash("Post link copied."),
+      () => showFlash("error: could not copy post link"),
     );
   }
 
@@ -479,7 +495,7 @@ export function DashboardClient({
               disabled={pending}
               onClick={runDelete}
               className="min-h-10 rounded-full bg-rose-500/5 px-3 font-mono uppercase tracking-[0.12em] text-rose-300 shadow-[0_0_0_1px_rgba(244,63,94,0.35)] transition-[background-color,box-shadow,transform] hover:bg-rose-500/10 hover:shadow-[0_0_0_1px_rgba(244,63,94,0.55)] active:scale-[0.97] disabled:opacity-35 disabled:active:scale-100"
-              title="Permanently delete the selected sessions"
+              title="Permanently delete the selected posts"
             >
               Delete
             </button>
@@ -489,7 +505,7 @@ export function DashboardClient({
 
       {filtered.length === 0 ? (
         <div className="rounded-[2rem] border border-dashed border-white/10 bg-zinc-950/65 p-10 text-center font-mono text-sm text-zinc-500">
-          no sessions match this studio view
+          no posts match this view
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -526,7 +542,7 @@ export function DashboardClient({
               checked={allSelected}
               onChange={toggleAll}
               className="accent-[#a7f300]"
-              aria-label="Select all visible sessions"
+              aria-label="Select all visible posts"
             />
             <div>Title</div>
             <div>Tool</div>
@@ -625,6 +641,7 @@ function StudioCard({
   onCopyLink: () => void;
 }) {
   const locked = session.visibility === "redacted" || session.redactedAt !== null;
+  const isManual = session.postKind === "manual_build";
   const receiptHref = `/u/${handle}/${session.slug}`;
   const title = session.title ?? session.slug;
   const description =
@@ -686,18 +703,39 @@ function StudioCard({
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">
-        <CardMetric label="Events" value={session.eventCount} />
+        {isManual ? (
+          <CardMetric label="Type" value="Build post" />
+        ) : (
+          <CardMetric label="Events" value={session.eventCount} />
+        )}
         <CardMetric label="Reactions" value={session.reactionCount} />
         <CardMetric label="Replies" value={session.commentCount} />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <ChecklistChip label="Receipt" good={session.receiptGeneratedAt !== null} />
-        <ChecklistChip label="Reviewed" good={(session.pendingReviewReasons?.length ?? 0) === 0} />
-        <ChecklistChip label="Finished" good={session.endedAt !== null} />
-        <ChecklistChip label="Outcome" good={hasOutcome} />
-        <ChecklistChip label="Repo" good={session.linkedRepo !== null || commit !== null} />
-        <ChecklistChip label="Shared" good={session.sharedAt !== null} />
+        {isManual ? (
+          <>
+            <ChecklistChip
+              label="Reviewed"
+              good={(session.pendingReviewReasons?.length ?? 0) === 0}
+            />
+            <ChecklistChip label="Outcome" good={hasOutcome} />
+            <ChecklistChip label="Proof" good={session.linkedRepo !== null || commit !== null} />
+            <ChecklistChip label="Shared" good={session.sharedAt !== null} />
+          </>
+        ) : (
+          <>
+            <ChecklistChip label="Receipt" good={session.receiptGeneratedAt !== null} />
+            <ChecklistChip
+              label="Reviewed"
+              good={(session.pendingReviewReasons?.length ?? 0) === 0}
+            />
+            <ChecklistChip label="Finished" good={session.endedAt !== null} />
+            <ChecklistChip label="Outcome" good={hasOutcome} />
+            <ChecklistChip label="Repo" good={session.linkedRepo !== null || commit !== null} />
+            <ChecklistChip label="Shared" good={session.sharedAt !== null} />
+          </>
+        )}
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -708,14 +746,14 @@ function StudioCard({
             onClick={onPublish}
             className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
           >
-            Publish receipt
+            Publish
           </button>
         ) : (
           <Link
             href={receiptHref}
             className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.97]"
           >
-            {lifecycle.key === "live" ? "Open thread" : "Review receipt"}
+            {lifecycle.key === "live" ? "Open thread" : "Review post"}
           </Link>
         )}
         {lifecycle.key === "live" && (
