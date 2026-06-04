@@ -120,39 +120,39 @@ export default async function PuertoRicoPage() {
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <SiteNav currentPath="/puerto-rico" />
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8">
-        <section className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
+        <section className="overflow-hidden rounded-[2rem] bg-zinc-950 text-zinc-50 shadow-[var(--trail-shadow-border)]">
           <div className="grid lg:grid-cols-[minmax(0,1fr)_260px]">
             <div className="px-5 py-8 sm:px-8">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 First community wedge
               </div>
-              <h1 className="mt-3 max-w-3xl font-display text-5xl leading-[0.92] tracking-[-0.07em] text-[var(--trail-ink)] sm:text-7xl">
+              <h1 className="mt-3 max-w-3xl font-display text-5xl leading-[0.92] tracking-[-0.07em] text-zinc-50 sm:text-7xl">
                 Puerto Rico AI builders, in one feed.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-black/60">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400">
                 Trail is becoming the place for local developers, vibe coders, founders, and
                 designers to share what they built with AI before and after meetups.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href="/create?community=puerto-rico"
-                  className="inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:scale-[0.98]"
+                  className="inline-flex min-h-11 items-center rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-zinc-50 active:scale-[0.98]"
                 >
                   Post your build
                 </Link>
                 <Link
                   href="/feed"
-                  className="inline-flex min-h-11 items-center rounded-full px-5 text-sm font-medium text-black/65 shadow-[0_0_0_1px_rgba(10,10,10,0.14)] transition-colors hover:text-black"
+                  className="inline-flex min-h-11 items-center rounded-full px-5 text-sm font-medium text-zinc-300 ring-1 ring-white/15 transition-colors hover:text-zinc-50 hover:ring-[var(--trail-green)]"
                 >
                   Browse all builds
                 </Link>
               </div>
             </div>
-            <div className="bg-[var(--trail-ink)] p-5 text-zinc-50 sm:p-6">
+            <div className="border-t border-white/10 bg-black/35 p-5 text-zinc-50 sm:p-6 lg:border-l lg:border-t-0">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 Local index
               </div>
-              <div className="mt-6 text-6xl font-semibold tracking-[-0.08em]">
+              <div className="mt-6 text-6xl font-semibold tracking-[-0.08em] text-[var(--trail-green)]">
                 {localBuilds.length}
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
@@ -162,13 +162,13 @@ export default async function PuertoRicoPage() {
             </div>
           </div>
 
-          <div className="grid border-t border-black/10 sm:grid-cols-3 sm:divide-x sm:divide-black/10">
+          <div className="grid border-t border-white/10 sm:grid-cols-3 sm:divide-x sm:divide-white/10">
             {COMMUNITY_STEPS.map((step, index) => (
               <div key={step} className="px-5 py-6 sm:px-8">
-                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/35">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-600">
                   0{index + 1}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-black/70">{step}</p>
+                <p className="mt-3 text-sm leading-6 text-zinc-300">{step}</p>
               </div>
             ))}
           </div>
@@ -263,7 +263,7 @@ export default async function PuertoRicoPage() {
               </p>
               <Link
                 href="/create?community=puerto-rico"
-                className="mt-7 inline-flex min-h-11 items-center rounded-full bg-zinc-100 px-5 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98]"
+                className="mt-7 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-zinc-50 active:scale-[0.98]"
               >
                 Post the first local build
               </Link>
@@ -320,7 +320,7 @@ function LocalBuildCard({ build }: { build: PuertoRicoBuild }) {
       </div>
       <Link
         href={href}
-        className="self-start rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-white active:scale-[0.98]"
+        className="self-start rounded-full bg-[var(--trail-green)] px-4 py-2 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-zinc-50 active:scale-[0.98]"
       >
         Open
       </Link>
