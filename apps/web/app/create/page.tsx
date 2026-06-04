@@ -126,23 +126,23 @@ function GateCard({
   actionLabel: string;
 }) {
   return (
-    <div className="grid overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)] lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950 text-zinc-50 shadow-[var(--trail-shadow-border)] lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="px-5 py-10 sm:px-8 sm:py-12">
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
           {eyebrow}
         </div>
-        <h1 className="mt-3 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
+        <h1 className="mt-3 max-w-xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-zinc-50 sm:text-6xl">
           {title}
         </h1>
-        <p className="mt-4 max-w-xl text-sm leading-6 text-black/60">{body}</p>
+        <p className="mt-4 max-w-xl text-sm leading-6 text-zinc-400">{body}</p>
         <Link
           href={actionHref}
-          className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:translate-y-px"
+          className="mt-8 inline-flex min-h-11 items-center rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-black transition-[filter,transform] hover:brightness-110 active:translate-y-px"
         >
           {actionLabel}
         </Link>
       </div>
-      <div className="bg-[var(--trail-ink)] px-5 py-6 text-zinc-50 sm:px-8 lg:px-6 lg:py-8">
+      <div className="border-t border-white/10 bg-black/35 px-5 py-6 text-zinc-50 sm:px-8 lg:border-l lg:border-t-0 lg:px-6 lg:py-8">
         <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
           Before publishing
         </div>

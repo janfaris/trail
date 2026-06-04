@@ -6,13 +6,13 @@ import Link from "next/link";
 import { type ReactNode, useState, useTransition } from "react";
 
 const inputClassName =
-  "min-h-12 w-full rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--trail-ink)] outline-2 outline-transparent transition-[background-color,border-color,box-shadow] placeholder:text-black/35 hover:bg-white focus:border-black/25 focus:outline-[var(--trail-green)]";
+  "min-h-12 w-full rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-zinc-50 outline-2 outline-offset-2 outline-transparent transition-[background-color,border-color,box-shadow] placeholder:text-zinc-600 hover:border-white/15 hover:bg-white/[0.055] focus:border-[var(--trail-green)] focus:outline-[var(--trail-green)]";
 
 const textareaClassName = `${inputClassName} min-h-36 resize-y leading-7`;
 const primaryButtonClassName =
-  "inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-white active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-black transition-[filter,transform] hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButtonClassName =
-  "inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-zinc-950 px-4 text-xs font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-black active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-white/[0.08] px-4 text-xs font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-white/[0.13] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45";
 const ghostButtonClassName =
   "inline-flex min-h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-medium text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[color,transform] hover:text-zinc-50 active:translate-y-px";
 
@@ -197,7 +197,7 @@ export function BuildPostForm({
   ];
 
   return (
-    <div className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
+    <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950 text-zinc-50 shadow-[var(--trail-shadow-border)]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -205,22 +205,22 @@ export function BuildPostForm({
         }}
         className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]"
       >
-        <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-          <div className="grid gap-4 border-b border-black/10 pb-5 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),transparent_18rem)] px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="grid gap-4 border-b border-white/10 pb-5 lg:grid-cols-[minmax(0,1fr)_240px]">
             <div className="min-w-0">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-black/45">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 Workbench composer
               </div>
-              <h1 className="mt-3 max-w-2xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-[var(--trail-ink)] sm:text-6xl">
+              <h1 className="mt-3 max-w-2xl font-display text-4xl leading-[0.95] tracking-[-0.06em] text-zinc-50 sm:text-6xl">
                 Make the ship obvious.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-black/60">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400">
                 Three moves: say what changed, attach proof, ask for the next useful reply. Logs
                 stay optional.
               </p>
             </div>
-            <div className="rounded-3xl border border-black/10 bg-black/[0.035] p-4 text-sm leading-6 text-black/60">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                 Good post shape
               </div>
               <ol className="mt-3 space-y-2">
@@ -233,10 +233,10 @@ export function BuildPostForm({
 
           {hasStarterContext ? (
             <div className="rounded-3xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
                 Trail Pick starter
               </div>
-              <p className="mt-2 text-sm leading-6 text-black/65">
+              <p className="mt-2 text-sm leading-6 text-zinc-300">
                 I carried the source link and discussion question into this draft. Rewrite it in
                 your voice before publishing.
               </p>
@@ -400,18 +400,18 @@ export function BuildPostForm({
               />
             </Field>
 
-            <label className="flex gap-3 rounded-3xl border border-black/10 bg-black/[0.035] p-4 text-sm leading-6 text-black/65">
+            <label className="flex gap-3 rounded-3xl border border-white/10 bg-white/[0.035] p-4 text-sm leading-6 text-zinc-400">
               <input
                 type="checkbox"
                 checked={input.community === "puerto-rico"}
                 onChange={(event) => update("community", event.target.checked ? "puerto-rico" : "")}
-                className="mt-1 size-4 rounded border-black/20 bg-white accent-[var(--trail-green)]"
+                className="mt-1 size-4 rounded border-white/20 bg-zinc-950 accent-[var(--trail-green)]"
               />
               <span>
-                <span className="block font-medium text-[var(--trail-ink)]">
+                <span className="block font-medium text-zinc-100">
                   Add to Puerto Rico AI builders
                 </span>
-                <span className="mt-1 block text-xs leading-5 text-black/50">
+                <span className="mt-1 block text-xs leading-5 text-zinc-500">
                   Use this for local meetup demos, island-built projects, and PR/USA collaboration
                   posts.
                 </span>
@@ -420,7 +420,7 @@ export function BuildPostForm({
           </StepBlock>
         </div>
 
-        <aside className="bg-[var(--trail-ink)] px-4 py-5 text-zinc-50 sm:px-6 lg:px-6 lg:py-8">
+        <aside className="border-t border-white/10 bg-black/35 px-4 py-5 text-zinc-50 sm:px-6 lg:border-l lg:border-t-0 lg:px-6 lg:py-8">
           <div className="sticky top-24 space-y-5">
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
@@ -524,15 +524,15 @@ function StepBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="grid gap-4 rounded-[1.75rem] border border-black/10 bg-white/45 p-4 sm:p-5 lg:grid-cols-[132px_minmax(0,1fr)]">
+    <section className="grid gap-4 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 sm:p-5 lg:grid-cols-[132px_minmax(0,1fr)]">
       <div>
-        <div className="flex size-9 items-center justify-center rounded-full bg-[var(--trail-ink)] font-mono text-xs font-semibold text-[var(--trail-green)]">
+        <div className="flex size-9 items-center justify-center rounded-full bg-[var(--trail-green)] font-mono text-xs font-semibold text-black">
           {number}
         </div>
-        <h2 className="mt-4 font-display text-2xl leading-none tracking-[-0.05em] text-[var(--trail-ink)]">
+        <h2 className="mt-4 font-display text-2xl leading-none tracking-[-0.05em] text-zinc-50">
           {title}
         </h2>
-        <p className="mt-2 text-xs leading-5 text-black/50">{description}</p>
+        <p className="mt-2 text-xs leading-5 text-zinc-500">{description}</p>
       </div>
       <div className="min-w-0 space-y-5">{children}</div>
     </section>
@@ -555,19 +555,21 @@ function ProofCard({
   error?: string | null;
 }) {
   return (
-    <div className="rounded-3xl border border-black/10 bg-[var(--trail-paper)] p-3.5">
+    <div className="rounded-3xl border border-white/10 bg-black/20 p-3.5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-black/45">
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {label}
           </div>
-          <p className="mt-1 text-xs leading-5 text-black/50">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-zinc-500">{description}</p>
         </div>
         {action}
       </div>
       <div className="mt-3">{control}</div>
-      {error ? <div className="mt-2 text-xs leading-5 text-red-700">{error}</div> : null}
-      {status ? <div className="mt-2 text-xs leading-5 text-black/60">{status}</div> : null}
+      {error ? <div className="mt-2 text-xs leading-5 text-red-200">{error}</div> : null}
+      {status ? (
+        <div className="mt-2 text-xs leading-5 text-[var(--trail-green)]">{status}</div>
+      ) : null}
     </div>
   );
 }
@@ -618,12 +620,12 @@ function Field({
     <div>
       <label
         htmlFor={labelFor}
-        className="block font-mono text-[10px] uppercase tracking-[0.2em] text-black/45"
+        className="block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500"
       >
-        {label} {required ? <span className="text-[var(--trail-ink)]">Required</span> : null}
+        {label} {required ? <span className="text-zinc-300">Required</span> : null}
       </label>
       {children}
-      {hint && <div className="mt-2 min-h-5 text-xs leading-5 text-black/45">{hint}</div>}
+      {hint && <div className="mt-2 min-h-5 text-xs leading-5 text-zinc-500">{hint}</div>}
     </div>
   );
 }
