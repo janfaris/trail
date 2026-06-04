@@ -16,7 +16,7 @@ const PUBLIC_APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://gettrail.verc
 export const metadata: Metadata = {
   title: "Discover AI builders shipping in public | Trail",
   description:
-    "Find trending AI coding receipts, builders, stacks, and repos on Trail's proof-of-work network.",
+    "Find trending build posts, builders, stacks, and repos on Trail's AI builder network.",
   alternates: {
     canonical: "/discover",
   },
@@ -145,7 +145,7 @@ function formatCount(value: unknown): string {
 }
 
 function receiptTitle(row: ReceiptRow): string {
-  return row.title ?? row.receiptTldr ?? row.summary ?? "Untitled receipt";
+  return row.title ?? row.receiptTldr ?? row.summary ?? "Untitled build post";
 }
 
 function receiptCopy(row: ReceiptRow): string {
@@ -153,7 +153,7 @@ function receiptCopy(row: ReceiptRow): string {
     row.receiptOutcome ??
     row.receiptTldr ??
     row.summary ??
-    "A public Trail receipt with the build log, decisions, and shipping proof."
+    "A public Trail build post with decisions, proof links, and conversation."
   );
 }
 
@@ -180,7 +180,7 @@ function receiptReason(row: ReceiptRow): string {
   if (reactions >= 3) return `${formatCount(reactions)} builder reactions`;
   if (isShipped(row)) return "shipped outcome with public proof";
   if (row.postKind === "manual_build") return "native build post";
-  return `${formatCount(row.eventCount)} agent events captured`;
+  return `${formatCount(row.eventCount)} proof events attached`;
 }
 
 function builderReason(row: BuilderRow): string {
@@ -193,9 +193,8 @@ function builderReason(row: BuilderRow): string {
 }
 
 function stackHref(row: StackRow): string {
-  if (row.kind === "framework") return `/frameworks/${row.tag}`;
-  if (row.kind === "tool") return `/tools/${row.tag}`;
-  return `/learn?tag=${encodeURIComponent(row.tag)}`;
+  void row;
+  return "/discover";
 }
 
 function githubRepoUrl(repo: string): string {
@@ -495,18 +494,18 @@ export default async function DiscoverPage() {
             <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#a7f300]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
-                  Proof network
+                  Build network
                 </div>
                 <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.06em] text-white sm:text-6xl">
                   Discover builders shipping with agents right now.
                 </h1>
                 <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-zinc-300">
-                  Trending receipts, rising builders, hot stacks, and repos with proof attached.
-                  Every link opens a public build receipt, not a marketing claim.
+                  Trending build posts, rising builders, hot stacks, and repos with proof attached.
+                  Every link opens real builder work, not a marketing claim.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <StatCard label="public receipts" value={formatCount(data.stats.receiptCount)} />
+                <StatCard label="build posts" value={formatCount(data.stats.receiptCount)} />
                 <StatCard label="builders" value={formatCount(data.stats.builderCount)} />
                 <StatCard label="reactions" value={formatCount(data.stats.reactionCount)} />
                 <StatCard label="comments" value={formatCount(data.stats.commentCount)} />
@@ -518,9 +517,9 @@ export default async function DiscoverPage() {
             <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
               <div className="space-y-6">
                 <SectionHeader
-                  kicker="Trending receipts"
+                  kicker="Trending build posts"
                   title="What the network is opening"
-                  description="Ranked from recent public receipts, reactions, comments, shipped outcomes, and build depth."
+                  description="Ranked from recent public build posts, reactions, comments, shipped outcomes, and build depth."
                 />
                 <div className="grid gap-4">
                   {data.receipts.map((receipt, index) => (
@@ -537,7 +536,7 @@ export default async function DiscoverPage() {
                   <SectionHeader
                     kicker="Stack heat"
                     title="Tools and frameworks with momentum"
-                    description="These tags are appearing in recent public receipts with real engagement."
+                    description="These tags are appearing in recent public build posts with real engagement."
                     compact
                   />
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -559,7 +558,7 @@ export default async function DiscoverPage() {
                           {stack.label}
                         </div>
                         <p className="mt-2 text-sm text-zinc-400">
-                          {formatCount(stack.receiptCount)} receipts ·{" "}
+                          {formatCount(stack.receiptCount)} posts ·{" "}
                           {formatCount(
                             toNumber(stack.reactionCount) + toNumber(stack.commentCount),
                           )}{" "}
@@ -576,7 +575,7 @@ export default async function DiscoverPage() {
                   <SectionHeader
                     kicker="Builder radar"
                     title="Follow people shipping"
-                    description="Profiles ranked by public receipts, followers, and conversation."
+                    description="Profiles ranked by public build posts, followers, and conversation."
                     compact
                   />
                   <div className="mt-5 space-y-3">
@@ -595,7 +594,7 @@ export default async function DiscoverPage() {
                   <SectionHeader
                     kicker="Repo momentum"
                     title="Projects with proof"
-                    description="Repositories attached to recent public receipts."
+                    description="Repositories attached to recent public build posts."
                     compact
                   />
                   <div className="mt-5 space-y-3">
@@ -611,9 +610,8 @@ export default async function DiscoverPage() {
                           {repo.repo}
                         </div>
                         <p className="mt-2 text-xs text-zinc-500">
-                          {formatCount(repo.receiptCount)} receipts ·{" "}
-                          {formatCount(repo.builderCount)} builders ·{" "}
-                          {formatCount(repo.reactionCount)} reactions
+                          {formatCount(repo.receiptCount)} posts · {formatCount(repo.builderCount)}{" "}
+                          builders · {formatCount(repo.reactionCount)} reactions
                         </p>
                         <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-zinc-600">
                           updated <RelativeTime date={repo.latestSharedAt} />
@@ -629,24 +627,24 @@ export default async function DiscoverPage() {
                       Become discoverable
                     </p>
                     <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">
-                      Publish a receipt, earn a slot in the network.
+                      Publish a build post, earn a slot in the network.
                     </h2>
                     <p className="mt-3 text-sm leading-6 text-zinc-800">
-                      Import a coding-agent session, review the generated receipt, then publish it
-                      to feed, profile, and discovery.
+                      Write what you built, attach proof links if you have them, then publish it to
+                      feed, profile, and discovery.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-2">
                       <Link
-                        href="/feed"
+                        href="/create"
                         className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-lime-100 transition-[background-color,transform] hover:bg-zinc-800 active:scale-[0.96]"
                       >
-                        Publish from feed
+                        Post a build
                       </Link>
                       <Link
-                        href="/import"
+                        href="/feed"
                         className="inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold text-zinc-950 shadow-[0_0_0_1px_rgba(9,9,11,0.26)] transition-[background-color,transform] hover:bg-zinc-950/10 active:scale-[0.96]"
                       >
-                        Import session
+                        Browse feed
                       </Link>
                     </div>
                   </div>
@@ -728,7 +726,7 @@ function ReceiptCard({
   const title = receiptTitle(receipt);
   const copy = receiptCopy(receipt);
   const url = shareUrl(receipt.handle, receipt.slug, PUBLIC_APP_URL);
-  const tweetUrl = tweetIntent(`${title} — proof of work by @${receipt.handle}`, url);
+  const tweetUrl = tweetIntent(`${title} — build post by @${receipt.handle}`, url);
 
   return (
     <article className="group overflow-hidden rounded-[1.75rem] bg-zinc-950/84 shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]">
@@ -770,7 +768,7 @@ function ReceiptCard({
         </div>
       </Link>
       <div className="grid grid-cols-3 border-t border-white/10 bg-black/25 text-xs text-zinc-500 sm:grid-cols-7">
-        <ProofMetric label="events" value={formatCount(receipt.eventCount)} />
+        <ProofMetric label="proof events" value={formatCount(receipt.eventCount)} />
         <ProofMetric label="reactions" value={formatCount(receipt.reactions)} />
         <ProofMetric label="comments" value={formatCount(receipt.comments)} />
         <SaveReceiptButton
@@ -889,14 +887,14 @@ function EmptyDiscoverState() {
   return (
     <section className="mt-6 rounded-[1.75rem] bg-zinc-950/84 p-10 text-center shadow-[var(--trail-shadow-border)]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-lime-300/80">
-        Discovery is waiting on receipts
+        Discovery is waiting on build posts
       </p>
       <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white">
-        Publish the first proof-of-work post.
+        Publish the first build post.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">
-        Import a coding-agent session, review the generated receipt, and publish it so builders can
-        react, comment, follow, fork, and share it.
+        Write what you built, add proof links if they help, and publish it so builders can react,
+        comment, follow, fork, and share it.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link
@@ -906,10 +904,10 @@ function EmptyDiscoverState() {
           Open feed
         </Link>
         <Link
-          href="/import"
+          href="/create"
           className="inline-flex min-h-10 items-center rounded-full px-5 text-sm font-semibold text-zinc-200 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[background-color,box-shadow,transform] hover:bg-zinc-900 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.22)] active:scale-[0.96]"
         >
-          Import session
+          Post a build
         </Link>
       </div>
     </section>

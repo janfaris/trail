@@ -14,8 +14,8 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Saved receipts · Trail",
-  description: "Your private collection of AI shipping receipts saved from the Trail network.",
+  title: "Saved posts · Trail",
+  description: "Your private collection of build posts and reusable moves saved from Trail.",
 };
 
 function signInHref(callbackURL: string): string {
@@ -121,11 +121,11 @@ export default async function SavedReceiptsPage() {
           <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="max-w-2xl text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
-                Saved receipts
+                Saved posts
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-                Keep proof artifacts you want to revisit, fork, or learn from. Saves are private;
-                only public receipts stay visible here.
+                Keep build posts and reusable moves you want to revisit, fork, or learn from. Saves
+                are private; only public posts stay visible here.
               </p>
             </div>
             <div className="rounded-2xl bg-zinc-950/85 px-4 py-3 shadow-[var(--trail-shadow-border)]">
@@ -141,10 +141,9 @@ export default async function SavedReceiptsPage() {
 
         {lessonRows.length === 0 && receiptRows.length === 0 ? (
           <section className="mt-6 rounded-[2rem] bg-zinc-950/70 p-10 text-center shadow-[var(--trail-shadow-border)]">
-            <div className="font-mono text-sm text-zinc-400">No saved lessons or receipts yet.</div>
+            <div className="font-mono text-sm text-zinc-400">No saved posts or moves yet.</div>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-              Save lessons from /learn or receipts from the feed when you find a build worth
-              revisiting.
+              Save moves and build posts from the feed when you find work worth revisiting.
             </p>
             <div className="mt-5 flex justify-center gap-2">
               <Link
@@ -154,10 +153,10 @@ export default async function SavedReceiptsPage() {
                 Browse feed
               </Link>
               <Link
-                href="/learn"
+                href="/create"
                 className="inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-sm font-semibold text-zinc-300 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-white hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
               >
-                Browse lessons
+                Post a build
               </Link>
             </div>
           </section>
@@ -166,7 +165,7 @@ export default async function SavedReceiptsPage() {
             {lessonRows.length > 0 ? (
               <section>
                 <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
-                  Saved lessons
+                  Saved moves
                 </div>
                 <div className="mt-3 grid gap-4">
                   {lessonRows.map((lesson) => {
@@ -183,7 +182,7 @@ export default async function SavedReceiptsPage() {
                           <Link href={`/u/${authorHandle}`} className="font-semibold text-zinc-300">
                             @{authorHandle}
                           </Link>
-                          <span>saved lesson</span>
+                          <span>saved move</span>
                           <RelativeTime date={lesson.savedAt} />
                           <span className="text-zinc-700">·</span>
                           <span>{lesson.transferabilityScore}/5 stealable</span>
@@ -204,7 +203,7 @@ export default async function SavedReceiptsPage() {
                             href={`${href}#lessons`}
                             className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
                           >
-                            Open lesson
+                            Open move
                           </Link>
                           <CopyButton
                             value={copyValue}
@@ -232,12 +231,12 @@ export default async function SavedReceiptsPage() {
             {receiptRows.length > 0 ? (
               <section className="grid gap-4">
                 <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-zinc-500">
-                  Saved receipts
+                  Saved build posts
                 </div>
                 {receiptRows.map((row) => {
                   const authorHandle = row.authorHandle ?? "";
                   const href = `/u/${authorHandle}/${row.slug}`;
-                  const copy = row.receiptTldr ?? row.summary ?? "Open the proof artifact.";
+                  const copy = row.receiptTldr ?? row.summary ?? "Open the build post.";
 
                   return (
                     <article
@@ -277,7 +276,7 @@ export default async function SavedReceiptsPage() {
                             {row.tool}
                           </span>
                           <span className="rounded-full bg-white/[0.04] px-2.5 py-1 text-zinc-300">
-                            {formatCount(row.eventCount)} events
+                            {formatCount(row.eventCount)} proof events
                           </span>
                         </div>
                       </div>

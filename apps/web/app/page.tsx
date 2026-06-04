@@ -94,7 +94,7 @@ const proofLayers = [
   {
     label: "Advanced",
     title: "Optional proof appendix",
-    body: "Agent logs, generated receipts, changed files, and timelines stay collapsed until a reader asks for deeper proof.",
+    body: "Proof details, changed files, and optional AI-session context stay collapsed until a reader asks for more.",
   },
 ];
 
@@ -284,7 +284,8 @@ export default async function Home() {
               </div>
               <p className="max-w-[45ch] text-[14px] leading-6 text-zinc-500">
                 The public page should read like a post first. If someone wants deeper evidence,
-                they can open proof details without forcing every reader through raw logs.
+                they can open proof details without forcing every reader through raw session
+                context.
               </p>
             </div>
 
@@ -348,8 +349,8 @@ export default async function Home() {
             <Link href="/puerto-rico" className="hover:text-zinc-200">
               puerto rico
             </Link>
-            <Link href="/install" className="hover:text-zinc-200">
-              advanced install
+            <Link href="/discover" className="hover:text-zinc-200">
+              builders
             </Link>
           </div>
         </div>

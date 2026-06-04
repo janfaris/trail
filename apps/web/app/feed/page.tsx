@@ -44,11 +44,6 @@ const discoveryLinks = [
     label: "Puerto Rico",
     detail: "Join the local AI builder loop around meetups, demos, and recaps.",
   },
-  {
-    href: "/radar",
-    label: "Trail Picks",
-    detail: "Curated AI builder signals to discuss while the network grows.",
-  },
 ];
 
 function TrailLink({
@@ -107,13 +102,6 @@ function commentAvatarSrc(comment: FeedCommentPreview): string | null {
   return comment.authorImage ?? (comment.authorHandle ? githubAvatar(comment.authorHandle) : null);
 }
 
-function formatUsd(raw: string | null): string | null {
-  if (!raw) return null;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return null;
-  return `$${value.toFixed(2)}`;
-}
-
 function shortList(values: string[] | null, count: number): string[] {
   if (!values) return [];
   return values.filter(Boolean).slice(0, count);
@@ -160,15 +148,13 @@ function matchedViewerStackLabels(row: BaseFeedRow, viewerTags: Set<string>): st
 
 function timelineMetrics(row: BaseFeedRow): Array<{ label: string; value: string }> {
   if (isManualBuildPost(row)) return [];
-  const metrics = [{ label: "Events", value: `${row.eventCount} ev` }];
+  const metrics = [{ label: "Proof", value: `${row.eventCount} ev` }];
   const duration = formatDuration(row.durationSeconds);
-  const cost = formatUsd(row.estimatedCostUsd);
 
   if (duration) metrics.push({ label: "Time", value: duration });
   if (row.promptCount) metrics.push({ label: "Prompts", value: `${row.promptCount}` });
   if (row.distinctFiles) metrics.push({ label: "Files", value: `${row.distinctFiles}` });
   if (row.failedToolCalls) metrics.push({ label: "Failed", value: `${row.failedToolCalls}` });
-  if (cost) metrics.push({ label: "Cost", value: cost });
 
   return metrics.slice(0, 5);
 }
@@ -201,7 +187,7 @@ function feedReason(row: FeedRow): string {
   }
   if (row.commentCount > 0)
     return `${pluralize(row.commentCount, "reply", "replies")} in the thread`;
-  if (row.lessonCount > 0) return `${pluralize(row.lessonCount, "reusable lesson")} extracted`;
+  if (row.lessonCount > 0) return `${pluralize(row.lessonCount, "reusable move")} extracted`;
   if (row.positiveReactions + row.negativeReactions > 0) return reactionSummary(row);
   if (isManualBuildPost(row) && row.xPostUrl) return "Discussion from X";
   if (isManualBuildPost(row)) return "New build post";
@@ -478,9 +464,8 @@ function formatCount(value: number): string {
 }
 
 function stackHref(stack: TrendingStack): string {
-  if (stack.kind === "framework") return `/frameworks/${stack.tag}`;
-  if (stack.kind === "tool") return `/tools/${stack.tag}`;
-  return "/tools";
+  void stack;
+  return "/discover";
 }
 
 async function loadViewer(): Promise<FeedComposerViewer | null> {
@@ -1374,17 +1359,17 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
       href: "/notifications",
       label: "Open inbox",
       title: "Answer the network",
-      body: `${pluralize(data.unreadNotifications, "unread signal")} waiting: replies, follows, reactions, or lessons used.`,
+      body: `${pluralize(data.unreadNotifications, "unread signal")} waiting: replies, follows, reactions, or moves reused.`,
     };
   }
 
   const firstLesson = data.lessons[0];
   if (firstLesson) {
     return {
-      href: `/learn#lesson-${firstLesson.id}`,
+      href: `/u/${firstLesson.handle}/${firstLesson.slug}#lessons`,
       label: "Steal move",
       title: "Steal one proven move",
-      body: "Mark a lesson used when it helps your own work. That is the habit loop.",
+      body: "Mark a move used when it helps your own work. That is the habit loop.",
     };
   }
 
@@ -1398,10 +1383,10 @@ function dailyBriefAction(data: DailyBuilderBriefData): {
   }
 
   return {
-    href: "/learn",
-    label: "Read lessons",
+    href: "/feed",
+    label: "Read builds",
     title: "Find one move to reuse",
-    body: "Search the playbook for the stack or bug you are working on today.",
+    body: "Open a build post, reuse one move, and answer the thread while it is warm.",
   };
 }
 
@@ -1463,7 +1448,7 @@ async function DailyBuilderBrief({
           <div className="min-w-0 border-t border-white/[0.08] pt-3 lg:w-72 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
             {data.lessons.slice(0, 1).map((lesson) => (
               <div key={lesson.id} className="min-w-0">
-                <Link href={`/learn#lesson-${lesson.id}`} className="group block">
+                <Link href={`/u/${lesson.handle}/${lesson.slug}#lessons`} className="group block">
                   <div className="text-[12px] text-zinc-600">
                     Move to steal · {lesson.transferabilityScore}/5 · @{lesson.handle}
                   </div>
@@ -1622,7 +1607,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   const metrics = timelineMetrics(r);
   const currentPublicReceiptUrl = publicReceiptUrl(r);
   const manualPost = isManualBuildPost(r);
-  const postNoun = manualPost ? "build post" : "receipt";
+  const postNoun = "build post";
   const tweetHref = tweetIntent(
     `${displayName} published a Trail ${postNoun} from ${formatToolName(r.tool)}.`,
     currentPublicReceiptUrl,
@@ -1678,7 +1663,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               ) : null}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
-              <span>{manualPost ? "posted a build" : "published proof"}</span>
+              <span>{manualPost ? "posted a build" : "shared a build"}</span>
               <span className="text-zinc-800">·</span>
               <span className="inline-flex items-center gap-1 font-mono text-[11px] text-zinc-500">
                 <ToolIcon name={r.tool} size={12} className="text-[#a7f300]" />
@@ -1765,7 +1750,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-500">
               <span>Steal this move</span>
               <span className="text-zinc-700">·</span>
-              <span>{pluralize(r.lessonCount, "lesson")}</span>
+              <span>{pluralize(r.lessonCount, "move")}</span>
               {r.lessonPreviewTitle ? (
                 <>
                   <span className="text-zinc-700">·</span>
@@ -1887,7 +1872,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               href={currentReceiptHref}
               className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
             >
-              Open {manualPost ? "post" : "receipt"}
+              Open post
             </Link>
           </div>
         </div>
@@ -1912,7 +1897,7 @@ function EmptyTimeline({
       {isFollowingView ? (
         <div className="mx-auto max-w-xl">
           <p className="text-pretty text-sm leading-relaxed text-zinc-400">
-            Your Following timeline is empty. Follow a few builders and this becomes your live build
+            Your Following feed is empty. Follow a few builders and this becomes your live build
             stream instead of a blank tab.
           </p>
           {builders.length > 0 ? (
@@ -2007,17 +1992,17 @@ function PersonalizationNudge({
           : "pick one",
       body: "teach For you",
       done: personalization.topTags.length > 0,
-      href: stackSuggestions[0] ? stackHref(stackSuggestions[0]) : "/tools",
+      href: stackSuggestions[0] ? stackHref(stackSuggestions[0]) : "/discover",
     },
     {
-      label: "Lessons",
+      label: "Moves",
       value:
         personalization.usedLessonCount > 0
           ? `${formatCount(personalization.usedLessonCount)} used`
           : "0 used",
-      body: "steal a move",
+      body: "reuse a move",
       done: personalization.usedLessonCount > 0,
-      href: "/learn",
+      href: "/feed",
     },
     {
       label: "Build",
@@ -2052,7 +2037,7 @@ function PersonalizationNudge({
               Tune your feed
             </span>
             <span className="mt-0.5 block text-[12px] text-zinc-600">
-              Follow builders, choose stacks, reuse lessons, post builds.
+              Follow builders, choose stacks, reuse moves, post builds.
             </span>
           </span>
           <span className="shrink-0 text-[12px] text-zinc-600 group-open:hidden">Show</span>
@@ -2148,13 +2133,7 @@ function FeedDiscoveryPanel({
 
       <section className="border-b border-white/[0.08] pb-5">
         <div className="flex items-baseline justify-between gap-4">
-          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Signals</h3>
-          <Link
-            href="/radar"
-            className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
-          >
-            Radar
-          </Link>
+          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Trail Picks</h3>
         </div>
 
         {radarSignals.length === 0 ? (
@@ -2164,11 +2143,7 @@ function FeedDiscoveryPanel({
         ) : (
           <div className="mt-3 space-y-3">
             {radarSignals.slice(0, 4).map((signal) => (
-              <Link
-                key={signal.id}
-                href={`/radar?category=${signal.category}`}
-                className="group block"
-              >
+              <div key={signal.id} className="group block">
                 <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
                   <span>{radarCategoryLabel(signal.category)}</span>
                   <span>@{signal.sourceHandle}</span>
@@ -2179,7 +2154,7 @@ function FeedDiscoveryPanel({
                 <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-300 group-hover:text-zinc-50">
                   {signal.title}
                 </p>
-              </Link>
+              </div>
             ))}
           </div>
         )}
@@ -2258,7 +2233,7 @@ function FeedDiscoveryPanel({
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Stacks</h3>
           <Link
-            href="/tools"
+            href="/discover"
             className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
           >
             Explore
@@ -2429,8 +2404,8 @@ export default async function FeedPage({
                   Follow builders and post your own build.
                 </h2>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
-                  The public timeline is open. GitHub sign-in unlocks follows, reactions,
-                  notifications, and your own builder graph.
+                  The public feed is open. GitHub sign-in unlocks follows, reactions, notifications,
+                  and your own builder graph.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <TrailLink
