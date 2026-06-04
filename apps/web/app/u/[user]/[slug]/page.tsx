@@ -1,5 +1,6 @@
 import { CommentThread, type ReceiptComment } from "@/components/comment-thread";
 import { CopyButton } from "@/components/copy-button";
+import { DeletePostButton } from "@/components/delete-post-button";
 import { ExplainButton } from "@/components/explain-button";
 import { FileDiff } from "@/components/file-diff";
 import { ForkButton } from "@/components/fork-button";
@@ -626,11 +627,24 @@ export default async function SessionView({
                     {postTypeLabel}
                   </h1>
                 </div>
-                {!manualPost ? (
-                  <span className="shrink-0 font-mono text-[12px] text-zinc-600 tabular-nums">
-                    {formatCount(sessionRow.eventCount)} events
-                  </span>
-                ) : null}
+                {manualPost ? (
+                  isOwner ? (
+                    <DeletePostButton
+                      sessionId={sessionRow.id}
+                      handle={userRow.handle ?? user}
+                      isManualPost
+                    />
+                  ) : null
+                ) : (
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <span className="font-mono text-[12px] text-zinc-600 tabular-nums">
+                      {formatCount(sessionRow.eventCount)} events
+                    </span>
+                    {isOwner ? (
+                      <DeletePostButton sessionId={sessionRow.id} handle={userRow.handle ?? user} />
+                    ) : null}
+                  </div>
+                )}
               </div>
             </div>
 
