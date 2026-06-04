@@ -147,17 +147,17 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!viewer.handle) {
     return (
-      <section className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
-        <p className="text-[12px] text-amber-200/75">Finish your identity</p>
+      <section className="rounded-2xl border border-[#a7f300]/20 bg-[#a7f300]/[0.035] p-4">
+        <p className="text-[12px] text-[#a7f300]">Finish your identity</p>
         <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
           Claim a Trail handle before publishing.
         </h2>
-        <p className="mt-2 text-sm text-amber-50/75">
+        <p className="mt-2 text-sm text-[#d9ff91]/75">
           Public build posts need a stable builder profile so people can follow, reply, and share
           your work.
         </p>
         <Link
-          className="mt-4 inline-flex rounded-full border border-amber-200/25 px-4 py-2 text-sm font-medium text-amber-50 transition hover:bg-amber-200/10"
+          className="mt-4 inline-flex rounded-full border border-[#a7f300]/25 px-4 py-2 text-sm font-medium text-[#d9ff91] transition hover:bg-[#a7f300]/10"
           href="/settings"
         >
           Add public handle

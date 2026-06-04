@@ -123,7 +123,7 @@ export default async function PuertoRicoPage() {
         <section className="overflow-hidden rounded-[2rem] bg-[var(--trail-paper)] text-[var(--trail-ink)] shadow-[var(--trail-shadow-border)]">
           <div className="grid lg:grid-cols-[minmax(0,1fr)_260px]">
             <div className="px-5 py-8 sm:px-8">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-orange)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 First community wedge
               </div>
               <h1 className="mt-3 max-w-3xl font-display text-5xl leading-[0.92] tracking-[-0.07em] text-[var(--trail-ink)] sm:text-7xl">
@@ -136,7 +136,7 @@ export default async function PuertoRicoPage() {
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
                   href="/create?community=puerto-rico"
-                  className="inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-orange)] hover:text-black active:scale-[0.98]"
+                  className="inline-flex min-h-11 items-center rounded-full bg-[var(--trail-ink)] px-5 text-sm font-semibold text-zinc-50 transition-[background-color,transform] hover:bg-[var(--trail-green)] hover:text-black active:scale-[0.98]"
                 >
                   Post your build
                 </Link>
@@ -149,7 +149,7 @@ export default async function PuertoRicoPage() {
               </div>
             </div>
             <div className="bg-[var(--trail-ink)] p-5 text-zinc-50 sm:p-6">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-orange)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 Local index
               </div>
               <div className="mt-6 text-6xl font-semibold tracking-[-0.08em]">
@@ -251,7 +251,7 @@ export default async function PuertoRicoPage() {
             </div>
           ) : (
             <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-zinc-950 px-5 py-10 text-center sm:px-8">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-orange)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--trail-green)]">
                 No local posts yet
               </div>
               <h2 className="mx-auto mt-3 max-w-xl text-3xl font-semibold tracking-[-0.05em] text-zinc-50">
@@ -298,7 +298,7 @@ function LocalBuildCard({ build }: { build: PuertoRicoBuild }) {
           <time dateTime={build.sharedAt.toISOString()}>{formatDate(build.sharedAt)}</time>
         </div>
         <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-zinc-50">
-          <Link href={href} className="hover:text-[var(--trail-orange)]">
+          <Link href={href} className="hover:text-[var(--trail-green)]">
             {title}
           </Link>
         </h3>
