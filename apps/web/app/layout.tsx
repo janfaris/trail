@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -11,9 +11,9 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
-const TITLE = "Trail — The public log of what you shipped with AI";
+const TITLE = "Trail — Share what you built with AI";
 const DESCRIPTION =
-  "Trail captures your Claude Code, Codex, Cursor, Copilot, and Hermes sessions and turns them into Recaps — share-ready summaries linked to the commits they produced. Pulse, Weekly, Monthly, Project, Wrapped.";
+  "Trail is a social build feed for AI builders: post what you built, import from GitHub or X, follow builders, and join communities starting in Puerto Rico.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://gettrail.vercel.app"),
