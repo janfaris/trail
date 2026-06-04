@@ -347,11 +347,11 @@ export function CommentThread({
       <div className="flex flex-col gap-3 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-[18px] font-medium tracking-[-0.025em] text-zinc-50">
-            Turn this proof into a builder conversation
+            Turn this build into a conversation
           </h2>
           <p className="mt-1 max-w-xl text-[13px] leading-5 text-zinc-500">
-            Ask what changed, leave a proof check, or suggest the next fork so the receipt keeps
-            moving through the network.
+            Ask what changed, leave a proof check, or suggest the next fork while the builder
+            context is fresh.
           </p>
         </div>
         <div className="text-[12px] text-zinc-600">
@@ -388,7 +388,7 @@ export function CommentThread({
           </form>
         ) : (
           <div className="border-l border-white/10 pl-3 text-sm text-zinc-300">
-            <p className="font-medium text-zinc-100">Join the receipt conversation.</p>
+            <p className="font-medium text-zinc-100">Join the build conversation.</p>
             <p className="mt-1 text-zinc-500">
               Sign in to ask a question, leave proof, or reply to the builder.
             </p>
