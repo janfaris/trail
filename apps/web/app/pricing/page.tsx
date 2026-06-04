@@ -165,10 +165,10 @@ export default function PricingPage() {
                     <div>
                       {t.key === "free" && (
                         <Link
-                          href="/install"
+                          href="/create"
                           className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium border border-zinc-800 text-zinc-100 hover:bg-zinc-900 transition-colors w-full"
                         >
-                          Install
+                          Post a build
                         </Link>
                       )}
                       {t.key === "pro" && (
@@ -265,8 +265,8 @@ export default function PricingPage() {
             >
               GitHub
             </a>
-            <Link href="/install" className="hover:text-zinc-200 transition-colors">
-              Install
+            <Link href="/create" className="hover:text-zinc-200 transition-colors">
+              Create
             </Link>
             <Link href="/" className="hover:text-zinc-200 transition-colors">
               Home

@@ -1,6 +1,6 @@
 import { CopyButton } from "@/components/copy-button";
 import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
-import { EmptyInstallCard } from "@/components/empty-install-card";
+import { EmptyBuildPostCard } from "@/components/empty-build-post-card";
 import { FeatureToggle } from "@/components/feature-toggle";
 import { FeaturedSessionCard } from "@/components/featured-session-card";
 import { FollowButton } from "@/components/follow-button";
@@ -127,7 +127,7 @@ function formatCount(n: number): string {
 }
 
 function sessionTitle(s: TrailSessionRow): string {
-  return s.title || s.receiptTldr || s.summary || "Untitled Trail";
+  return s.title || s.receiptTldr || s.summary || "Untitled build post";
 }
 
 function sessionOutcome(s: TrailSessionRow): string {
@@ -135,20 +135,21 @@ function sessionOutcome(s: TrailSessionRow): string {
     s.receiptOutcome ||
     s.receiptTldr ||
     s.summary ||
-    "A public shipping receipt with the session log, proof metrics, and conversation context."
+    "A public build post with optional proof details and conversation context."
   );
 }
 
 function sessionStatusLabel(s: TrailSessionRow): string {
   if (s.receiptStatus === "shipped") return "Verified ship";
   if (s.outcome === "shipped") return "Shipped";
-  if (s.receiptStatus === "draft") return "Draft receipt";
+  if (s.receiptStatus === "draft") return "Draft build";
   if (isPublicReceipt(s)) return "Public proof";
   return s.visibility === "public" ? "Unshared proof" : "Private proof";
 }
 
 function stackHref(tag: string): string {
-  return `/learn?tag=${encodeURIComponent(tag)}`;
+  void tag;
+  return "/discover";
 }
 
 function githubRepoUrl(repo: string | null | undefined): string | null {
@@ -182,11 +183,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!builder) {
     return {
       title: `@${handle} on Trail`,
-      description: "Trail builder profile and AI coding receipts.",
+      description: "Trail builder profile, build posts, and proof links.",
       alternates: { canonical: profileUrl },
       openGraph: {
         title: `@${handle} on Trail`,
-        description: "Trail builder profile and AI coding receipts.",
+        description: "Trail builder profile, build posts, and proof links.",
         url: profileUrl,
         type: "profile",
         images: [{ url: imageUrl, width: 1200, height: 630, alt: `@${handle} on Trail` }],
@@ -194,7 +195,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       twitter: {
         card: "summary_large_image",
         title: `@${handle} on Trail`,
-        description: "Trail builder profile and AI coding receipts.",
+        description: "Trail builder profile, build posts, and proof links.",
         images: [imageUrl],
       },
     };
@@ -227,8 +228,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = `${displayName} (@${handle}) on Trail`;
   const description =
     publicCount > 0
-      ? `${formatCount(publicCount)} public AI coding receipts, ${formatCount(shippedCount)} shipped outcomes, ${formatCount(eventCount)} agent events, and ${formatCount(followerCount)} followers.`
-      : `Follow @${handle}'s AI coding receipts, shipped work, and builder proof on Trail.`;
+      ? `${formatCount(publicCount)} public build posts, ${formatCount(shippedCount)} shipped outcomes, ${formatCount(eventCount)} proof events, and ${formatCount(followerCount)} followers.`
+      : `Follow @${handle}'s build posts, shipped work, and builder proof on Trail.`;
 
   return {
     title,
@@ -370,7 +371,7 @@ export default async function UserProfile({ params }: PageProps) {
   const profileUrl = `${base}/u/${handle}`;
   const profileShareText = `${
     userRow.name || `@${handle}`
-  } is shipping AI-built work on Trail: ${formatCount(publicSessions.length)} public receipts, ${formatCount(shippedPublicCount)} shipped.`;
+  } is shipping AI-built work on Trail: ${formatCount(publicSessions.length)} public build posts, ${formatCount(shippedPublicCount)} shipped.`;
   const profileTweetUrl = tweetIntent(profileShareText, profileUrl);
 
   const [engagementResult, stackResult, lessonSignalResult] = await Promise.all([
@@ -454,8 +455,8 @@ export default async function UserProfile({ params }: PageProps) {
   const topStack = stackPills[0]?.tag;
   const proofSummary = [
     `${userRow.name || `@${handle}`} on Trail`,
-    `${formatCount(publicSessions.length)} public receipts · ${formatCount(shippedPublicCount)} shipped · ${formatCount(lessonSignal.lessons)} lessons · ${formatCount(lessonSignal.reuses)} moves reused`,
-    `${formatCount(publicEventCount)} agent events · ${formatCount(followerCount)} followers`,
+    `${formatCount(publicSessions.length)} public build posts · ${formatCount(shippedPublicCount)} shipped · ${formatCount(lessonSignal.lessons)} lessons · ${formatCount(lessonSignal.reuses)} moves reused`,
+    `${formatCount(publicEventCount)} proof events · ${formatCount(followerCount)} followers`,
     `${reputation.label}: ${formatCount(reputation.score)} signal`,
     topStack ? `Top stack/tool: ${topStack}` : null,
     profileUrl,
@@ -597,7 +598,7 @@ export default async function UserProfile({ params }: PageProps) {
 
               <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
-                  ["Public receipts", publicSessions.length],
+                  ["Build posts", publicSessions.length],
                   ["Verified ships", shippedPublicCount],
                   ["Moves reused", lessonSignal.reuses],
                   ["Builder signal", reputation.score],
@@ -621,7 +622,7 @@ export default async function UserProfile({ params }: PageProps) {
                   {reputation.label} · {formatCount(reputation.score)}
                 </span>
                 <span className="rounded-full bg-white/[0.04] px-3 py-1">
-                  {formatCount(totalEvents)} agent events
+                  {formatCount(totalEvents)} proof events
                 </span>
                 <span className="rounded-full bg-white/[0.04] px-3 py-1">{hoursLabel} logged</span>
                 <span className="rounded-full bg-white/[0.04] px-3 py-1">
@@ -706,7 +707,7 @@ export default async function UserProfile({ params }: PageProps) {
             <aside className="rounded-[1.5rem] bg-black/36 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
-                  Pinned proof
+                  Pinned build
                 </p>
                 {heroSession && (
                   <span className="rounded-full bg-[#a7f300] px-2 py-0.5 text-[10px] font-mono font-semibold text-black">
@@ -752,7 +753,7 @@ export default async function UserProfile({ params }: PageProps) {
                       href={`/u/${handle}/${heroSession.slug}`}
                       className="inline-flex min-h-10 flex-1 items-center justify-center rounded-full bg-[#a7f300]/10 px-3 text-xs font-mono text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.24)] transition-[background-color,transform] hover:bg-[#a7f300]/20 active:scale-[0.96]"
                     >
-                      Open receipt
+                      Open post
                     </Link>
                     <Link
                       href={`/u/${handle}/${heroSession.slug}#conversation`}
@@ -784,9 +785,9 @@ export default async function UserProfile({ params }: PageProps) {
                 </div>
               ) : (
                 <div className="rounded-[1.25rem] border border-dashed border-white/10 bg-zinc-950/70 p-5">
-                  <p className="text-sm font-medium text-zinc-200">No public receipts yet.</p>
+                  <p className="text-sm font-medium text-zinc-200">No public build posts yet.</p>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                    The first published session will become this builder&apos;s proof card.
+                    The first build post will become this builder&apos;s featured card.
                   </p>
                 </div>
               )}
@@ -800,7 +801,7 @@ export default async function UserProfile({ params }: PageProps) {
               <section className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)] p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-500">
-                    Curated receipts
+                    Curated builds
                   </h3>
                   <span className="text-xs font-mono text-zinc-600">
                     {compactFeatured.length} pinned
@@ -817,12 +818,12 @@ export default async function UserProfile({ params }: PageProps) {
             {all.length === 0 ? (
               isSelf ? (
                 <div className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)] p-5">
-                  <EmptyInstallCard />
+                  <EmptyBuildPostCard />
                 </div>
               ) : (
                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-zinc-950/60 p-8 text-center">
                   <p className="text-lg font-semibold text-zinc-200">
-                    @{handle} has not published a receipt yet.
+                    @{handle} has not published a build post yet.
                   </p>
                   <p className="mt-2 text-sm text-zinc-500">
                     Follow now and their first public ship will land in your feed.
@@ -833,9 +834,9 @@ export default async function UserProfile({ params }: PageProps) {
               <section className="rounded-[1.5rem] bg-zinc-950/70 shadow-[var(--trail-shadow-border)]">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-5">
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-100">Shipping timeline</h3>
+                    <h3 className="text-sm font-semibold text-zinc-100">Build history</h3>
                     <p className="mt-1 text-xs font-mono text-zinc-500">
-                      Receipts, proof metrics, and conversation entry points.
+                      Build posts, proof metrics, and conversation entry points.
                     </p>
                   </div>
                   <Link
@@ -1058,13 +1059,13 @@ export default async function UserProfile({ params }: PageProps) {
                   {userRow.name || `@${handle}`} builder proof
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-                  {formatCount(publicSessions.length)} public receipts ·{" "}
+                  {formatCount(publicSessions.length)} public build posts ·{" "}
                   {formatCount(shippedPublicCount)} shipped · {formatCount(lessonSignal.lessons)}{" "}
                   lessons · {formatCount(lessonSignal.reuses)} used by builders
                 </p>
                 <p className="mt-2 text-xs font-mono text-zinc-500">
                   {reputation.label} · {formatCount(reputation.score)} signal ·{" "}
-                  {formatCount(publicEventCount)} agent events · {formatCount(followerCount)}{" "}
+                  {formatCount(publicEventCount)} proof events · {formatCount(followerCount)}{" "}
                   followers
                   {topStack ? ` · ${topStack}` : ""}
                 </p>
