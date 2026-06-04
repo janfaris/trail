@@ -189,9 +189,9 @@ export function ReactionBar({
   }
 
   return (
-    <div className={cn("mt-6 rounded border border-white/10 bg-zinc-900/40 p-4", className)}>
-      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-3">
-        Did this work for you?
+    <div className={cn("rounded-2xl border border-white/10 bg-black/20 p-4", className)}>
+      <div className="mb-3 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500">
+        Did this help your build?
       </div>
       <div className="flex flex-wrap gap-2">
         {KINDS.map((k) => {

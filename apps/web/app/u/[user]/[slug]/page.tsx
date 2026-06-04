@@ -17,12 +17,13 @@ import { SiteNav } from "@/components/site-nav";
 import { type EventData, TimelineEvent } from "@/components/timeline-event";
 import { TimelineToggle } from "@/components/timeline-toggle";
 import { ToolIcon } from "@/components/tool-icon";
+import { Avatar } from "@/components/ui/avatar";
 import { UseLessonButton } from "@/components/use-lesson-button";
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
 import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
-import { shareUrl, tweetIntent } from "@/lib/share";
+import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
 import { durationBetween } from "@/lib/time";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Metadata } from "next";
@@ -484,6 +485,11 @@ export default async function SessionView({
     !sessionRow.redactedAt && isReceiptAiReview(sessionRow.receiptAiReview)
       ? sessionRow.receiptAiReview
       : null;
+  const authorDisplayName = userRow.name?.trim() || `@${user}`;
+  const authorAvatar = userRow.image ?? githubAvatar(userRow.githubHandle || user);
+  const visibleCommentCount = comments.filter((comment) => !comment.deletedAt).length;
+  const replyCount = comments.filter((comment) => comment.parentId && !comment.deletedAt).length;
+  const postTypeLabel = manualPost ? "Build post" : "Proof-backed build post";
 
   const keyPromptIdxs = sessionRow.recipeKeyPromptIdxs ?? [];
   const keyPrompts =
@@ -564,6 +570,7 @@ export default async function SessionView({
           : null,
       ].filter(Boolean) as ProofFactData[]);
   const proofFacts = [...linkProofFacts, ...aiEvidenceFacts, ...fallbackProofFacts].slice(0, 3);
+  const proofLinkCount = buildPostLinks.length;
   const verdict = aiReview
     ? reviewVerdictLabel(aiReview.verdict)
     : manualPost
@@ -606,7 +613,7 @@ export default async function SessionView({
                     <span className="truncate text-zinc-400">{slug}</span>
                   </div>
                   <h1 className="mt-2 text-[24px] font-medium leading-tight tracking-[-0.035em] text-zinc-50">
-                    {manualPost ? "Build post" : "Receipt"}
+                    {postTypeLabel}
                   </h1>
                 </div>
                 {!manualPost ? (
@@ -657,6 +664,44 @@ export default async function SessionView({
                 <h2 className="mt-3 max-w-3xl text-pretty text-[25px] font-medium leading-[1.16] tracking-[-0.04em] text-zinc-50 sm:text-[30px]">
                   {title}
                 </h2>
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-y border-white/[0.08] py-3">
+                  <Link
+                    href={`/u/${user}`}
+                    className="group inline-flex min-w-0 items-center gap-2.5"
+                  >
+                    <Avatar
+                      src={authorAvatar}
+                      alt={authorDisplayName}
+                      size={34}
+                      fallback={user}
+                      className="shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-medium text-zinc-200 group-hover:text-white">
+                        {authorDisplayName}
+                      </span>
+                      <span className="block truncate font-mono text-[11px] text-zinc-600">
+                        @{user}
+                      </span>
+                    </span>
+                  </Link>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-zinc-600">
+                    <span>
+                      Published <RelativeTime date={sessionRow.sharedAt ?? sessionRow.startedAt} />
+                    </span>
+                    {proofLinkCount > 0 ? (
+                      <span>
+                        {formatCount(proofLinkCount)} proof link
+                        {proofLinkCount === 1 ? "" : "s"}
+                      </span>
+                    ) : null}
+                    <a href="#conversation" className="hover:text-zinc-200">
+                      {visibleCommentCount > 0
+                        ? `${formatCount(visibleCommentCount)} comments`
+                        : "Start the thread"}
+                    </a>
+                  </div>
+                </div>
                 <p className="mt-3 max-w-2xl text-pretty text-[14px] leading-6 text-zinc-400">
                   {heroSummary}
                 </p>
@@ -725,6 +770,13 @@ export default async function SessionView({
                           {fact.value}
                         </ProofFact>
                       ))}
+                      <ProofFact label="Conversation">
+                        {visibleCommentCount > 0
+                          ? `${formatCount(visibleCommentCount)} comment${
+                              visibleCommentCount === 1 ? "" : "s"
+                            }${replyCount > 0 ? `, ${formatCount(replyCount)} replies` : ""}`
+                          : "No comments yet. Ask the builder what they would do next."}
+                      </ProofFact>
                     </div>
                   </div>
                 </div>
