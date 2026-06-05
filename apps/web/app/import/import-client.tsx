@@ -66,6 +66,24 @@ export function ImportClient({ githubHandleHint }: { githubHandleHint: string | 
   function publish(card: CardState) {
     const key = card.draft.repoFullName;
     if (publishingKey || card.status === "published") return;
+
+    // Give immediate, visible feedback instead of a silently-disabled button.
+    const quality = validateBuildPostQuality({
+      summary: card.summary,
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+    });
+    if (!quality.ok) {
+      updateCard(key, {
+        status: "error",
+        message:
+          quality.issues[0]?.message ??
+          "Add a line on what you shipped and why it matters before publishing.",
+      });
+      return;
+    }
+
     setPublishingKey(key);
     updateCard(key, { status: "publishing", message: null });
     void (async () => {
@@ -220,7 +238,12 @@ function RepoCard({
         <>
           <textarea
             value={card.summary}
-            onChange={(event) => onChange({ summary: event.target.value })}
+            onChange={(event) =>
+              onChange({
+                summary: event.target.value,
+                ...(card.status === "error" ? { status: "idle", message: null } : {}),
+              })
+            }
             rows={3}
             maxLength={1200}
             placeholder="What did you ship in this repo, who is it for, and what did you learn?"
@@ -233,13 +256,17 @@ function RepoCard({
             className={`${inputClassName} mt-2 font-mono text-xs`}
           />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] leading-5 text-zinc-600">
-              {quality.ok ? "Ready to post." : (quality.issues[0]?.message ?? "Add more detail.")}
+            <span
+              className={`text-[12px] leading-5 ${quality.ok ? "text-[var(--trail-green)]" : "text-amber-300/80"}`}
+            >
+              {quality.ok
+                ? "Ready to post."
+                : (quality.issues[0]?.message ?? "Add what you shipped and why it matters.")}
             </span>
             <button
               type="button"
               onClick={onPublish}
-              disabled={disabled || publishing || !quality.ok}
+              disabled={disabled || publishing}
               className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[var(--trail-green)] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
             >
               {publishing ? "Publishing…" : "Publish"}
