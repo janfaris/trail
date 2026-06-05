@@ -1544,6 +1544,139 @@ async function DailyBuilderBrief({
   );
 }
 
+function FeedIdentityRail({
+  viewer,
+  personalization,
+}: {
+  viewer: FeedComposerViewer | null;
+  personalization: FeedPersonalization;
+}) {
+  if (!viewer?.id) {
+    return (
+      <div className="sticky top-20 py-6 pr-2">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <div className="text-[15px] font-medium tracking-[-0.015em] text-zinc-100">
+            Your public build log.
+          </div>
+          <p className="mt-1.5 text-[12px] leading-5 text-zinc-500">
+            Sign in to follow builders, save ideas, and publish what you shipped.
+          </p>
+          <TrailLink
+            href={signInHref("/feed")}
+            className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[#a7f300] px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.97]"
+          >
+            Sign in with GitHub
+          </TrailLink>
+          <Link
+            href="/create"
+            className="mt-2 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-white/[0.05] px-4 text-sm text-zinc-300 transition-[background-color,color,transform] hover:bg-white/[0.09] hover:text-zinc-100 active:scale-[0.97]"
+          >
+            Post a build
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const profileHref = viewer.handle ? `/u/${viewer.handle}` : "/settings";
+  const avatar = viewer.image ?? (viewer.handle ? githubAvatar(viewer.handle) : undefined);
+  const stats = [
+    { label: "Builds", value: personalization.publicReceiptCount },
+    { label: "Following", value: personalization.followingCount },
+    { label: "Saved", value: personalization.usedLessonCount },
+  ];
+  const unread = personalization.unreadNotifications;
+  const links = [
+    {
+      href: "/notifications",
+      label: "Notifications",
+      detail: unread > 0 ? `${formatCount(unread)} unread` : "Replies and reactions",
+      badge: unread > 0,
+    },
+    { href: "/saved", label: "Saved", detail: "Ideas and builds you kept", badge: false },
+    { href: "/dashboard", label: "Builder Studio", detail: "Manage your posts", badge: false },
+    viewer.handle
+      ? {
+          href: `/u/${viewer.handle}`,
+          label: "Your profile",
+          detail: `@${viewer.handle}`,
+          badge: false,
+        }
+      : {
+          href: "/settings",
+          label: "Finish your profile",
+          detail: "Add a public handle",
+          badge: false,
+        },
+  ];
+
+  return (
+    <div className="sticky top-20 py-6 pr-2">
+      <Link href={profileHref} className="group flex items-center gap-3">
+        <Avatar
+          src={avatar}
+          alt={viewer.name}
+          size={40}
+          fallback={viewer.handle ?? viewer.name}
+          className="border-white/10 bg-black"
+        />
+        <span className="min-w-0">
+          <span className="block truncate text-[14px] font-medium tracking-[-0.01em] text-zinc-100 group-hover:text-white">
+            {viewer.name}
+          </span>
+          <span className="block truncate font-mono text-[12px] text-zinc-600">
+            {viewer.handle ? `@${viewer.handle}` : "Finish your profile"}
+          </span>
+        </span>
+      </Link>
+
+      <div className="mt-4 flex items-center gap-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="leading-tight">
+            <div className="font-mono text-[14px] text-zinc-100 tabular-nums">
+              {formatCount(stat.value)}
+            </div>
+            <div className="text-[11px] text-zinc-600">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <TrailLink
+        href="/create"
+        className="mt-5 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+      >
+        Post a build
+      </TrailLink>
+
+      <nav className="mt-6 space-y-0.5">
+        {links.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="group block border-l border-white/0 px-3 py-2.5 text-zinc-500 transition-[border-color,color] hover:border-white/20 hover:text-zinc-200"
+          >
+            <span className="flex items-center gap-2 text-[14px] font-medium tracking-[-0.01em]">
+              {item.label}
+              {item.badge ? (
+                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-[#a7f300] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
+                  {formatCount(unread)}
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-0.5 block text-[12px] leading-4 text-zinc-700 group-hover:text-zinc-600">
+              {item.detail}
+            </span>
+          </Link>
+        ))}
+      </nav>
+
+      <p className="mt-6 border-l border-white/10 px-3 text-[12px] leading-5 text-zinc-600">
+        Your loop: read a build, save an idea, ship an update, reply to a thread.
+      </p>
+    </div>
+  );
+}
+
 function NetworkPulse({ stats }: { stats: FeedStats }) {
   const items = [
     { label: "Builders", value: stats.builders },
@@ -2427,7 +2560,11 @@ export default async function FeedPage({
       <SiteNav currentPath="/feed" />
 
       <main className="min-h-[calc(100vh-3.5rem)] w-full">
-        <div className="mx-auto grid max-w-[1100px] grid-cols-1 justify-center lg:grid-cols-[minmax(0,680px)] lg:px-4 xl:grid-cols-[minmax(0,720px)_300px] xl:gap-10">
+        <div className="mx-auto grid max-w-[1380px] grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 lg:px-4 xl:grid-cols-[240px_minmax(0,720px)_300px] xl:gap-10">
+          <aside className="hidden lg:block">
+            <FeedIdentityRail viewer={viewer} personalization={personalization} />
+          </aside>
+
           <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
             <div className="border-b border-white/[0.08] bg-[#0b0b0a]/95 backdrop-blur-xl md:sticky md:top-14 md:z-30">
               <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
@@ -2554,7 +2691,7 @@ export default async function FeedPage({
             </div>
           </aside>
 
-          <div className="px-3 py-6 xl:hidden">
+          <div className="px-3 py-6 lg:col-start-2 xl:hidden">
             <FeedDiscoveryPanel
               discovery={discovery}
               radarSignals={radarSignals}
