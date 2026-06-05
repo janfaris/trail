@@ -1087,8 +1087,8 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
         published_at AS "publishedAt"
       FROM radar_signal
       WHERE status <> 'dismissed'
-      ORDER BY score DESC, published_at DESC
-      LIMIT 6
+      ORDER BY published_at DESC, score DESC
+      LIMIT 12
     `);
     return rowsOf<FeedRadarSignal>(rows);
   } catch (error) {
@@ -1104,26 +1104,39 @@ function buildTimelineItems(
 ): TimelineItem[] {
   if (isFollowingView) return rows.map((row) => ({ kind: "post", row }));
 
-  const maxPicks = rows.length < 6 ? 4 : 3;
-  const picks = radarSignals.slice(0, maxPicks);
-  if (rows.length === 0) {
+  // Curated Trail Picks fill the gap while native builds are scarce, then recede
+  // as real posts arrive: more picks when the feed is empty, fewer as it fills.
+  const postCount = rows.length;
+  const pickBudget =
+    postCount === 0 ? 8 : postCount <= 4 ? 4 : postCount <= 12 ? 3 : postCount <= 24 ? 2 : 1;
+  const picks = radarSignals.slice(0, pickBudget);
+
+  if (postCount === 0) {
     return picks.map((signal) => ({ kind: "trail_pick", signal }));
   }
 
+  // Spread the picks at roughly even intervals so they're interleaved through
+  // the feed rather than front-loaded.
   const items: TimelineItem[] = [];
-  const remainingPicks = [...picks];
+  const gap = Math.max(3, Math.ceil(postCount / (picks.length + 1)));
+  let pickIdx = 0;
 
   rows.forEach((row, index) => {
     items.push({ kind: "post", row });
-    const shouldInsertPick = index === 0 || (index + 1) % 4 === 0;
-    if (shouldInsertPick) {
-      const signal = remainingPicks.shift();
+    if (pickIdx < picks.length && (index + 1) % gap === 0) {
+      const signal = picks[pickIdx];
       if (signal) items.push({ kind: "trail_pick", signal });
+      pickIdx += 1;
     }
   });
 
-  if (rows.length < 5) {
-    for (const signal of remainingPicks) items.push({ kind: "trail_pick", signal });
+  // For a still-thin feed, append any picks that didn't land so the page stays
+  // lively; once there's real volume we drop the remainder to let builds lead.
+  if (postCount < 5) {
+    for (let i = pickIdx; i < picks.length; i++) {
+      const signal = picks[i];
+      if (signal) items.push({ kind: "trail_pick", signal });
+    }
   }
 
   return items;

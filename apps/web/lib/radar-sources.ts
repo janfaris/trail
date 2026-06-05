@@ -21,9 +21,12 @@ export const RADAR_DEFAULT_MAX_RESULTS_PER_SOURCE = 10;
 
 const RADAR_ACTIVE_X_SOURCE_HANDLES = new Set([
   "swyx",
+  "karpathy",
   "simonw",
+  "levelsio",
   "bindureddy",
   "testingcatalog",
+  "markgurman",
   "kimmonismus",
   "chetaslua",
 ]);
