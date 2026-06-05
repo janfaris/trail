@@ -68,14 +68,19 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
   const poster = item.previewImageUrl || item.url;
   const extraCount = Math.max(media.length - 1, 0);
   const altText = item.altText || `Visual from @${sourceHandle}'s post`;
+  // X gates video.twimg.com MP4s by Referer, so a direct cross-origin <video>
+  // gets a 403. Stream it through our same-origin proxy instead.
+  const proxiedVideoUrl = item.videoUrl
+    ? `/api/radar/video?src=${encodeURIComponent(item.videoUrl)}`
+    : null;
 
   // Video with a playable MP4 → play inline inside Trail.
-  if (isVideo && item.videoUrl && playing) {
+  if (isVideo && proxiedVideoUrl && playing) {
     return (
       <div className="relative mt-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-black">
         {/* biome-ignore lint/a11y/useMediaCaption: third-party social media has no caption track */}
         <video
-          src={item.videoUrl}
+          src={proxiedVideoUrl}
           poster={poster}
           controls
           autoPlay
@@ -97,7 +102,7 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
 
   if (isVideo) {
     // Inline play if we have an MP4, otherwise open the X post to watch.
-    const hasInline = Boolean(item.videoUrl);
+    const hasInline = Boolean(proxiedVideoUrl);
     const overlayLabel =
       item.type === "animated_gif"
         ? hasInline
