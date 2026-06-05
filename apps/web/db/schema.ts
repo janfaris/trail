@@ -199,6 +199,9 @@ export const trailSession = pgTable(
     receiptAiReviewModel: text("receipt_ai_review_model"),
     receiptAiReviewError: text("receipt_ai_review_error"),
     manualProofNote: text("manual_proof_note"),
+    // Best-effort Open Graph image scraped from the post's proof link (demo,
+    // GitHub, or X) at publish time. Nullable; never blocks publishing.
+    previewImageUrl: text("preview_image_url"),
     inputTokens: integer("input_tokens"),
     outputTokens: integer("output_tokens"),
     cachedTokens: integer("cached_tokens"),

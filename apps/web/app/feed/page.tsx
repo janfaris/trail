@@ -260,6 +260,7 @@ interface BaseFeedRow extends RankableSession {
   commentCount: number;
   commentPreviews: FeedCommentPreview[];
   xPostUrl: string | null;
+  previewImageUrl: string | null;
 }
 
 interface FeedRow extends BaseFeedRow {
@@ -344,6 +345,8 @@ interface FeedRadarSignal {
   sourceHandle: string;
   score: unknown;
   publishedAt: Date | string;
+  imageUrl: string | null;
+  imageAlt: string | null;
 }
 
 type TimelineItem =
@@ -645,6 +648,7 @@ async function loadPublicFeed(viewerId: string | null): Promise<FeedRow[]> {
       receiptStatus: schema.trailSession.receiptStatus,
       taskType: schema.trailSession.taskType,
       outcome: schema.trailSession.outcome,
+      previewImageUrl: schema.trailSession.previewImageUrl,
     })
     .from(schema.trailSession)
     .innerJoin(schema.user, eq(schema.trailSession.userId, schema.user.id))
@@ -726,6 +730,7 @@ async function loadFollowingFeed(viewerId: string): Promise<FeedRow[]> {
       receiptStatus: schema.trailSession.receiptStatus,
       taskType: schema.trailSession.taskType,
       outcome: schema.trailSession.outcome,
+      previewImageUrl: schema.trailSession.previewImageUrl,
     })
     .from(schema.follow)
     .innerJoin(schema.trailSession, eq(schema.follow.followingId, schema.trailSession.userId))
@@ -1084,7 +1089,9 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
         category,
         source_handle AS "sourceHandle",
         score,
-        published_at AS "publishedAt"
+        published_at AS "publishedAt",
+        (entities -> 'media' -> 0 ->> 'url') AS "imageUrl",
+        (entities -> 'media' -> 0 ->> 'altText') AS "imageAlt"
       FROM radar_signal
       WHERE status <> 'dismissed'
       ORDER BY published_at DESC, score DESC
@@ -1447,6 +1454,20 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
           ) : null}
         </Link>
 
+        {r.previewImageUrl ? (
+          <Link
+            href={currentReceiptHref}
+            className="mt-3 block overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900 transition-colors hover:border-white/[0.16]"
+          >
+            <img
+              src={r.previewImageUrl}
+              alt={r.title ?? "Build preview"}
+              loading="lazy"
+              className="max-h-80 w-full object-cover"
+            />
+          </Link>
+        ) : null}
+
         {r.xPostUrl ? (
           <a
             href={r.xPostUrl}
@@ -1662,6 +1683,22 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
               {signal.summary}
             </p>
           </a>
+
+          {signal.imageUrl ? (
+            <a
+              href={signal.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="mt-3 block overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900 transition-colors hover:border-white/[0.16]"
+            >
+              <img
+                src={signal.imageUrl}
+                alt={signal.imageAlt || `Visual from @${signal.sourceHandle}'s post`}
+                loading="lazy"
+                className="max-h-80 w-full object-cover"
+              />
+            </a>
+          ) : null}
 
           <div className="mt-3 border-l border-[#a7f300]/30 pl-3">
             <div className="text-[12px] text-zinc-500">Why builders care</div>
