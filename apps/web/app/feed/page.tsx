@@ -16,6 +16,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { FeedComposer, type FeedComposerDraft, type FeedComposerViewer } from "./feed-composer";
+import { FeedPickMedia, type FeedPickMediaItem } from "./feed-pick-media";
 
 export const dynamic = "force-dynamic";
 
@@ -345,9 +346,7 @@ interface FeedRadarSignal {
   sourceHandle: string;
   score: unknown;
   publishedAt: Date | string;
-  imageUrl: string | null;
-  imageAlt: string | null;
-  imageType: string | null;
+  media: FeedPickMediaItem[] | null;
 }
 
 type TimelineItem =
@@ -1091,9 +1090,7 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
         source_handle AS "sourceHandle",
         score,
         published_at AS "publishedAt",
-        (entities -> 'media' -> 0 ->> 'url') AS "imageUrl",
-        (entities -> 'media' -> 0 ->> 'altText') AS "imageAlt",
-        (entities -> 'media' -> 0 ->> 'type') AS "imageType"
+        (entities -> 'media') AS "media"
       FROM radar_signal
       WHERE status <> 'dismissed'
       ORDER BY published_at DESC, score DESC
@@ -1686,37 +1683,12 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
             </p>
           </a>
 
-          {signal.imageUrl ? (
-            <a
-              href={signal.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="group/media relative mt-3 block overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900 transition-colors hover:border-white/[0.16]"
-            >
-              <img
-                src={signal.imageUrl}
-                alt={signal.imageAlt || `Visual from @${signal.sourceHandle}'s post`}
-                loading="lazy"
-                className="max-h-80 w-full object-cover"
-              />
-              {signal.imageType === "video" || signal.imageType === "animated_gif" ? (
-                <>
-                  <span className="pointer-events-none absolute inset-0 bg-black/25" />
-                  <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.25)] backdrop-blur-sm transition-transform group-hover/media:scale-105">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="ml-0.5 h-6 w-6 fill-white"
-                      aria-hidden="true"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </span>
-                  <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
-                    {signal.imageType === "animated_gif" ? "GIF · open on X" : "Video · watch on X"}
-                  </span>
-                </>
-              ) : null}
-            </a>
+          {Array.isArray(signal.media) && signal.media.length > 0 ? (
+            <FeedPickMedia
+              media={signal.media}
+              sourceHandle={signal.sourceHandle}
+              signalUrl={signal.url}
+            />
           ) : null}
 
           <div className="mt-3 border-l border-[#a7f300]/30 pl-3">

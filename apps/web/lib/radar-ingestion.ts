@@ -21,6 +21,7 @@ export type RawRadarTweetMedia = {
   type?: unknown;
   url?: unknown;
   preview_image_url?: unknown;
+  variants?: unknown;
   width?: unknown;
   height?: unknown;
   alt_text?: unknown;
@@ -31,6 +32,7 @@ export type RadarTweetMedia = {
   type: string;
   url: string;
   previewImageUrl?: string;
+  videoUrl?: string;
   width?: number;
   height?: number;
   altText?: string;
@@ -90,6 +92,26 @@ function optionalNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+// X returns playable video for `video`/`animated_gif` media as `variants`. Pick
+// the highest-bitrate MP4 (directly playable in an HTML5 <video>); HLS (.m3u8)
+// and non-mp4 variants are ignored.
+function bestVideoUrl(variants: unknown): string | undefined {
+  if (!Array.isArray(variants)) return undefined;
+  let best: { bitRate: number; url: string } | null = null;
+  for (const variant of variants) {
+    if (!variant || typeof variant !== "object") continue;
+    const record = variant as Record<string, unknown>;
+    if (record.content_type !== "video/mp4") continue;
+    if (typeof record.url !== "string" || record.url.length === 0) continue;
+    const bitRate = Number(record.bit_rate);
+    const normalizedBitRate = Number.isFinite(bitRate) ? bitRate : 0;
+    if (!best || normalizedBitRate > best.bitRate) {
+      best = { bitRate: normalizedBitRate, url: record.url };
+    }
+  }
+  return best?.url;
+}
+
 function normalizeMedia(media: RawRadarTweetMedia | undefined): RadarTweetMedia | null {
   if (!media || typeof media.media_key !== "string") return null;
   const type = typeof media.type === "string" ? media.type : "unknown";
@@ -107,6 +129,7 @@ function normalizeMedia(media: RawRadarTweetMedia | undefined): RadarTweetMedia 
     url,
     previewImageUrl:
       typeof media.preview_image_url === "string" ? media.preview_image_url : undefined,
+    videoUrl: bestVideoUrl(media.variants),
     width: optionalNumber(media.width),
     height: optionalNumber(media.height),
     altText: typeof media.alt_text === "string" ? media.alt_text : undefined,
