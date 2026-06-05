@@ -1544,60 +1544,6 @@ async function DailyBuilderBrief({
   );
 }
 
-function FeedNavRail({ viewerId }: { viewerId: string | null }) {
-  const publishHref = viewerId ? "/create" : signInHref("/create");
-  const quickLinks = viewerId
-    ? [
-        {
-          href: "/notifications",
-          label: "Notifications",
-          detail: "Replies and reactions",
-        },
-        {
-          href: "/saved",
-          label: "Saved",
-          detail: "Ideas and builds you kept",
-        },
-      ]
-    : [];
-
-  return (
-    <div className="sticky top-20 flex min-h-[calc(100vh-5rem)] flex-col justify-between py-6 pr-2">
-      <div>
-        <TrailLink
-          href={publishHref}
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
-        >
-          Post a build
-        </TrailLink>
-
-        {quickLinks.length > 0 ? (
-          <nav className="mt-8 space-y-0.5">
-            {quickLinks.map((item) => (
-              <TrailLink
-                key={item.label}
-                href={item.href}
-                className="group block border-l border-white/0 px-3 py-2.5 text-zinc-500 transition-[border-color,color] hover:border-white/20 hover:text-zinc-200"
-              >
-                <span className="block text-[14px] font-medium tracking-[-0.01em]">
-                  {item.label}
-                </span>
-                <span className="mt-0.5 block text-[12px] leading-4 text-zinc-700 group-hover:text-zinc-600">
-                  {item.detail}
-                </span>
-              </TrailLink>
-            ))}
-          </nav>
-        ) : null}
-      </div>
-
-      <div className="border-l border-white/10 px-3 text-[12px] leading-5 text-zinc-600">
-        Your daily loop: read a build, save an idea, post an update, reply to a thread.
-      </div>
-    </div>
-  );
-}
-
 function NetworkPulse({ stats }: { stats: FeedStats }) {
   const items = [
     { label: "Builders", value: stats.builders },
@@ -2481,11 +2427,7 @@ export default async function FeedPage({
       <SiteNav currentPath="/feed" />
 
       <main className="min-h-[calc(100vh-3.5rem)] w-full">
-        <div className="mx-auto grid max-w-[1380px] grid-cols-1 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-8 lg:px-4 xl:grid-cols-[190px_minmax(0,720px)_300px] xl:gap-10">
-          <aside className="hidden lg:block">
-            <FeedNavRail viewerId={viewerId} />
-          </aside>
-
+        <div className="mx-auto grid max-w-[1100px] grid-cols-1 justify-center lg:grid-cols-[minmax(0,680px)] lg:px-4 xl:grid-cols-[minmax(0,720px)_300px] xl:gap-10">
           <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
             <div className="border-b border-white/[0.08] bg-[#0b0b0a]/95 backdrop-blur-xl md:sticky md:top-14 md:z-30">
               <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
@@ -2612,7 +2554,7 @@ export default async function FeedPage({
             </div>
           </aside>
 
-          <div className="px-3 py-6 lg:col-start-2 xl:hidden">
+          <div className="px-3 py-6 xl:hidden">
             <FeedDiscoveryPanel
               discovery={discovery}
               radarSignals={radarSignals}
