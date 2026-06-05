@@ -99,6 +99,78 @@ describe("radar ingestion helpers", () => {
     ]);
   });
 
+  it("extracts the highest-bitrate mp4 from video variants as videoUrl", () => {
+    const tweet = normalizeRadarTweet(
+      {
+        id: "789",
+        author_id: "42",
+        text: "Watch this agent ship a feature end to end.",
+        created_at: "2026-06-01T21:00:00.000Z",
+        attachments: { media_keys: ["13_vid"] },
+      },
+      source,
+      "X API",
+      new Map([
+        [
+          "13_vid",
+          {
+            media_key: "13_vid",
+            type: "video",
+            preview_image_url: "https://pbs.twimg.com/amplify_video_thumb/clip.jpg",
+            variants: [
+              { content_type: "application/x-mpegURL", url: "https://video.twimg.com/clip.m3u8" },
+              {
+                bit_rate: 256000,
+                content_type: "video/mp4",
+                url: "https://video.twimg.com/low.mp4",
+              },
+              {
+                bit_rate: 2176000,
+                content_type: "video/mp4",
+                url: "https://video.twimg.com/high.mp4",
+              },
+            ],
+          },
+        ],
+      ]),
+    );
+
+    const values = buildRadarSignalWrite(source, tweet);
+    const media = values.entities.media as Array<{ videoUrl?: string }>;
+    expect(media[0]?.videoUrl).toBe("https://video.twimg.com/high.mp4");
+  });
+
+  it("leaves videoUrl undefined when no mp4 variant is present", () => {
+    const tweet = normalizeRadarTweet(
+      {
+        id: "790",
+        author_id: "42",
+        text: "HLS-only clip.",
+        created_at: "2026-06-01T21:00:00.000Z",
+        attachments: { media_keys: ["13_hls"] },
+      },
+      source,
+      "X API",
+      new Map([
+        [
+          "13_hls",
+          {
+            media_key: "13_hls",
+            type: "video",
+            preview_image_url: "https://pbs.twimg.com/amplify_video_thumb/hls.jpg",
+            variants: [
+              { content_type: "application/x-mpegURL", url: "https://video.twimg.com/only.m3u8" },
+            ],
+          },
+        ],
+      ]),
+    );
+
+    const values = buildRadarSignalWrite(source, tweet);
+    const media = values.entities.media as Array<{ videoUrl?: string }>;
+    expect(media[0]?.videoUrl).toBeUndefined();
+  });
+
   it("rejects invalid tweet timestamps loudly", () => {
     expect(() =>
       normalizeRadarTweet(

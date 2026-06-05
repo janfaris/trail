@@ -31,6 +31,7 @@ const MEDIA_FIELDS = [
   "preview_image_url",
   "type",
   "url",
+  "variants",
   "width",
   "height",
 ].join(",");
