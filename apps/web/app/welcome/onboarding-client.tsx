@@ -20,7 +20,12 @@ export function OnboardingClient({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const preview = normalizeHandle(handle) || "your-handle";
+  // When the input still matches the existing handle, the server grandfathers
+  // it (keeps the exact stored value), so the preview should show that real
+  // handle — not the normalized form — to avoid implying the URL will change.
+  const normalized = normalizeHandle(handle);
+  const isGrandfathered = Boolean(initialHandle) && normalized === normalizeHandle(initialHandle);
+  const preview = isGrandfathered ? initialHandle : normalized || "your-handle";
 
   function submit() {
     setError(null);
@@ -85,7 +90,7 @@ export function OnboardingClient({
 
       <button
         type="submit"
-        disabled={pending || normalizeHandle(handle).length < 2}
+        disabled={pending || normalized.length < 2}
         className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--trail-green)] px-5 text-sm font-semibold text-black transition-[filter,transform] hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? "Claiming…" : "Claim handle and post your first build"}
