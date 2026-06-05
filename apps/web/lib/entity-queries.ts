@@ -319,3 +319,56 @@ export async function loadEntitySlugs(): Promise<{ kind: EntityKind; tag: string
   `);
   return rowsOf<{ kind: EntityKind; tag: string }>(res).map((r) => ({ kind: r.kind, tag: r.tag }));
 }
+
+/**
+ * Public builder profiles for the sitemap: handles of users with at least one
+ * public, shared post. We exclude post-less handles to avoid thin pages that
+ * hurt SEO. Capped for sitemap size sanity.
+ */
+export async function loadPublicProfileSlugs(): Promise<{ handle: string; lastSharedAt: Date }[]> {
+  const res = await db.execute<{ handle: string; last_shared_at: string | Date }>(sql`
+    SELECT u.handle AS handle, max(ts.shared_at) AS last_shared_at
+    FROM "user" u
+    JOIN trail_session ts
+      ON ts.user_id = u.id
+     AND ts.visibility = 'public'
+     AND ts.shared_at IS NOT NULL
+    WHERE u.handle IS NOT NULL
+    GROUP BY u.handle
+    ORDER BY max(ts.shared_at) DESC
+    LIMIT 10000
+  `);
+  return rowsOf<{ handle: string; last_shared_at: string | Date }>(res).map((r) => ({
+    handle: r.handle,
+    lastSharedAt: new Date(r.last_shared_at),
+  }));
+}
+
+/**
+ * Public post URLs for the sitemap: every publicly shared session paired with
+ * its author handle. Capped for sitemap size sanity.
+ */
+export async function loadPublicPostSlugs(): Promise<
+  { handle: string; slug: string; lastModified: Date }[]
+> {
+  const res = await db.execute<{
+    handle: string;
+    slug: string;
+    last_modified: string | Date;
+  }>(sql`
+    SELECT u.handle AS handle, ts.slug AS slug,
+      COALESCE(ts.shared_at, ts.started_at) AS last_modified
+    FROM trail_session ts
+    JOIN "user" u ON u.id = ts.user_id
+    WHERE ts.visibility = 'public'
+      AND ts.shared_at IS NOT NULL
+      AND u.handle IS NOT NULL
+    ORDER BY ts.shared_at DESC
+    LIMIT 30000
+  `);
+  return rowsOf<{ handle: string; slug: string; last_modified: string | Date }>(res).map((r) => ({
+    handle: r.handle,
+    slug: r.slug,
+    lastModified: new Date(r.last_modified),
+  }));
+}

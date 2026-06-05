@@ -340,6 +340,12 @@ export async function toggleFollow(followingId: string) {
     return { ok: false as const, error: "cannot follow this user" };
   }
 
+  const { limitAction } = await import("@/lib/rate-limit");
+  const limit = await limitAction("follow", me.id);
+  if (!limit.ok) {
+    return { ok: false as const, error: "Too many follow actions. Slow down for a moment." };
+  }
+
   const target = await db.query.user.findFirst({
     where: eq(schema.user.id, followingId),
   });

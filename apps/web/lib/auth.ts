@@ -1,6 +1,6 @@
+import { db, schema } from "@/db/client";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db, schema } from "@/db/client";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -53,15 +53,33 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user, ctx) => {
-          // try to derive handle from github profile
+          // Derive a safe, unique public handle at signup. We normalize the
+          // GitHub login through the shared validator and resolve collisions by
+          // appending a short suffix, so a handle claimed earlier via /welcome
+          // can never break a later signup.
           const profile = (ctx as { profile?: { login?: string } } | undefined)?.profile;
-          const login = profile?.login;
-          return {
-            data: {
-              ...user,
-              handle: login || (user.email?.split("@")[0] ?? user.id.slice(0, 8)),
-            },
-          };
+          const { deriveInitialHandle, normalizeHandle } = await import("@/lib/handle");
+          const base = deriveInitialHandle(profile?.login, user.email, user.id);
+
+          let handle = base;
+          try {
+            const { db, schema } = await import("@/db/client");
+            const { eq } = await import("drizzle-orm");
+            for (let attempt = 0; attempt < 5; attempt++) {
+              const existing = await db.query.user.findFirst({
+                where: eq(schema.user.handle, handle),
+                columns: { id: true },
+              });
+              if (!existing) break;
+              const suffix = Math.random().toString(36).slice(2, 6);
+              handle = normalizeHandle(`${base}-${suffix}`);
+            }
+          } catch {
+            // If the uniqueness probe fails, fall back to the base handle; the
+            // unique index is the final backstop and onboarding can fix it.
+          }
+
+          return { data: { ...user, handle } };
         },
       },
     },

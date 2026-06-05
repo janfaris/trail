@@ -65,6 +65,10 @@ export const user = pgTable(
     // Privileged role for internal tooling (e.g. /admin/radar). 'user' for
     // everyone by default; set to 'admin' manually for trusted operators.
     role: text("role").notNull().default("user"),
+    // First-run onboarding completion (claim handle + guided first post). Null
+    // means the user has not finished /welcome yet; the sign-in flow routes them
+    // there once.
+    onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   },
   (t) => ({
     handleIdx: uniqueIndex("user_handle_idx").on(t.handle),
@@ -949,3 +953,13 @@ export const sessionTag = pgTable(
     lookupIdx: index("session_tag_kind_tag_idx").on(t.kind, t.tag, t.sessionId),
   }),
 );
+
+// Postgres-backed fixed-window rate limiter for social mutations (reactions,
+// comments, follows, posts). One row per "<action>:<userId>" bucket key; the
+// limiter upserts atomically so concurrent requests serialize on the row.
+// Rows are bounded by (actions x users); prune old buckets periodically.
+export const rateLimitBucket = pgTable("rate_limit_bucket", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  count: integer("count").notNull().default(0),
+});
