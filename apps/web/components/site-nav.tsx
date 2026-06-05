@@ -144,7 +144,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
             </div>
           ) : (
             <a
-              href="/api/auth/sign-in/github?callbackURL=/create"
+              href="/api/auth/sign-in/github?callbackURL=%2Fwelcome"
               className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-[12.5px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.96]"
             >
               Sign in

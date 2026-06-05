@@ -311,6 +311,12 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     };
   }
 
+  const { limitAction } = await import("@/lib/rate-limit");
+  const postLimit = await limitAction("buildPost", sessionInfo.user.id);
+  if (!postLimit.ok) {
+    return { ok: false, error: "You're posting too fast. Try again in a few minutes." };
+  }
+
   const title = cleanText(input.title, 120);
   const summary = normalizeBuildPostText(input.summary, 1200);
   if (!title || !summary) {

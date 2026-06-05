@@ -87,6 +87,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const actorId = sess.user.id;
+
+  const { limitAction, rateLimitHeaders } = await import("@/lib/rate-limit");
+  const limit = await limitAction("reaction", actorId);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many reactions. Slow down for a moment." },
+      { status: 429, headers: rateLimitHeaders(limit) },
+    );
+  }
+
   let body: { kind?: string; note?: string };
   try {
     body = (await req.json()) as { kind?: string; note?: string };

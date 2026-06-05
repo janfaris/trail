@@ -50,6 +50,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
   const actorId = session.user.id;
 
+  const { limitAction, rateLimitHeaders } = await import("@/lib/rate-limit");
+  const limit = await limitAction("comment", actorId);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many comments. Slow down for a moment." },
+      { status: 429, headers: rateLimitHeaders(limit) },
+    );
+  }
+
   const { slug } = await context.params;
   const { db, schema, receipt, error } = await loadReceipt(req, slug);
 

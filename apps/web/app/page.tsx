@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=/feed";
+const SIGNIN_HREF = "/api/auth/sign-in/github?callbackURL=%2Fwelcome";
 
 const feedCards = [
   {

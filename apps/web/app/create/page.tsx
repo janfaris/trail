@@ -2,6 +2,7 @@ import { BuildPostForm } from "@/app/create/build-post-form";
 import SiteNav from "@/components/site-nav";
 import { parseXPostUrl } from "@/lib/x-url";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 type CreateSearchParams = {
   community?: string | string[];
@@ -55,6 +56,12 @@ export default async function CreatePage({
       })
     : null;
 
+  // A signed-in builder without a handle can't post — route them through the
+  // onboarding first-run, then back here, instead of a dead-end settings gate.
+  if (session?.user && !viewer?.handle) {
+    redirect(`/welcome?next=${encodeURIComponent(createCallbackPath)}`);
+  }
+
   return (
     <main className="min-h-screen overflow-x-clip bg-zinc-950 text-zinc-50">
       <SiteNav currentPath="/create" />
@@ -90,14 +97,6 @@ export default async function CreatePage({
               body="Trail uses GitHub identity so builders know who shipped the work."
               actionHref={signInHref(createCallbackPath)}
               actionLabel="Sign in with GitHub"
-            />
-          ) : !viewer?.handle ? (
-            <GateCard
-              eyebrow="Public handle required"
-              title="Finish your builder identity first."
-              body="Build posts live on your public profile, so Trail needs your handle before publishing."
-              actionHref="/settings"
-              actionLabel="Edit profile"
             />
           ) : (
             <BuildPostForm
