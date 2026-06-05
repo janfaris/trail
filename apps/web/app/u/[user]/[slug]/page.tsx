@@ -729,6 +729,16 @@ export default async function SessionView({
                 <p className="mt-3 max-w-2xl text-pretty text-[14px] leading-6 text-zinc-400">
                   {heroSummary}
                 </p>
+                {sessionRow.previewImageUrl ? (
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900">
+                    <img
+                      src={sessionRow.previewImageUrl}
+                      alt={title}
+                      loading="lazy"
+                      className="max-h-[26rem] w-full object-cover"
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div id="check" className="mt-5 scroll-mt-28 border-t border-white/[0.08] pt-5">

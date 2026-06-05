@@ -2,6 +2,7 @@
 
 import { normalizeBuildPostText, validateBuildPostQuality } from "@/lib/build-post-quality";
 import { extractGithubLinkage, parseGithubBuildUrl } from "@/lib/github-url";
+import { fetchOgImage, pickPreviewSourceUrl } from "@/lib/og-image";
 import { parseXPostUrl } from "@/lib/x-url";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -381,6 +382,11 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     };
   }
 
+  // Best-effort: pull an OG preview image from the proof link so the feed card
+  // has a visual. Never blocks publishing — failures resolve to null.
+  const previewSourceUrl = pickPreviewSourceUrl({ demoUrl, githubUrl, xUrl });
+  const previewImageUrl = previewSourceUrl ? await fetchOgImage(previewSourceUrl) : null;
+
   await db.insert(schema.trailSession).values({
     id: sessionId,
     userId: viewer.id,
@@ -405,6 +411,7 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     receiptTldr: question ? `${summary}\n\nQuestion for the community: ${question}` : summary,
     recipeTldr: summary,
     manualProofNote: proofNote || null,
+    previewImageUrl,
   });
 
   const links = [
