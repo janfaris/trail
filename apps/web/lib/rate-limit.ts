@@ -83,6 +83,7 @@ export const RATE_LIMITS = {
   comment: { limit: 15, windowSeconds: 60 },
   follow: { limit: 60, windowSeconds: 60 },
   buildPost: { limit: 10, windowSeconds: 600 },
+  githubImport: { limit: 5, windowSeconds: 60 },
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

@@ -75,6 +75,14 @@ export default async function CreatePage({
               Post what shipped with enough proof and context that another builder can trust it,
               learn from it, and reply.
             </p>
+            {session?.user ? (
+              <Link
+                href="/import"
+                className="mt-3 inline-flex min-h-9 items-center rounded-full bg-white/[0.05] px-3.5 text-xs font-medium text-zinc-200 transition-[background-color,color,transform] hover:bg-white/[0.09] hover:text-zinc-50 active:translate-y-px"
+              >
+                Bulk import from your GitHub →
+              </Link>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
             <span className="rounded-full px-3 py-1.5 shadow-[var(--trail-shadow-border)]">
