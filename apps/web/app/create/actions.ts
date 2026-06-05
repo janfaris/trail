@@ -696,3 +696,206 @@ export async function improveBuildPostDraft(input: BuildPostInput): Promise<Buil
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bulk "import my GitHub" seeding tool.
+//
+// Uses the builder's own stored GitHub OAuth token to list their public repos
+// and turn each into an editable DRAFT build post. Attribution stays honest:
+// we never accept a free-text username, only the verified GitHub identity tied
+// to this account, and we publish under the builder's own profile with the
+// canonical repo URL as visible proof. Publishing still runs through the same
+// quality gate + rate limit as /create, and is deduped per repo.
+// ---------------------------------------------------------------------------
+
+export type GithubRepoDraft = {
+  repoFullName: string;
+  title: string;
+  summary: string;
+  stack: string[];
+  githubUrl: string;
+  description: string | null;
+  pushedAt: string | null;
+};
+
+export type GithubProfileImportResult =
+  | { ok: true; login: string; drafts: GithubRepoDraft[] }
+  | { ok: false; error: string };
+
+type GithubViewerRepoPayload = GitHubRepoPayload & {
+  html_url?: unknown;
+  fork?: unknown;
+  archived?: unknown;
+  pushed_at?: unknown;
+  owner?: { login?: unknown } | null;
+};
+
+async function githubTokenFetch<T>(
+  path: string,
+  token: string,
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GITHUB_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${GITHUB_API_BASE}${path}`, {
+      headers: {
+        ...githubHeaders(),
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (response.status === 401) {
+      return { ok: false, error: "Your GitHub connection expired. Sign in again to refresh it." };
+    }
+    if (!response.ok) {
+      return { ok: false, error: "GitHub could not return your repositories right now." };
+    }
+    return { ok: true, data: (await response.json()) as T };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return { ok: false, error: "GitHub took too long to respond. Try again in a moment." };
+    }
+    return { ok: false, error: "Trail could not reach GitHub. Try again in a moment." };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Import the signed-in builder's own public GitHub repos as draft build posts.
+ * Returns drafts only — nothing is published until the builder edits and
+ * confirms each one (so the quality gate still forces real context).
+ */
+export async function importMyGithubRepos(): Promise<GithubProfileImportResult> {
+  if (!process.env.BETTER_AUTH_SECRET || !process.env.DATABASE_URL) {
+    return { ok: false, error: "Importing is unavailable until Trail auth is configured." };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to import your GitHub repos." };
+  }
+
+  const { limitAction } = await import("@/lib/rate-limit");
+  const limit = await limitAction("githubImport", session.user.id);
+  if (!limit.ok) {
+    return { ok: false, error: "Too many imports in a row. Wait a moment and try again." };
+  }
+
+  const { db, schema } = await import("@/db/client");
+  const { and, eq } = await import("drizzle-orm");
+  const account = await db.query.account.findFirst({
+    where: and(eq(schema.account.userId, session.user.id), eq(schema.account.providerId, "github")),
+    columns: { accessToken: true },
+  });
+  const token = account?.accessToken;
+  if (!token) {
+    return {
+      ok: false,
+      error: "Reconnect GitHub to import your repos (no GitHub token on file).",
+    };
+  }
+
+  const who = await githubTokenFetch<{ login?: unknown }>("/user", token);
+  if (!who.ok) return who;
+  const login = text(who.data.login);
+  if (!login) {
+    return { ok: false, error: "Trail could not read your GitHub identity. Try again." };
+  }
+
+  // public_repo scope returns public repos only, so private work never leaks in.
+  const reposResult = await githubTokenFetch<GithubViewerRepoPayload[]>(
+    "/user/repos?affiliation=owner&sort=pushed&direction=desc&per_page=40",
+    token,
+  );
+  if (!reposResult.ok) return reposResult;
+
+  const drafts: GithubRepoDraft[] = (Array.isArray(reposResult.data) ? reposResult.data : [])
+    .filter(
+      (repo) =>
+        repo.private !== true &&
+        repo.fork !== true &&
+        repo.archived !== true &&
+        Boolean(text(repo.full_name) ?? text(repo.name)),
+    )
+    .slice(0, 30)
+    .map((repo) => {
+      const repoName = text(repo.name) ?? "repo";
+      const repoFullName = text(repo.full_name) ?? `${login}/${repoName}`;
+      const description = text(repo.description);
+      const url = text(repo.html_url) ?? `https://github.com/${repoFullName}`;
+      // Neutral scaffold — intentionally does NOT claim authorship and is short
+      // enough that the quality gate still requires the builder to add context.
+      const summary = description ? `${description}\n\n` : "";
+      return {
+        repoFullName,
+        title: truncate(repoName, 120),
+        summary: truncate(summary, 1200),
+        stack: stackFromRepo(repo),
+        githubUrl: url,
+        description,
+        pushedAt: text(repo.pushed_at),
+      } satisfies GithubRepoDraft;
+    });
+
+  return { ok: true, login, drafts };
+}
+
+/**
+ * Publish one imported repo as a build post. Wraps createBuildPostFromFeed with
+ * (1) per-repo idempotency so re-clicking or re-importing never creates a
+ * duplicate public post, and (2) an explicit provenance proof note.
+ */
+export async function publishImportedBuildPost(
+  input: BuildPostInput,
+): Promise<import("@/app/feed/actions").FeedPublishResult> {
+  if (!process.env.BETTER_AUTH_SECRET || !process.env.DATABASE_URL) {
+    return { ok: false, error: "Posting is unavailable until Trail auth is configured." };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to publish a build." };
+  }
+
+  const { extractGithubLinkage } = await import("@/lib/github-url");
+  const linkedRepo = extractGithubLinkage(input.githubUrl).linkedRepo;
+
+  if (linkedRepo) {
+    const { db, schema } = await import("@/db/client");
+    const { and, eq, isNotNull } = await import("drizzle-orm");
+    const existing = await db.query.trailSession.findFirst({
+      where: and(
+        eq(schema.trailSession.userId, session.user.id),
+        eq(schema.trailSession.postKind, "manual_build"),
+        eq(schema.trailSession.linkedRepo, linkedRepo),
+        isNotNull(schema.trailSession.sharedAt),
+      ),
+      columns: { slug: true },
+    });
+    if (existing) {
+      const viewer = await db.query.user.findFirst({
+        where: eq(schema.user.id, session.user.id),
+        columns: { handle: true },
+      });
+      if (viewer?.handle) {
+        const href = `/u/${viewer.handle}/${existing.slug}`;
+        return {
+          ok: false,
+          error: "You already posted this repo.",
+          actionHref: href,
+          actionLabel: "Open post",
+        };
+      }
+    }
+  }
+
+  const { createBuildPostFromFeed } = await import("@/app/feed/actions");
+  const proofNote = input.proofNote?.trim()
+    ? input.proofNote
+    : "Imported from public GitHub metadata.";
+  return createBuildPostFromFeed({ ...input, proofNote });
+}
