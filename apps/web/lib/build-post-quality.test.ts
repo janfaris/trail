@@ -27,6 +27,30 @@ describe("validateBuildPostQuality", () => {
     expect(result.checks).toEqual({ outcome: true, proof: true, context: true });
   });
 
+  it("accepts a clear one-line outcome when a proof URL is attached", () => {
+    const result = validateBuildPostQuality({
+      summary: "Personal portfolio website - Software Engineer @ Microsoft",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toEqual({ outcome: true, proof: true, context: true });
+  });
+
+  it("still requires real context when there is no proof", () => {
+    const result = validateBuildPostQuality({
+      summary: "Personal portfolio website - Software Engineer @ Microsoft",
+      proofUrlCount: 0,
+      proofNote: "",
+      question: "",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toContain("proof_required");
+  });
+
   it("allows a proof note when no public URL exists", () => {
     const result = validateBuildPostQuality({
       summary:

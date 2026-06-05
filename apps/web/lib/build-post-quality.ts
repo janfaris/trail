@@ -27,8 +27,8 @@ export type BuildPostQualityResult = {
   };
 };
 
-const MIN_SUMMARY_CHARS = 48;
-const MIN_SUMMARY_WORDS = 8;
+const MIN_SUMMARY_CHARS = 40;
+const MIN_SUMMARY_WORDS = 6;
 const MIN_PROOF_NOTE_CHARS = 24;
 const MIN_QUESTION_CHARS = 12;
 
@@ -75,7 +75,7 @@ function hasEnoughOutcomeDetail(summary: string): boolean {
   const compactLength = summary.replace(/\s/g, "").length;
   return (
     summary.length >= MIN_SUMMARY_CHARS &&
-    (meaningfulWordCount(summary) >= MIN_SUMMARY_WORDS || compactLength >= 80)
+    (meaningfulWordCount(summary) >= MIN_SUMMARY_WORDS || compactLength >= 64)
   );
 }
 
@@ -98,7 +98,10 @@ export function validateBuildPostQuality(input: BuildPostQualityInput): BuildPos
   const compactSummary = compactForLowSignal(summary);
   const outcome = hasEnoughOutcomeDetail(summary) && !LOW_SIGNAL_SUMMARIES.has(compactSummary);
   const proof = input.proofUrlCount > 0 || proofNote.length >= MIN_PROOF_NOTE_CHARS;
-  const context = hasContextSignal(summary, question);
+  // A real, verifiable proof link makes a clear one-line outcome a legitimate
+  // post — proof compensates for a terse summary. Without proof we still require
+  // an explicit context signal (why it matters / lesson / question).
+  const context = hasContextSignal(summary, question) || (input.proofUrlCount > 0 && outcome);
 
   if (!summary) {
     issues.push({
