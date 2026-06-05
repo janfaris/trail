@@ -708,8 +708,13 @@ export async function improveBuildPostDraft(input: BuildPostInput): Promise<Buil
 // quality gate + rate limit as /create, and is deduped per repo.
 // ---------------------------------------------------------------------------
 
+export type GithubImportKind = "repo" | "shipment";
+
 export type GithubRepoDraft = {
+  key: string;
+  kind: GithubImportKind;
   repoFullName: string;
+  subtitle: string;
   title: string;
   summary: string;
   stack: string[];
@@ -830,7 +835,10 @@ export async function importMyGithubRepos(): Promise<GithubProfileImportResult> 
       // enough that the quality gate still requires the builder to add context.
       const summary = description ? `${description}\n\n` : "";
       return {
+        key: `repo:${repoFullName}`,
+        kind: "repo",
         repoFullName,
+        subtitle: repoFullName,
         title: truncate(repoName, 120),
         summary: truncate(summary, 1200),
         stack: stackFromRepo(repo),
@@ -843,10 +851,114 @@ export async function importMyGithubRepos(): Promise<GithubProfileImportResult> 
   return { ok: true, login, drafts };
 }
 
+type GithubSearchPrItem = {
+  title?: unknown;
+  html_url?: unknown;
+  body?: unknown;
+  number?: unknown;
+  closed_at?: unknown;
+  pull_request?: { merged_at?: unknown } | null;
+};
+
+/** Parse "owner/repo" + number from a PR html_url (…/owner/repo/pull/N). */
+function repoFromPrUrl(url: string): { repoFullName: string; number: number | null } | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "github.com") return null;
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length < 4 || parts[2] !== "pull") return null;
+    const number = Number(parts[3]);
+    return {
+      repoFullName: `${parts[0]}/${parts[1]}`,
+      number: Number.isInteger(number) ? number : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Publish one imported repo as a build post. Wraps createBuildPostFromFeed with
- * (1) per-repo idempotency so re-clicking or re-importing never creates a
- * duplicate public post, and (2) an explicit provenance proof note.
+ * Import the builder's recent merged pull requests as draft "shipment" posts —
+ * the high-signal unit Trail is built around ("I shipped this"). Each draft
+ * links to the merged PR as proof. Drafts only; publishing still runs the
+ * quality gate. Public PRs only (private needs a scope we never request).
+ */
+export async function importMyGithubShipments(): Promise<GithubProfileImportResult> {
+  if (!process.env.BETTER_AUTH_SECRET || !process.env.DATABASE_URL) {
+    return { ok: false, error: "Importing is unavailable until Trail auth is configured." };
+  }
+
+  const { auth } = await import("@/lib/auth");
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in to import your shipments." };
+  }
+
+  const { limitAction } = await import("@/lib/rate-limit");
+  const limit = await limitAction("githubImport", session.user.id);
+  if (!limit.ok) {
+    return { ok: false, error: "Too many imports in a row. Wait a moment and try again." };
+  }
+
+  const { db, schema } = await import("@/db/client");
+  const { and, eq } = await import("drizzle-orm");
+  const account = await db.query.account.findFirst({
+    where: and(eq(schema.account.userId, session.user.id), eq(schema.account.providerId, "github")),
+    columns: { accessToken: true },
+  });
+  const token = account?.accessToken;
+  if (!token) {
+    return { ok: false, error: "Reconnect GitHub to import your shipments (no GitHub token)." };
+  }
+
+  const who = await githubTokenFetch<{ login?: unknown }>("/user", token);
+  if (!who.ok) return who;
+  const login = text(who.data.login);
+  if (!login) {
+    return { ok: false, error: "Trail could not read your GitHub identity. Try again." };
+  }
+
+  const query = encodeURIComponent(`type:pr is:merged author:${login}`);
+  const searchResult = await githubTokenFetch<{ items?: GithubSearchPrItem[] }>(
+    `/search/issues?q=${query}&sort=updated&order=desc&per_page=30`,
+    token,
+  );
+  if (!searchResult.ok) return searchResult;
+
+  const items = Array.isArray(searchResult.data.items) ? searchResult.data.items : [];
+  const drafts: GithubRepoDraft[] = [];
+  for (const item of items) {
+    const url = text(item.html_url);
+    if (!url) continue;
+    const parsed = repoFromPrUrl(url);
+    if (!parsed) continue;
+    const prTitle = text(item.title) ?? `PR #${parsed.number ?? ""}`.trim();
+    const bodyLead = firstParagraph(item.body);
+    const summary = bodyLead ? `${bodyLead}\n\n` : "";
+    drafts.push({
+      key: `pr:${url}`,
+      kind: "shipment",
+      repoFullName: parsed.repoFullName,
+      subtitle: parsed.number
+        ? `${parsed.repoFullName} #${parsed.number} · merged`
+        : `${parsed.repoFullName} · merged`,
+      title: truncate(prTitle, 120),
+      summary: truncate(summary, 1200),
+      stack: [],
+      githubUrl: url,
+      description: bodyLead,
+      pushedAt: text(item.closed_at),
+    });
+  }
+
+  return { ok: true, login, drafts };
+}
+
+/**
+ * Publish one imported repo or merged PR as a build post. Wraps
+ * createBuildPostFromFeed with (1) idempotency — per-PR for shipments, per-repo
+ * for repo backfills, so re-clicking/re-importing never duplicates and same-repo
+ * PRs don't collide — and (2) an explicit provenance proof note.
  */
 export async function publishImportedBuildPost(
   input: BuildPostInput,
@@ -862,17 +974,25 @@ export async function publishImportedBuildPost(
   }
 
   const { extractGithubLinkage } = await import("@/lib/github-url");
-  const linkedRepo = extractGithubLinkage(input.githubUrl).linkedRepo;
+  const linkage = extractGithubLinkage(input.githubUrl);
 
-  if (linkedRepo) {
+  if (linkage.linkedRepo) {
     const { db, schema } = await import("@/db/client");
-    const { and, eq, isNotNull } = await import("drizzle-orm");
+    const { and, eq, isNotNull, isNull } = await import("drizzle-orm");
+    // A PR post is unique by its PR URL; a repo backfill post is unique by repo
+    // (and must not collide with PR posts of the same repo).
+    const dedupeFilter = linkage.linkedPrUrl
+      ? eq(schema.trailSession.linkedPrUrl, linkage.linkedPrUrl)
+      : and(
+          eq(schema.trailSession.linkedRepo, linkage.linkedRepo),
+          isNull(schema.trailSession.linkedPrUrl),
+        );
     const existing = await db.query.trailSession.findFirst({
       where: and(
         eq(schema.trailSession.userId, session.user.id),
         eq(schema.trailSession.postKind, "manual_build"),
-        eq(schema.trailSession.linkedRepo, linkedRepo),
         isNotNull(schema.trailSession.sharedAt),
+        dedupeFilter,
       ),
       columns: { slug: true },
     });
@@ -885,7 +1005,9 @@ export async function publishImportedBuildPost(
         const href = `/u/${viewer.handle}/${existing.slug}`;
         return {
           ok: false,
-          error: "You already posted this repo.",
+          error: linkage.linkedPrUrl
+            ? "You already posted this PR."
+            : "You already posted this repo.",
           actionHref: href,
           actionLabel: "Open post",
         };
