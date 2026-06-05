@@ -2566,7 +2566,7 @@ export default async function FeedPage({
           </aside>
 
           <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
-            <div className="border-b border-white/[0.08] bg-[#0b0b0a]/95 backdrop-blur-xl md:sticky md:top-14 md:z-30">
+            <div className="border-b border-white/[0.08] bg-[#0b0b0a]">
               <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
