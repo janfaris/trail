@@ -35,12 +35,12 @@ export default async function ImportPage() {
             Import
           </div>
           <h1 className="mt-2 font-display text-3xl leading-[0.98] tracking-[-0.05em] text-zinc-50 sm:text-4xl">
-            Turn your GitHub into build posts.
+            Turn what you shipped into posts.
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-            Trail pulls your own public repos and drafts a post for each. Add a line on what you
-            shipped and why it matters, then publish — each post links back to the repo as proof.
-            Nothing publishes automatically.
+            Pull your merged pull requests (what you actually shipped) — or backfill your profile
+            from your repos. Add a line on what changed and why it matters, then publish. Each post
+            links back to the PR or repo as proof. Nothing publishes automatically.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
             <Link
