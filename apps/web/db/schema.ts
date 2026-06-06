@@ -966,3 +966,57 @@ export const rateLimitBucket = pgTable("rate_limit_bucket", {
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   count: integer("count").notNull().default(0),
 });
+
+// Trail Pick engagement — reactions on curated radar signals (the external X
+// tweets surfaced in the feed). Picks have no owner user, so unlike
+// sessionReaction there is no owner notification. Uniqueness on
+// (signal, user, kind) means each user toggles each kind independently, so the
+// reaction row behaves like a set of independent emoji pills.
+export const radarReaction = pgTable(
+  "radar_reaction",
+  {
+    id: text("id").primaryKey(),
+    signalId: text("signal_id")
+      .notNull()
+      .references(() => radarSignal.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // 'fire' | 'eyes' | 'building'
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    signalIdx: index("radar_reaction_signal_idx").on(t.signalId, t.kind),
+    userKindIdx: uniqueIndex("radar_reaction_user_kind_idx").on(t.signalId, t.userId, t.kind),
+  }),
+);
+
+// Trail Pick conversation — comments on curated radar signals. Mirrors
+// sessionComment (soft delete, parentId reserved for future one-level replies)
+// but scoped to a radar_signal. The MVP renders a flat list; the API rejects
+// parentId until reply UI ships.
+export const radarComment = pgTable(
+  "radar_comment",
+  {
+    id: text("id").primaryKey(),
+    signalId: text("signal_id")
+      .notNull()
+      .references(() => radarSignal.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    parentId: text("parent_id").references((): AnyPgColumn => radarComment.id, {
+      onDelete: "cascade",
+    }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedById: text("deleted_by_id").references(() => user.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    signalCreatedIdx: index("radar_comment_signal_created_idx").on(t.signalId, t.createdAt),
+    parentIdx: index("radar_comment_parent_idx").on(t.parentId, t.createdAt),
+    userIdx: index("radar_comment_user_idx").on(t.userId, t.createdAt),
+  }),
+);
