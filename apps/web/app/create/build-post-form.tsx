@@ -441,7 +441,7 @@ export function BuildPostForm({
           {hasStarterContext && !quotedPick ? (
             <div className="rounded-3xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
-                Trail Pick starter
+                {quotedPick ? "Quoting a Trail Pick" : "Trail Pick starter"}
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-300">
                 The source link and discussion prompt are already here. Add your take in the big
