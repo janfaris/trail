@@ -1,4 +1,5 @@
 import { BuildPostForm } from "@/app/create/build-post-form";
+import { QuoteRepostIcon, QuotedPickEmbed } from "@/app/create/quoted-pick-embed";
 import SiteNav from "@/components/site-nav";
 import { parseXPostUrl } from "@/lib/x-url";
 import Link from "next/link";
@@ -59,15 +60,15 @@ export default async function CreatePage({
       })
     : null;
 
-  // Load the curated Trail Pick so signed-in builders see the post they're
-  // responding to as quoted context (dismissed picks resolve to no context).
-  const quotedPick =
-    session?.user && radarId
-      ? ((await db.query.radarSignal.findFirst({
-          where: eq(schema.radarSignal.id, radarId),
-          columns: { sourceHandle: true, sourceName: true, text: true, url: true, status: true },
-        })) ?? null)
-      : null;
+  // Load the curated Trail Pick so builders see the post they're responding to
+  // as quoted context. Public feed content, so we resolve it for signed-out
+  // visitors too — the sign-in wall shows what they're about to quote.
+  const quotedPick = radarId
+    ? ((await db.query.radarSignal.findFirst({
+        where: eq(schema.radarSignal.id, radarId),
+        columns: { sourceHandle: true, sourceName: true, text: true, url: true, status: true },
+      })) ?? null)
+    : null;
   const quotedPickContext =
     quotedPick && quotedPick.status !== "dismissed"
       ? {
@@ -121,13 +122,28 @@ export default async function CreatePage({
 
         <section>
           {!session?.user ? (
-            <GateCard
-              eyebrow="Create"
-              title="Sign in to post a build."
-              body="Trail uses GitHub identity so builders know who shipped the work."
-              actionHref={signInHref(createCallbackPath)}
-              actionLabel="Sign in with GitHub"
-            />
+            <div className="space-y-4">
+              {quotedPickContext ? (
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                  <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
+                    <QuoteRepostIcon className="h-3 w-3" />
+                    Quoting
+                  </div>
+                  <p className="mt-2 mb-3 text-sm leading-6 text-zinc-400">
+                    Sign in to quote this into your own Trail post — under your name, with your
+                    receipts. The external author stays external.
+                  </p>
+                  <QuotedPickEmbed pick={quotedPickContext} />
+                </div>
+              ) : null}
+              <GateCard
+                eyebrow="Create"
+                title={quotedPickContext ? "Sign in to quote this." : "Sign in to post a build."}
+                body="Trail uses GitHub identity so builders know who shipped the work."
+                actionHref={signInHref(createCallbackPath)}
+                actionLabel="Sign in with GitHub"
+              />
+            </div>
           ) : (
             <BuildPostForm
               defaultCommunity={defaultCommunity}
