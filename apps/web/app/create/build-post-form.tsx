@@ -326,6 +326,14 @@ export function BuildPostForm({
     (value) => value.trim().length > 0,
   ).length;
   const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim() || quotedPick);
+  const quotedAuthorIsHandle = quotedPick ? quotedPick.author.trim().startsWith("@") : false;
+  const quotedInitial = quotedPick
+    ? (
+        quotedPick.author.replace(/^@/, "").trim().charAt(0) ||
+        quotedPick.handle.charAt(0) ||
+        "?"
+      ).toUpperCase()
+    : "";
   const canUseAssist = [
     input.title,
     input.summary,
@@ -430,40 +438,27 @@ export function BuildPostForm({
             </div>
           ) : null}
 
-          {hasStarterContext ? (
+          {hasStarterContext && !quotedPick ? (
             <div className="rounded-3xl border border-[color:var(--trail-green-border)] bg-[var(--trail-green-soft)] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
                 {quotedPick ? "Quoting a Trail Pick" : "Trail Pick starter"}
               </div>
-              {quotedPick ? (
-                <a
-                  href={quotedPick.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 block rounded-2xl border border-white/10 bg-black/30 p-3 transition-[background-color] hover:bg-black/45"
-                >
-                  <div className="text-xs font-medium text-zinc-300">
-                    {quotedPick.author}{" "}
-                    <span className="text-zinc-500">@{quotedPick.handle} · on X</span>
-                  </div>
-                  <p className="mt-1.5 line-clamp-4 whitespace-pre-line text-sm leading-6 text-zinc-300">
-                    {quotedPick.text}
-                  </p>
-                </a>
-              ) : null}
               <p className="mt-3 text-sm leading-6 text-zinc-300">
-                {quotedPick
-                  ? "Add your take on this in the big box below — what you'd test, build, or disagree with — then publish it as your own Trail post."
-                  : "The source link and discussion prompt are already here. Add your take in the big box, then publish it as your own Trail post."}
+                The source link and discussion prompt are already here. Add your take in the big
+                box, then publish it as your own Trail post.
               </p>
             </div>
           ) : null}
 
           <section className="space-y-4 rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 sm:p-5">
             <Field
-              label="What did you ship?"
+              label={quotedPick ? "Your take" : "What did you ship?"}
               labelFor="build-summary"
-              hint="Lead with the outcome. Add why it matters or what feedback you want if you know it."
+              hint={
+                quotedPick
+                  ? "Add your take on the quoted post below — what you'd test, build, ship, or disagree with."
+                  : "Lead with the outcome. Add why it matters or what feedback you want if you know it."
+              }
               required
             >
               <textarea
@@ -472,12 +467,69 @@ export function BuildPostForm({
                 onChange={(event) => update("summary", event.target.value)}
                 rows={7}
                 maxLength={1200}
-                placeholder="I shipped a cleaner /create flow so builders can post proof-backed work without fighting a long form. It helps new builders share the actual outcome, then asks for feedback on the thread."
+                placeholder={
+                  quotedPick
+                    ? "Here's my take — what I'd test, build, or push back on…"
+                    : "I shipped a cleaner /create flow so builders can post proof-backed work without fighting a long form. It helps new builders share the actual outcome, then asks for feedback on the thread."
+                }
                 className={`${textareaClassName} text-base sm:text-lg`}
                 required
                 aria-required="true"
               />
             </Field>
+
+            {quotedPick ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3 w-3"
+                    aria-hidden="true"
+                  >
+                    <path d="M17 2l4 4-4 4" />
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                    <path d="M7 22l-4-4 4-4" />
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  Quoting
+                </div>
+                <a
+                  href={quotedPick.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-2xl border border-white/[0.12] bg-black/30 p-3.5 transition-colors hover:border-white/25 hover:bg-black/45"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-semibold text-zinc-300">
+                      {quotedInitial}
+                    </span>
+                    <div className="min-w-0 flex-1 truncate text-[13px]">
+                      <span className="font-semibold text-zinc-200">{quotedPick.author}</span>
+                      {quotedAuthorIsHandle ? null : (
+                        <span className="text-zinc-500"> @{quotedPick.handle}</span>
+                      )}
+                      <span className="text-zinc-600"> · on X</span>
+                    </div>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="h-3.5 w-3.5 shrink-0 text-zinc-500"
+                      aria-hidden="true"
+                    >
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </div>
+                  <p className="mt-2 line-clamp-5 whitespace-pre-line text-[13px] leading-6 text-zinc-300">
+                    {quotedPick.text}
+                  </p>
+                </a>
+              </div>
+            ) : null}
 
             <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs leading-5 text-zinc-500">
               <span className="font-mono uppercase tracking-[0.18em] text-zinc-600">
