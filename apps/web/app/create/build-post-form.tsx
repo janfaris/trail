@@ -320,6 +320,7 @@ export function BuildPostForm({
     (value) => value.trim().length > 0,
   ).length;
   const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim() || quotedPick);
+
   const canUseAssist = [
     input.title,
     input.summary,
