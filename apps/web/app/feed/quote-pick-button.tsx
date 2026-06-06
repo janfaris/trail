@@ -116,6 +116,7 @@ function QuoteModal({
         proofNote: "",
         question: "",
         community: "",
+        kind: "quote",
       });
       if (!result.ok) {
         setError(result.error);

@@ -74,4 +74,67 @@ describe("validateBuildPostQuality", () => {
 
     expect(result.ok).toBe(true);
   });
+
+  it("blocks a one-word quote take even with the quoted post attached", () => {
+    const result = validateBuildPostQuality({
+      summary: "suree",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+      kind: "quote",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toContain("summary_too_short");
+  });
+
+  it("accepts a genuine short quote take when the quoted post is the proof", () => {
+    const result = validateBuildPostQuality({
+      summary: "This is huge for indie hotels.",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+      kind: "quote",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toEqual({ outcome: true, proof: true, context: true });
+  });
+
+  it("accepts a three-word quote take", () => {
+    const result = validateBuildPostQuality({
+      summary: "Love this approach",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+      kind: "quote",
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("still requires some take on an empty quote", () => {
+    const result = validateBuildPostQuality({
+      summary: "",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+      kind: "quote",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toContain("summary_required");
+  });
+
+  it("still holds original build posts to the full outcome bar", () => {
+    const result = validateBuildPostQuality({
+      summary: "This is huge",
+      proofUrlCount: 1,
+      proofNote: "",
+      question: "",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toContain("summary_too_short");
+  });
 });

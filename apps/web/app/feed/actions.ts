@@ -28,6 +28,9 @@ export type BuildPostInput = {
   proofNote: string;
   question: string;
   community: string;
+  // Set by the quote composer (feed modal + /create quote flow) so the quality
+  // gate applies the lighter quote floor instead of the full-receipt bar.
+  kind?: "build" | "quote";
 };
 
 export type FeedPublishResult =
@@ -348,6 +351,7 @@ export async function createBuildPostFromFeed(input: BuildPostInput): Promise<Fe
     proofUrlCount,
     proofNote,
     question,
+    kind: input.kind === "quote" ? "quote" : "build",
   });
   if (!quality.ok) {
     return {
