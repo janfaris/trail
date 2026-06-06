@@ -1,6 +1,7 @@
 import { CommentThread, type ReceiptComment } from "@/components/comment-thread";
 import { CopyButton } from "@/components/copy-button";
 import { DeletePostButton } from "@/components/delete-post-button";
+import { EditPostButton } from "@/components/edit-post-button";
 import { ExplainButton } from "@/components/explain-button";
 import { FileDiff } from "@/components/file-diff";
 import { ForkButton } from "@/components/fork-button";
@@ -22,6 +23,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { UseLessonButton } from "@/components/use-lesson-button";
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
+import { buildPostEditDeadline, canEditManualPost } from "@/lib/build-post-edit";
 import { deriveTitle } from "@/lib/derive-title";
 import { isReceiptAiReview } from "@/lib/receipt-ai-review-types";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
@@ -154,20 +156,26 @@ function ReviewRail({
   hasLessons: boolean;
   isManualPost: boolean;
 }) {
-  const items = [
-    ["#outcome", "01", "60-sec read"],
-    ...(hasLessons ? ([["#lessons", "02", "Lessons"]] as const) : []),
-    ["#reuse", hasLessons ? "03" : "02", "Reuse"],
-    ["#conversation", hasLessons ? "04" : "03", "Thread"],
-    ...(!isManualPost ? ([["#proof", hasLessons ? "05" : "04", "Deep proof"]] as const) : []),
-  ] as const;
+  const items = isManualPost
+    ? ([
+        ["#outcome", "01", "The take"],
+        ["#reuse", "02", "Proof"],
+        ["#conversation", "03", "Discussion"],
+      ] as const)
+    : ([
+        ["#outcome", "01", "60-sec read"],
+        ...(hasLessons ? ([["#lessons", "02", "Lessons"]] as const) : []),
+        ["#reuse", hasLessons ? "03" : "02", "Reuse"],
+        ["#conversation", hasLessons ? "04" : "03", "Thread"],
+        ["#proof", hasLessons ? "05" : "04", "Deep proof"],
+      ] as const);
 
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-20 space-y-6 py-5 text-sm">
         <section className="border-b border-white/[0.08] pb-5">
           <h3 className="font-medium tracking-[-0.01em] text-zinc-200">
-            {isManualPost ? "Post index" : "Receipt index"}
+            {isManualPost ? "On this post" : "Receipt index"}
           </h3>
           <div className="mt-3 space-y-2">
             {items.map(([href, step, label]) => (
@@ -187,34 +195,40 @@ function ReviewRail({
 
         <section className="border-b border-white/[0.08] pb-5">
           <h3 className="font-medium tracking-[-0.01em] text-zinc-200">
-            {isManualPost ? "Post pulse" : "Proof pulse"}
+            {isManualPost ? "Published" : "Proof pulse"}
           </h3>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-xs text-zinc-500">Status</span>
-            <span className={`font-mono text-[11px] tabular-nums ${statusClass(status)}`}>
-              {isManualPost ? "Build post" : statusLabel(status)}
-            </span>
-          </div>
-          <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-600">
-            {!isManualPost ? (
-              <div className="flex justify-between gap-3">
-                <span>Events</span>
-                <span className="text-zinc-300">{formatCount(eventCount)}</span>
-              </div>
-            ) : null}
-            {duration ? (
-              <div className="flex justify-between gap-3">
-                <span>Runtime</span>
-                <span className="text-zinc-300">{duration}</span>
-              </div>
-            ) : null}
-            <div className="flex justify-between gap-3">
-              <span>{sharedAt ? "Published" : "Started"}</span>
-              <span className="text-zinc-300">
-                <RelativeTime date={sharedAt ?? startedAt} />
-              </span>
+          {isManualPost ? (
+            <div className="mt-3 font-mono text-[11px] text-zinc-500">
+              <RelativeTime date={sharedAt ?? startedAt} />
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-zinc-500">Status</span>
+                <span className={`font-mono text-[11px] tabular-nums ${statusClass(status)}`}>
+                  {statusLabel(status)}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-600">
+                <div className="flex justify-between gap-3">
+                  <span>Events</span>
+                  <span className="text-zinc-300">{formatCount(eventCount)}</span>
+                </div>
+                {duration ? (
+                  <div className="flex justify-between gap-3">
+                    <span>Runtime</span>
+                    <span className="text-zinc-300">{duration}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between gap-3">
+                  <span>{sharedAt ? "Published" : "Started"}</span>
+                  <span className="text-zinc-300">
+                    <RelativeTime date={sharedAt ?? startedAt} />
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </section>
       </div>
     </aside>
@@ -254,7 +268,10 @@ export async function generateMetadata({
       : `${sessionRow.tool} · ${sessionRow.eventCount} events · @${user}`);
   const base = process.env.NEXT_PUBLIC_APP_URL || "https://gettrail.vercel.app";
   const canonical = `${base}/u/${user}/${slug}`;
-  const ogImage = `${base}/api/receipt/${sessionRow.id}/image.png`;
+  // Cache-bust the immutable OG image when the post is edited so social
+  // previews refresh instead of serving the pre-edit render.
+  const ogVersion = (sessionRow.editedAt ?? sessionRow.sharedAt ?? sessionRow.createdAt).getTime();
+  const ogImage = `${base}/api/receipt/${sessionRow.id}/image.png?v=${ogVersion}`;
   return {
     title: `${title} — @${user} on Trail`,
     description: desc,
@@ -316,6 +333,14 @@ export default async function SessionView({
   const isPubliclyShared = sessionRow.visibility === "public" && sessionRow.sharedAt != null;
   if (!isPubliclyShared && !isOwner) return notFound();
   const manualPost = isManualBuildPost(sessionRow.postKind);
+  // Twitter-style: manual posts are editable by the owner for a short window
+  // after publishing, then locked. Server-enforced in editOwnBuildPost.
+  const canEdit =
+    isOwner && manualPost && isPubliclyShared && canEditManualPost(sessionRow.sharedAt);
+  const editableUntil =
+    canEdit && sessionRow.sharedAt
+      ? buildPostEditDeadline(sessionRow.sharedAt).toISOString()
+      : null;
 
   const events = await db
     .select()
@@ -475,13 +500,14 @@ export default async function SessionView({
     (manualPost
       ? "A public Trail build post with context, proof links, and a builder thread."
       : "A public Trail receipt with the outcome, reusable setup, proof, and conversation in one place.");
-  const readerTakeaway =
-    sessionRow.receiptOutcome ??
-    sessionRow.receiptTldr ??
-    sessionRow.summary ??
-    (manualPost
-      ? "Read what was built, open the proof links, then ask the builder a useful question."
-      : "Skim the outcome, inspect the proof, then decide whether to save, fork, share, or ask the builder a question.");
+  const readerTakeaway = manualPost
+    ? (sessionRow.summary ??
+      sessionRow.receiptTldr ??
+      "Read what was built, open the proof links, then ask the builder a useful question.")
+    : (sessionRow.receiptOutcome ??
+      sessionRow.receiptTldr ??
+      sessionRow.summary ??
+      "Skim the outcome, inspect the proof, then decide whether to save, fork, share, or ask the builder a question.");
   const aiReview =
     !sessionRow.redactedAt && isReceiptAiReview(sessionRow.receiptAiReview)
       ? sessionRow.receiptAiReview
@@ -623,17 +649,33 @@ export default async function SessionView({
                     <span>/</span>
                     <span className="truncate text-zinc-400">{slug}</span>
                   </div>
-                  <h1 className="mt-2 text-[24px] font-medium leading-tight tracking-[-0.035em] text-zinc-50">
+                  <h1
+                    className={
+                      manualPost
+                        ? "mt-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500"
+                        : "mt-2 text-[24px] font-medium leading-tight tracking-[-0.035em] text-zinc-50"
+                    }
+                  >
                     {postTypeLabel}
                   </h1>
                 </div>
                 {manualPost ? (
                   isOwner ? (
-                    <DeletePostButton
-                      sessionId={sessionRow.id}
-                      handle={userRow.handle ?? user}
-                      isManualPost
-                    />
+                    <div className="flex shrink-0 items-start gap-2">
+                      {canEdit && editableUntil ? (
+                        <EditPostButton
+                          sessionId={sessionRow.id}
+                          initialTitle={sessionRow.title ?? ""}
+                          initialSummary={sessionRow.summary ?? ""}
+                          editableUntil={editableUntil}
+                        />
+                      ) : null}
+                      <DeletePostButton
+                        sessionId={sessionRow.id}
+                        handle={userRow.handle ?? user}
+                        isManualPost
+                      />
+                    </div>
                   ) : null
                 ) : (
                   <div className="flex shrink-0 flex-col items-end gap-2">
@@ -713,6 +755,7 @@ export default async function SessionView({
                     <span>
                       Published <RelativeTime date={sessionRow.sharedAt ?? sessionRow.startedAt} />
                     </span>
+                    {sessionRow.editedAt ? <span className="text-zinc-500">· edited</span> : null}
                     {proofLinkCount > 0 ? (
                       <span>
                         {formatCount(proofLinkCount)} proof link
@@ -744,39 +787,33 @@ export default async function SessionView({
               <div id="check" className="mt-5 scroll-mt-28 border-t border-white/[0.08] pt-5">
                 <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,0.95fr)]">
                   <div>
-                    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-zinc-600">
-                      <span>60-second read</span>
-                      <span
-                        className={`font-mono text-[11px] tabular-nums ${statusClass(aiReview?.verdict ?? sessionRow.receiptStatus)}`}
-                      >
-                        {verdict}
-                      </span>
-                      {manualPost ? (
-                        <div className="mt-4 border-l border-white/10 pl-3">
-                          <div className="text-[12px] text-zinc-600">Builder post</div>
-                          <p className="mt-1 text-[13px] leading-5 text-zinc-500">
-                            No logs required. Judge this by the builder context, links, and
-                            discussion.
-                          </p>
-                        </div>
-                      ) : aiReview ? (
-                        <span className="font-mono text-[11px] text-zinc-500">
-                          {aiReview.confidence} confidence
+                    {manualPost ? null : (
+                      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-zinc-600">
+                        <span>60-second read</span>
+                        <span
+                          className={`font-mono text-[11px] tabular-nums ${statusClass(aiReview?.verdict ?? sessionRow.receiptStatus)}`}
+                        >
+                          {verdict}
                         </span>
-                      ) : null}
-                      {!manualPost ? (
+                        {aiReview ? (
+                          <span className="font-mono text-[11px] text-zinc-500">
+                            {aiReview.confidence} confidence
+                          </span>
+                        ) : null}
                         <span className="font-mono text-[11px] text-zinc-500">
                           {formatCount(sessionRow.eventCount)} events
                         </span>
-                      ) : null}
-                    </div>
-                    <h3 className="mt-2 text-[18px] font-medium leading-6 tracking-[-0.02em] text-zinc-50">
-                      What happened
+                      </div>
+                    )}
+                    <h3
+                      className={`${manualPost ? "" : "mt-2"} text-[18px] font-medium leading-6 tracking-[-0.02em] text-zinc-50`}
+                    >
+                      {manualPost ? "The take" : "What happened"}
                     </h3>
                     <p className="mt-2 max-w-2xl whitespace-pre-line text-[14px] leading-6 text-zinc-300">
                       {readerTakeaway}
                     </p>
-                    {aiReview ? (
+                    {manualPost ? null : aiReview ? (
                       <div className="mt-4 border-l border-[#a7f300]/30 pl-3">
                         <div className="text-[12px] text-zinc-600">Trail check</div>
                         <p className="mt-1 text-[13px] leading-5 text-zinc-400">
