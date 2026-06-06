@@ -9,6 +9,7 @@ type CreateSearchParams = {
   prompt?: string | string[];
   source?: string | string[];
   url?: string | string[];
+  radarId?: string | string[];
 };
 
 function getSingleSearchParam(value: string | string[] | undefined): string | undefined {
@@ -29,11 +30,13 @@ export default async function CreatePage({
   const prompt = getSingleSearchParam(sp.prompt);
   const source = getSingleSearchParam(sp.source);
   const url = getSingleSearchParam(sp.url);
+  const radarId = getSingleSearchParam(sp.radarId);
   const defaultCommunity = community === "puerto-rico" ? "puerto-rico" : "";
   const defaultQuestion = prompt ? prompt.slice(0, 260) : "";
   const parsedXUrl = source === "x" ? parseXPostUrl(url) : null;
   const defaultXUrl = parsedXUrl?.normalizedUrl ?? "";
   const callbackParams = new URLSearchParams();
+  if (radarId) callbackParams.set("radarId", radarId);
   if (defaultCommunity) callbackParams.set("community", defaultCommunity);
   if (defaultQuestion) callbackParams.set("prompt", defaultQuestion);
   if (defaultXUrl) {
@@ -55,6 +58,25 @@ export default async function CreatePage({
         columns: { id: true, handle: true },
       })
     : null;
+
+  // Load the curated Trail Pick so signed-in builders see the post they're
+  // responding to as quoted context (dismissed picks resolve to no context).
+  const quotedPick =
+    session?.user && radarId
+      ? ((await db.query.radarSignal.findFirst({
+          where: eq(schema.radarSignal.id, radarId),
+          columns: { sourceHandle: true, sourceName: true, text: true, url: true, status: true },
+        })) ?? null)
+      : null;
+  const quotedPickContext =
+    quotedPick && quotedPick.status !== "dismissed"
+      ? {
+          author: quotedPick.sourceName?.trim() || `@${quotedPick.sourceHandle}`,
+          handle: quotedPick.sourceHandle,
+          text: quotedPick.text,
+          url: quotedPick.url,
+        }
+      : null;
 
   // A signed-in builder without a handle can't post — route them through the
   // onboarding first-run, then back here, instead of a dead-end settings gate.
@@ -111,6 +133,7 @@ export default async function CreatePage({
               defaultCommunity={defaultCommunity}
               defaultQuestion={defaultQuestion}
               defaultXUrl={defaultXUrl}
+              quotedPick={quotedPickContext}
             />
           )}
         </section>

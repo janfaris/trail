@@ -7,6 +7,11 @@ import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
+import {
+  type RadarReactionKind,
+  emptyRadarReactionCounts,
+  isRadarReactionKind,
+} from "@/lib/radar-engagement";
 import { type RadarCategory, radarCategoryLabel } from "@/lib/radar-sources";
 import { formatDuration } from "@/lib/session-metrics";
 import { githubAvatar, shareUrl, tweetIntent } from "@/lib/share";
@@ -16,6 +21,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { FeedComposer, type FeedComposerDraft, type FeedComposerViewer } from "./feed-composer";
+import { FeedPickEngagement } from "./feed-pick-engagement";
 import { FeedPickMedia, type FeedPickMediaItem } from "./feed-pick-media";
 
 export const dynamic = "force-dynamic";
@@ -97,6 +103,7 @@ function trailPickCreateHref(signal: FeedRadarSignal): string {
   const params = new URLSearchParams();
   const prompt = signal.testPrompt.trim().slice(0, 260);
 
+  params.set("radarId", signal.id);
   if (signal.source === "x") {
     params.set("source", "x");
     params.set("url", signal.url);
@@ -347,6 +354,10 @@ interface FeedRadarSignal {
   score: unknown;
   publishedAt: Date | string;
   media: FeedPickMediaItem[] | null;
+  text: string | null;
+  reactionCounts: Record<RadarReactionKind, number>;
+  viewerReactions: RadarReactionKind[];
+  commentCount: number;
 }
 
 type TimelineItem =
@@ -1072,11 +1083,11 @@ async function loadFeedDiscovery(viewerId: string | null): Promise<FeedDiscovery
   return { stats, builders, stacks };
 }
 
-async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
+async function loadFeedRadarSignals(viewerId: string | null): Promise<FeedRadarSignal[]> {
   if (!process.env.DATABASE_URL) return [];
 
   try {
-    const { db } = await import("@/db/client");
+    const { db, schema } = await import("@/db/client");
     const rows = await db.execute<FeedRadarSignal>(sql`
       SELECT
         id,
@@ -1090,13 +1101,82 @@ async function loadFeedRadarSignals(): Promise<FeedRadarSignal[]> {
         source_handle AS "sourceHandle",
         score,
         published_at AS "publishedAt",
+        text AS "text",
         (entities -> 'media') AS "media"
       FROM radar_signal
       WHERE status <> 'dismissed'
       ORDER BY published_at DESC, score DESC
       LIMIT 12
     `);
-    return rowsOf<FeedRadarSignal>(rows);
+    const signals = rowsOf<FeedRadarSignal>(rows).map((signal) => ({
+      ...signal,
+      text: typeof signal.text === "string" ? signal.text : null,
+      reactionCounts: emptyRadarReactionCounts(),
+      viewerReactions: [] as RadarReactionKind[],
+      commentCount: 0,
+    }));
+    if (signals.length === 0) return signals;
+
+    const ids = signals.map((signal) => signal.id);
+    try {
+      const [reactionRows, commentRows, viewerRows] = await Promise.all([
+        db
+          .select({
+            signalId: schema.radarReaction.signalId,
+            kind: schema.radarReaction.kind,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(schema.radarReaction)
+          .where(inArray(schema.radarReaction.signalId, ids))
+          .groupBy(schema.radarReaction.signalId, schema.radarReaction.kind),
+        db
+          .select({
+            signalId: schema.radarComment.signalId,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(schema.radarComment)
+          .where(
+            and(inArray(schema.radarComment.signalId, ids), isNull(schema.radarComment.deletedAt)),
+          )
+          .groupBy(schema.radarComment.signalId),
+        viewerId
+          ? db
+              .select({
+                signalId: schema.radarReaction.signalId,
+                kind: schema.radarReaction.kind,
+              })
+              .from(schema.radarReaction)
+              .where(
+                and(
+                  inArray(schema.radarReaction.signalId, ids),
+                  eq(schema.radarReaction.userId, viewerId),
+                ),
+              )
+          : Promise.resolve([] as { signalId: string; kind: string }[]),
+      ]);
+
+      const byId = new Map(signals.map((signal) => [signal.id, signal]));
+      for (const row of reactionRows) {
+        const signal = byId.get(row.signalId);
+        if (signal && isRadarReactionKind(row.kind)) {
+          signal.reactionCounts[row.kind] = toCount(row.count);
+        }
+      }
+      for (const row of commentRows) {
+        const signal = byId.get(row.signalId);
+        if (signal) signal.commentCount = toCount(row.count);
+      }
+      for (const row of viewerRows) {
+        const signal = byId.get(row.signalId);
+        if (signal && isRadarReactionKind(row.kind) && !signal.viewerReactions.includes(row.kind)) {
+          signal.viewerReactions.push(row.kind);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load feed radar engagement", error);
+    }
+
+    return signals;
   } catch (error) {
     console.error("Failed to load feed radar signals", error);
     return [];
@@ -1649,7 +1729,13 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
   );
 }
 
-function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
+function TrailPickFeedCard({
+  signal,
+  viewerId,
+}: {
+  signal: FeedRadarSignal;
+  viewerId: string | null;
+}) {
   const sourceLabel = signal.source === "x" ? "Curated from X" : "Curated signal";
   const openLabel = signal.source === "x" ? "Open X post" : "Open source";
   const createHref = trailPickCreateHref(signal);
@@ -1730,6 +1816,14 @@ function TrailPickFeedCard({ signal }: { signal: FeedRadarSignal }) {
               Creates your own Trail post; the external author stays external.
             </span>
           </div>
+
+          <FeedPickEngagement
+            signalId={signal.id}
+            initialCounts={signal.reactionCounts}
+            initialMine={signal.viewerReactions}
+            initialCommentCount={signal.commentCount}
+            viewerId={viewerId}
+          />
         </div>
       </div>
     </article>
@@ -2025,7 +2119,7 @@ export default async function FeedPage({
     [rows, discovery, radarSignals, composerDrafts, personalization] = await Promise.all([
       loadFollowingFeed(viewerId),
       loadFeedDiscovery(viewerId),
-      loadFeedRadarSignals(),
+      loadFeedRadarSignals(viewerId),
       loadComposerDrafts(viewerId),
       loadFeedPersonalization(viewerId),
     ]);
@@ -2033,7 +2127,7 @@ export default async function FeedPage({
     [rows, discovery, radarSignals, composerDrafts, personalization] = await Promise.all([
       loadPublicFeed(viewerId),
       loadFeedDiscovery(viewerId),
-      loadFeedRadarSignals(),
+      loadFeedRadarSignals(viewerId),
       loadComposerDrafts(viewerId),
       loadFeedPersonalization(viewerId),
     ]);
@@ -2153,7 +2247,11 @@ export default async function FeedPage({
                   item.kind === "post" ? (
                     <FeedPostCard key={item.row.id} row={item.row} viewerId={viewerId} />
                   ) : (
-                    <TrailPickFeedCard key={`trail-pick-${item.signal.id}`} signal={item.signal} />
+                    <TrailPickFeedCard
+                      key={`trail-pick-${item.signal.id}`}
+                      signal={item.signal}
+                      viewerId={viewerId}
+                    />
                   ),
                 )}
               </div>

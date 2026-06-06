@@ -106,16 +106,25 @@ function proofUrlCount(input: BuildPostInput): number {
   ].filter(Boolean).length;
 }
 
+type QuotedPick = {
+  author: string;
+  handle: string;
+  text: string;
+  url: string;
+};
+
 type BuildPostFormProps = {
   defaultCommunity?: string;
   defaultQuestion?: string;
   defaultXUrl?: string;
+  quotedPick?: QuotedPick | null;
 };
 
 export function BuildPostForm({
   defaultCommunity = "",
   defaultQuestion = "",
   defaultXUrl = "",
+  quotedPick = null,
 }: BuildPostFormProps) {
   const [input, setInput] = useState<BuildPostInput>(() =>
     createEmptyInput(defaultCommunity, defaultQuestion, defaultXUrl),
@@ -316,7 +325,7 @@ export function BuildPostForm({
   const detailsCount = [input.tools, input.stack, input.question, input.community].filter(
     (value) => value.trim().length > 0,
   ).length;
-  const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim());
+  const hasStarterContext = Boolean(defaultQuestion.trim() || defaultXUrl.trim() || quotedPick);
   const canUseAssist = [
     input.title,
     input.summary,
@@ -426,9 +435,26 @@ export function BuildPostForm({
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--trail-green)]">
                 Trail Pick starter
               </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-300">
-                The source link and discussion prompt are already here. Add your take in the big
-                box, then publish it as your own Trail post.
+              {quotedPick ? (
+                <a
+                  href={quotedPick.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 block rounded-2xl border border-white/10 bg-black/30 p-3 transition-[background-color] hover:bg-black/45"
+                >
+                  <div className="text-xs font-medium text-zinc-300">
+                    {quotedPick.author}{" "}
+                    <span className="text-zinc-500">@{quotedPick.handle} · on X</span>
+                  </div>
+                  <p className="mt-1.5 line-clamp-4 whitespace-pre-line text-sm leading-6 text-zinc-300">
+                    {quotedPick.text}
+                  </p>
+                </a>
+              ) : null}
+              <p className="mt-3 text-sm leading-6 text-zinc-300">
+                {quotedPick
+                  ? "Add your take on this in the big box below — what you'd test, build, or disagree with — then publish it as your own Trail post."
+                  : "The source link and discussion prompt are already here. Add your take in the big box, then publish it as your own Trail post."}
               </p>
             </div>
           ) : null}
