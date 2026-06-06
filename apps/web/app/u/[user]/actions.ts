@@ -2,6 +2,9 @@
 
 import { db, schema } from "@/db/client";
 import { auth } from "@/lib/auth";
+import { canEditManualPost, detectManualPostKind } from "@/lib/build-post-edit";
+import { normalizeBuildPostText, validateBuildPostQuality } from "@/lib/build-post-quality";
+import { deriveBuildPostTitle } from "@/lib/build-post-title";
 import { canFollow, toggleDecision } from "@/lib/follow";
 import { promoteSessionToPublicReceipt } from "@/lib/public-receipt-publishing";
 import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
@@ -272,6 +275,124 @@ export async function deleteOwnPost(
     revalidatePath("/feed");
   }
   return { ok: true, handle: me?.handle ?? null };
+}
+
+const QUESTION_SUFFIX = "Question for the community:";
+// Exact shape appended at creation/edit time, so extraction can't be fooled by a
+// take that merely happens to contain the phrase mid-sentence.
+const QUESTION_DELIMITER = `\n\n${QUESTION_SUFFIX} `;
+
+/** Pull the appended community-question line back out of a stored take, if any. */
+function extractQuestion(receiptTldr: string | null): string | null {
+  if (!receiptTldr) return null;
+  const idx = receiptTldr.lastIndexOf(QUESTION_DELIMITER);
+  if (idx === -1) return null;
+  const question = receiptTldr.slice(idx + QUESTION_DELIMITER.length).trim();
+  return question || null;
+}
+
+/**
+ * Owner-only, time-limited edit of a manual build/quote post (Twitter-style:
+ * editable for a short window after publishing, then locked forever).
+ *
+ * The window is enforced SERVER-SIDE (the UI only hides the button as a
+ * convenience). We only edit the title + take here; proof links, images, and
+ * slug are intentionally left untouched so public URLs and proof stay stable.
+ */
+export async function editOwnBuildPost(
+  sessionId: string,
+  input: { title: string; summary: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let user: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    user = await requireUser();
+  } catch {
+    return { ok: false, error: "Sign in to edit this post." };
+  }
+
+  const row = await db.query.trailSession.findFirst({
+    where: and(eq(schema.trailSession.id, sessionId), eq(schema.trailSession.userId, user.id)),
+  });
+  if (!row) {
+    return { ok: false, error: "You can only edit your own posts." };
+  }
+  if (row.postKind !== "manual_build") {
+    return { ok: false, error: "Only build posts can be edited." };
+  }
+  if (row.visibility !== "public" || !row.sharedAt || row.redactedAt) {
+    return { ok: false, error: "Publish this post before editing it." };
+  }
+  if (!canEditManualPost(row.sharedAt)) {
+    return { ok: false, error: "The edit window for this post has closed." };
+  }
+
+  const title = normalizeBuildPostText(input.title, 120);
+  const summary = normalizeBuildPostText(input.summary, 1200);
+  if (!summary) {
+    return { ok: false, error: "Add your take before saving." };
+  }
+
+  const links = await db
+    .select({ kind: schema.buildPostLink.kind })
+    .from(schema.buildPostLink)
+    .where(eq(schema.buildPostLink.sessionId, sessionId));
+  const kind = detectManualPostKind(links.map((link) => link.kind));
+  const question = extractQuestion(row.receiptTldr);
+
+  const quality = validateBuildPostQuality({
+    summary,
+    proofUrlCount: links.length,
+    proofNote: row.manualProofNote,
+    question,
+    kind,
+  });
+  if (!quality.ok) {
+    return {
+      ok: false,
+      error: quality.issues[0]?.message ?? "Add a clearer take before saving.",
+    };
+  }
+
+  const finalTitle = title || deriveBuildPostTitle(summary);
+  // Mirror creation: the visible take prefers `summary`, but receipt_tldr /
+  // recipe_tldr are kept in sync (OG image + legacy reads) and the community
+  // question suffix is preserved so context-gated validation stays satisfied.
+  const receiptTldr = question ? `${summary}${QUESTION_DELIMITER}${question}` : summary;
+
+  // Re-assert the public-safety predicates at write time (not just at read) so a
+  // concurrent redact/unpublish can't be raced past the validation above, and bail
+  // if nothing matched.
+  const updated = await db
+    .update(schema.trailSession)
+    .set({
+      title: finalTitle,
+      summary,
+      receiptTldr,
+      recipeTldr: summary,
+      editedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.trailSession.id, sessionId),
+        eq(schema.trailSession.userId, user.id),
+        eq(schema.trailSession.postKind, "manual_build"),
+        eq(schema.trailSession.visibility, "public"),
+        isNotNull(schema.trailSession.sharedAt),
+        isNull(schema.trailSession.redactedAt),
+      ),
+    )
+    .returning({ id: schema.trailSession.id });
+  if (updated.length === 0) {
+    return { ok: false, error: "This post can no longer be edited." };
+  }
+
+  const me = await db.query.user.findFirst({ where: eq(schema.user.id, user.id) });
+  if (me?.handle) {
+    revalidatePath(`/u/${me.handle}`);
+    revalidatePath(`/u/${me.handle}/${row.slug}`);
+    revalidatePath("/feed");
+  }
+  return { ok: true };
 }
 
 export async function saveProfile(formData: FormData) {

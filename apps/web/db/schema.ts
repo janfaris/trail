@@ -199,6 +199,10 @@ export const trailSession = pgTable(
     receiptAiReviewModel: text("receipt_ai_review_model"),
     receiptAiReviewError: text("receipt_ai_review_error"),
     manualProofNote: text("manual_proof_note"),
+    // Twitter-style time-limited edit: manual build/quote posts can be edited
+    // for a short window after publishing, then lock forever. Set whenever the
+    // owner edits the post; also drives the public "edited" indicator. Nullable.
+    editedAt: timestamp("edited_at", { withTimezone: true }),
     // Best-effort Open Graph image scraped from the post's proof link (demo,
     // GitHub, or X) at publish time. Nullable; never blocks publishing.
     previewImageUrl: text("preview_image_url"),
