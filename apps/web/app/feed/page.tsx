@@ -23,6 +23,7 @@ import type { ReactNode } from "react";
 import { FeedComposer, type FeedComposerDraft, type FeedComposerViewer } from "./feed-composer";
 import { FeedPickEngagement } from "./feed-pick-engagement";
 import { FeedPickMedia, type FeedPickMediaItem } from "./feed-pick-media";
+import { QuotePickButton } from "./quote-pick-button";
 
 export const dynamic = "force-dynamic";
 
@@ -1806,27 +1807,17 @@ function TrailPickFeedCard({
               copiedLabel="Copied source"
               className="min-h-8 rounded-full border-transparent bg-transparent px-2.5 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-200"
             />
-            <Link
-              href={createHref}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-3.5 w-3.5"
-                aria-hidden="true"
-              >
-                <path d="M17 2l4 4-4 4" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <path d="M7 22l-4-4 4-4" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-              Quote
-            </Link>
+            <QuotePickButton
+              quoted={{
+                author: `@${signal.sourceHandle}`,
+                handle: signal.sourceHandle,
+                text: signal.text ?? signal.summary,
+                url: signal.url,
+              }}
+              xUrl={signal.source === "x" ? signal.url : ""}
+              createHref={createHref}
+              canQuote={viewerId != null && signal.source === "x"}
+            />
             <span className="basis-full text-[11px] leading-5 text-zinc-700 sm:basis-auto">
               Quotes this into a new Trail post under your name — the external author stays
               external.
