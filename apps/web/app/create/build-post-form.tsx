@@ -186,6 +186,7 @@ export function BuildPostForm({
         ...input,
         summary,
         title,
+        kind: quotedPick ? "quote" : "build",
       });
       if (!result.ok) {
         setError(result.error);

@@ -3,6 +3,9 @@ export type BuildPostQualityInput = {
   proofUrlCount: number;
   proofNote?: string | null | undefined;
   question?: string | null | undefined;
+  // "quote" posts react to someone else's shipped work (the quoted artifact is
+  // the proof), so they clear a lighter outcome floor than original receipts.
+  kind?: "build" | "quote";
 };
 
 export type BuildPostQualityIssueCode =
@@ -31,6 +34,10 @@ const MIN_SUMMARY_CHARS = 40;
 const MIN_SUMMARY_WORDS = 6;
 const MIN_PROOF_NOTE_CHARS = 24;
 const MIN_QUESTION_CHARS = 12;
+// Quotes only need a real take, not a full receipt: a few words or a short
+// phrase clears the bar (the quoted post supplies the proof + context).
+const QUOTE_MIN_SUMMARY_WORDS = 3;
+const QUOTE_MIN_SUMMARY_COMPACT = 16;
 
 const LOW_SIGNAL_SUMMARIES = new Set([
   "a",
@@ -45,6 +52,27 @@ const LOW_SIGNAL_SUMMARIES = new Set([
   "built stuff",
   "stuff",
   "todo",
+  // Bare one-word reactions that read as spam on a proof network.
+  "sure",
+  "suree",
+  "nice",
+  "cool",
+  "lol",
+  "lmao",
+  "same",
+  "this",
+  "facts",
+  "yep",
+  "yes",
+  "ok",
+  "okay",
+  "fire",
+  "based",
+  "true",
+  "wow",
+  "agreed",
+  "agree",
+  "w",
 ]);
 
 export function normalizeBuildPostText(
@@ -79,6 +107,14 @@ function hasEnoughOutcomeDetail(summary: string): boolean {
   );
 }
 
+function hasQuoteOutcomeFloor(summary: string): boolean {
+  const compactLength = summary.replace(/\s/g, "").length;
+  return (
+    meaningfulWordCount(summary) >= QUOTE_MIN_SUMMARY_WORDS ||
+    compactLength >= QUOTE_MIN_SUMMARY_COMPACT
+  );
+}
+
 function hasContextSignal(summary: string, question: string): boolean {
   if (question.length >= MIN_QUESTION_CHARS) return true;
   if (summary.length >= 140) return true;
@@ -96,7 +132,9 @@ export function validateBuildPostQuality(input: BuildPostQualityInput): BuildPos
   const question = normalizeBuildPostText(input.question, 260);
   const issues: BuildPostQualityIssue[] = [];
   const compactSummary = compactForLowSignal(summary);
-  const outcome = hasEnoughOutcomeDetail(summary) && !LOW_SIGNAL_SUMMARIES.has(compactSummary);
+  const isQuote = input.kind === "quote";
+  const outcomeDetailOk = isQuote ? hasQuoteOutcomeFloor(summary) : hasEnoughOutcomeDetail(summary);
+  const outcome = outcomeDetailOk && !LOW_SIGNAL_SUMMARIES.has(compactSummary);
   const proof = input.proofUrlCount > 0 || proofNote.length >= MIN_PROOF_NOTE_CHARS;
   // A real, verifiable proof link makes a clear one-line outcome a legitimate
   // post — proof compensates for a terse summary. Without proof we still require
@@ -106,17 +144,21 @@ export function validateBuildPostQuality(input: BuildPostQualityInput): BuildPos
   if (!summary) {
     issues.push({
       code: "summary_required",
-      message: "Write what shipped before publishing.",
+      message: isQuote ? "Add your take before posting." : "Write what shipped before publishing.",
     });
-  } else if (!hasEnoughOutcomeDetail(summary)) {
+  } else if (!outcomeDetailOk) {
     issues.push({
       code: "summary_too_short",
-      message: "Add a little more detail: what changed, who it helps, or what shipped.",
+      message: isQuote
+        ? "Add a few words — your take on this post."
+        : "Add a little more detail: what changed, who it helps, or what shipped.",
     });
   } else if (LOW_SIGNAL_SUMMARIES.has(compactSummary)) {
     issues.push({
       code: "summary_low_signal",
-      message: "That post is too generic. Name the actual build or change.",
+      message: isQuote
+        ? "Say a bit more than that — what stood out or what you'd build."
+        : "That post is too generic. Name the actual build or change.",
     });
   }
 
