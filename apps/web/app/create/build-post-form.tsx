@@ -8,6 +8,7 @@ import {
 import { QuoteRepostIcon, type QuotedPick, QuotedPickEmbed } from "@/app/create/quoted-pick-embed";
 import { type BuildPostInput, createBuildPostFromFeed } from "@/app/feed/actions";
 import { validateBuildPostQuality } from "@/lib/build-post-quality";
+import { deriveBuildPostTitle } from "@/lib/build-post-title";
 import { parseGithubBuildUrl } from "@/lib/github-url";
 import { parseXPostUrl } from "@/lib/x-url";
 import Link from "next/link";
@@ -60,19 +61,6 @@ function mergeCsv(existing: string, incoming: string[]): string {
       return true;
     })
     .join(", ");
-}
-
-function deriveTitle(summary: string): string {
-  const firstLine =
-    summary
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .find(Boolean) ?? "";
-  const firstSentence = firstLine.match(/^(.+?[.!?])(\s|$)/)?.[1] ?? firstLine;
-  return firstSentence
-    .replace(/^[-*#\d.)\s]+/, "")
-    .slice(0, 120)
-    .trim();
 }
 
 type ProofKind = "empty" | "github" | "x" | "demo";
@@ -174,7 +162,7 @@ export function BuildPostForm({
   const publish = () => {
     startTransition(async () => {
       const summary = input.summary.trim();
-      const title = input.title.trim() || deriveTitle(summary);
+      const title = input.title.trim() || deriveBuildPostTitle(summary);
       if (!summary || !title) {
         setError("Write what shipped before publishing.");
         setPublished(null);
@@ -292,7 +280,7 @@ export function BuildPostForm({
         `I just posted a build on Trail: ${published.title}`,
       )}&url=${encodeURIComponent(published.shareUrl)}`
     : null;
-  const generatedTitle = deriveTitle(input.summary);
+  const generatedTitle = deriveBuildPostTitle(input.summary);
   const publishTitle = input.title.trim() || generatedTitle;
   const proofUrl = proofUrlValue(input);
   const proofKind = proofKindFromUrl(proofUrl);
