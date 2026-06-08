@@ -86,11 +86,11 @@ export default async function InterviewView({ params }: Props) {
   const withGh = shipped.filter((s) => s.linkedCommitSha).length;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <header>
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-6">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)]">
               Trail · recruiter view
             </div>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
@@ -193,13 +193,13 @@ export default async function InterviewView({ params }: Props) {
                       {s.linkedRepo && s.linkedCommitSha && (
                         <>
                           <span>·</span>
-                          <span className="text-[#a7f300]">
+                          <span className="text-[var(--accent-text)]">
                             {s.linkedRepo}@{s.linkedCommitSha.slice(0, 7)}
                           </span>
                         </>
                       )}
                     </div>
-                    <h3 className="text-lg font-medium leading-tight text-zinc-50 transition-colors group-hover:text-[#a7f300]">
+                    <h3 className="text-lg font-medium leading-tight text-zinc-50 transition-colors group-hover:text-[var(--accent-text)]">
                       {s.title ?? s.slug}
                     </h3>
                     {s.summary && (
@@ -226,7 +226,7 @@ export default async function InterviewView({ params }: Props) {
 
         <footer className="mt-12 rounded-[1.5rem] bg-black/35 p-5 font-mono text-[11px] text-zinc-600 shadow-[var(--trail-shadow-border)]">
           This is a recruiter-mode view filtered to provably-shipped work. See the{" "}
-          <Link href={`/u/${user}`} className="text-zinc-300 hover:text-[#a7f300]">
+          <Link href={`/u/${user}`} className="text-zinc-300 hover:text-[var(--accent-text)]">
             full profile
           </Link>{" "}
           for everything @{user} has uploaded.

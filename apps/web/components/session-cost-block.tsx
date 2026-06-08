@@ -104,7 +104,7 @@ export async function SessionCostBlock({
             This session
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-semibold tabular-nums text-[#a7f300]">
+            <span className="text-lg font-semibold tabular-nums text-[var(--accent-text)]">
               {fmtUsd(cost)}
             </span>
             <span className="text-[11px] font-mono text-zinc-500">estimated</span>

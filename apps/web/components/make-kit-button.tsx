@@ -61,7 +61,7 @@ export function MakeKitButton({
         onClick={run}
         disabled={pending}
         className={cn(
-          "inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[#a7f300] px-3.5 text-[13px] font-medium text-black transition-[background-color,transform] hover:bg-[#b6ff14] active:scale-[0.97] disabled:opacity-60",
+          "inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--accent)] px-3.5 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97] disabled:opacity-60",
           className,
         )}
       >

@@ -57,11 +57,11 @@ export default function InstallPage() {
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 pt-16 pb-24">
         <section className="rounded-[2rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] sm:p-7">
           <div className="mb-6 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
             Install · 3 steps · ~60 seconds
           </div>
           <h1 className="mb-4 text-4xl leading-[1.05] font-medium tracking-[-0.055em] text-zinc-50 md:text-5xl">
-            Install <span className="text-[#a7f300]">Trail</span>.
+            Install <span className="text-[var(--accent-text)]">Trail</span>.
           </h1>
           <p className="max-w-2xl text-lg leading-relaxed text-zinc-400">
             Three commands, then every Claude Code, Codex, Hermes, and Copilot session you run gets
@@ -106,7 +106,10 @@ export default function InstallPage() {
 
         <section className="mt-8 text-sm text-zinc-500">
           Already on Trail?{" "}
-          <Link href="/search" className="text-[#a7f300] transition-[color] hover:text-lime-200">
+          <Link
+            href="/search"
+            className="text-[var(--accent-text)] transition-[color] hover:text-lime-200"
+          >
             Search across all public sessions →
           </Link>
         </section>

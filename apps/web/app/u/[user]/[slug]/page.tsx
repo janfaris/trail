@@ -88,7 +88,7 @@ function statusLabel(status: string | null | undefined) {
 }
 
 function statusClass(status: string | null | undefined) {
-  if (status === "shipped") return "text-[#a7f300]";
+  if (status === "shipped") return "text-[var(--accent-text)]";
   if (status === "partial") return "text-sky-200";
   if (status === "failed") return "text-red-200";
   if (status === "draft") return "text-amber-200";
@@ -494,15 +494,15 @@ export default async function SessionView({
   const proofHref = manualPost ? (hasManualProof ? "#reuse" : null) : "#proof";
 
   return (
-    <div className="min-h-screen bg-[#080808] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/feed" />
       <OpenDetailsOnHash />
 
       <main className="mx-auto w-full max-w-[640px] px-0 sm:px-4">
-        <article className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[#0b0b0a] sm:border-x">
+        <article className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[var(--surface-deep)] sm:border-x">
           {/* Thin X-style header. Not sticky on mobile to avoid stacking under
               the SiteNav (repo guidance: no double sticky bars on mobile). */}
-          <div className="z-30 flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[#0b0b0a]/90 px-4 py-3 backdrop-blur-xl md:sticky md:top-14">
+          <div className="z-30 flex items-center justify-between gap-3 border-b border-white/[0.08] bg-[var(--surface-deep)]/90 px-4 py-3 backdrop-blur-xl md:sticky md:top-14">
             <Link
               href="/feed"
               className="inline-flex min-w-0 items-center gap-2 text-[14px] font-medium text-zinc-300 transition-colors hover:text-zinc-100"
@@ -562,7 +562,7 @@ export default async function SessionView({
               ) : (
                 <Link
                   href={signInHref(`/u/${user}/${slug}`)}
-                  className="inline-flex min-h-9 shrink-0 items-center rounded-full border border-[#a7f300] bg-[#a7f300] px-3 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-black transition-colors hover:bg-[#b6ff14]"
+                  className="inline-flex min-h-9 shrink-0 items-center rounded-full border border-[var(--accent-border)] bg-[var(--accent)] px-3 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-bright)]"
                 >
                   Follow
                 </Link>
@@ -630,7 +630,7 @@ export default async function SessionView({
                     href={`https://github.com/${sessionRow.linkedRepo}/commit/${sessionRow.linkedCommitSha}`}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="font-mono text-[11px] text-[#a7f300] transition-colors hover:text-zinc-100"
+                    className="font-mono text-[11px] text-[var(--accent-text)] transition-colors hover:text-zinc-100"
                   >
                     {sessionRow.linkedCommitSha.slice(0, 7)}
                   </a>
@@ -639,7 +639,7 @@ export default async function SessionView({
               {proofHref ? (
                 <a
                   href={proofHref}
-                  className="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-500 transition-colors hover:text-[#a7f300]"
+                  className="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-zinc-500 transition-colors hover:text-[var(--accent-text)]"
                 >
                   View proof →
                 </a>
@@ -694,7 +694,7 @@ export default async function SessionView({
               link to the existing kit, or an owner affordance to make one from
               the linked repo. Hidden when there's neither a kit nor a repo. */}
           {sessionKit && (sessionKit.visibility === "public" || isOwner) ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] bg-[#a7f300]/[0.04] px-4 py-3 sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] bg-[var(--accent)]/[0.04] px-4 py-3 sm:px-5">
               <div className="min-w-0">
                 <div className="text-[13px] font-medium text-zinc-100">Steal this build</div>
                 <div className="text-[12px] text-zinc-500">
@@ -707,7 +707,7 @@ export default async function SessionView({
               </div>
               <Link
                 href={`/kit/${sessionKit.id}`}
-                className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#a7f300] px-3.5 text-[13px] font-medium text-black transition-[background-color,transform] hover:bg-[#b6ff14] active:scale-[0.97]"
+                className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[var(--accent)] px-3.5 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
               >
                 Open Build Kit →
               </Link>
@@ -773,7 +773,7 @@ export default async function SessionView({
                     <h3 className="mt-2 text-[17px] font-medium leading-6 tracking-[-0.015em] text-zinc-50">
                       {lesson.title}
                     </h3>
-                    <div className="mt-3 border-l border-[#a7f300]/30 pl-3">
+                    <div className="mt-3 border-l border-[var(--accent-border)]/30 pl-3">
                       <div className="text-[12px] text-zinc-600">What to steal</div>
                       <p className="mt-1 text-[14px] leading-6 text-zinc-300">
                         {lesson.whatToSteal}

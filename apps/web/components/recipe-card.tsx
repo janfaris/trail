@@ -37,7 +37,9 @@ export function RecipeCard({
   return (
     <section className="px-4 py-5 sm:px-5">
       {session.recipeOutcome ? (
-        <span className="font-mono text-[11px] text-[#a7f300]">{session.recipeOutcome}</span>
+        <span className="font-mono text-[11px] text-[var(--accent-text)]">
+          {session.recipeOutcome}
+        </span>
       ) : null}
 
       <h2 className="mt-1 text-[17px] font-medium leading-6 tracking-[-0.015em] text-zinc-50">

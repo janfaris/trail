@@ -214,7 +214,8 @@ function truncateCommit(sha: string | null): string | null {
 }
 
 function statusTone(tone: Lifecycle["tone"]): string {
-  if (tone === "lime") return "border-[#a7f300]/35 bg-[#a7f300]/10 text-[#a7f300]";
+  if (tone === "lime")
+    return "border-[var(--accent-border)]/35 bg-[var(--accent)]/10 text-[var(--accent-text)]";
   if (tone === "sky") return "border-sky-400/35 bg-sky-400/10 text-sky-200";
   if (tone === "amber") return "border-amber-400/35 bg-amber-400/10 text-amber-200";
   if (tone === "rose") return "border-rose-400/35 bg-rose-400/10 text-rose-200";
@@ -223,7 +224,7 @@ function statusTone(tone: Lifecycle["tone"]): string {
 
 function visTone(visibility: string, sharedAt: string | null): string {
   if (visibility === "public" && sharedAt !== null) {
-    return "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]";
+    return "border-[var(--accent-border)]/30 bg-[var(--accent)]/10 text-[var(--accent-text)]";
   }
   if (visibility === "public") return "border-sky-400/30 bg-sky-400/10 text-sky-200";
   if (visibility === "private") return "border-white/10 bg-zinc-900 text-zinc-400";
@@ -263,7 +264,7 @@ function ChecklistChip({
     <span
       className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${
         good
-          ? "border-[#a7f300]/25 bg-[#a7f300]/10 text-[#a7f300]"
+          ? "border-[var(--accent-border)]/25 bg-[var(--accent)]/10 text-[var(--accent-text)]"
           : "border-white/10 bg-zinc-950 text-zinc-500"
       }`}
     >
@@ -438,14 +439,14 @@ export function DashboardClient({
       </div>
 
       {flash && (
-        <div className="rounded-2xl bg-[#a7f300]/5 px-4 py-3 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
+        <div className="rounded-2xl bg-[var(--accent)]/5 px-4 py-3 font-mono text-xs text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
           {flash}
         </div>
       )}
 
       {hasSelection && (
         <div className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-zinc-950/95 px-4 py-3 shadow-[0_0_0_1px_rgba(167,243,0,0.25),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur">
-          <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#a7f300]">
+          <div className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--accent-text)]">
             {ids.length} selected
             {mutableIds.length !== ids.length ? ` · ${ids.length - mutableIds.length} locked` : ""}
           </div>
@@ -456,7 +457,7 @@ export function DashboardClient({
               onClick={() =>
                 run("Published", mutableIds, () => bulkSetVisibility(mutableIds, "public"))
               }
-              className="min-h-10 rounded-full bg-[#a7f300] px-3 font-mono font-semibold uppercase tracking-[0.12em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
+              className="min-h-10 rounded-full bg-[var(--accent)] px-3 font-mono font-semibold uppercase tracking-[0.12em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
             >
               Publish
             </button>
@@ -541,7 +542,7 @@ export function DashboardClient({
               type="checkbox"
               checked={allSelected}
               onChange={toggleAll}
-              className="accent-[#a7f300]"
+              className="accent-[var(--accent)]"
               aria-label="Select all visible posts"
             />
             <div>Title</div>
@@ -564,13 +565,13 @@ export function DashboardClient({
                   type="checkbox"
                   checked={isOn}
                   onChange={() => toggle(row.id)}
-                  className="mt-0.5 accent-[#a7f300]"
+                  className="mt-0.5 accent-[var(--accent)]"
                   aria-label={`Select ${row.title ?? row.slug}`}
                 />
                 <div className="min-w-0">
                   <Link
                     href={`/u/${handle}/${row.slug}`}
-                    className="block truncate text-zinc-100 hover:text-[#a7f300]"
+                    className="block truncate text-zinc-100 hover:text-[var(--accent-text)]"
                     title={row.title ?? row.slug}
                   >
                     {row.title ?? row.slug}
@@ -658,7 +659,7 @@ function StudioCard({
   return (
     <article
       className={`group relative overflow-hidden rounded-[2rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--trail-shadow-border-hover)] ${
-        selected ? "ring-1 ring-[#a7f300]/35" : ""
+        selected ? "ring-1 ring-[var(--accent)]/35" : ""
       }`}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-500/40 to-transparent" />
@@ -668,7 +669,7 @@ function StudioCard({
             type="checkbox"
             checked={selected}
             onChange={onToggle}
-            className="h-4 w-4 accent-[#a7f300]"
+            className="h-4 w-4 accent-[var(--accent)]"
             aria-label={`Select ${title}`}
           />
           <span
@@ -694,7 +695,7 @@ function StudioCard({
       <div className="mt-5">
         <Link
           href={receiptHref}
-          className="block text-2xl font-semibold tracking-[-0.05em] text-zinc-50 hover:text-[#a7f300]"
+          className="block text-2xl font-semibold tracking-[-0.05em] text-zinc-50 hover:text-[var(--accent-text)]"
         >
           {title}
         </Link>
@@ -744,7 +745,7 @@ function StudioCard({
             type="button"
             disabled={pending || locked}
             onClick={onPublish}
-            className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
+            className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
           >
             Publish
           </button>

@@ -58,7 +58,7 @@ function NavLinkItem({
     <Link href={link.href} className={linkClass(link.href, currentPath, className)}>
       {link.label}
       {badge ? (
-        <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-[#a7f300] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
+        <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
           {badge}
         </span>
       ) : null}
@@ -115,7 +115,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/86 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-10">
         <Link href="/" className="font-mono text-[14px] font-medium tracking-tight">
-          <span className="text-[#a7f300]">/</span>trail
+          <span className="text-[var(--accent-text)]">/</span>trail
         </Link>
         <nav className="flex items-center gap-5 text-[13px]">
           {handle ? null : (
@@ -147,7 +147,7 @@ export async function SiteNav({ currentPath }: { currentPath?: string }) {
           ) : (
             <a
               href="/api/auth/sign-in/github?callbackURL=%2Fwelcome"
-              className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-[12.5px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.96]"
+              className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 text-[12.5px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.96]"
             >
               Sign in
             </a>

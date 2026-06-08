@@ -25,7 +25,7 @@ export function EntityIndex({ kind, stats }: { kind: EntityKind; stats: EntitySt
   return (
     <section className="mx-auto w-full max-w-4xl px-6 py-10">
       <div className="rounded-[2rem] bg-zinc-950/82 p-5 shadow-[var(--trail-shadow-border)] sm:p-7">
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-[#a7f300]">
+        <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--accent-text)]">
           {plural}
         </p>
         <h1 className="mb-1 text-3xl font-semibold tracking-[-0.05em] text-zinc-50">
@@ -57,7 +57,7 @@ export function EntityIndex({ kind, stats }: { kind: EntityKind; stats: EntitySt
                       {kind === "tool" ? (
                         <ToolIcon name={e.tag} className="h-4 w-4 shrink-0" />
                       ) : null}
-                      <h2 className="text-base font-medium text-zinc-100 transition-[color] group-hover:text-[#a7f300]">
+                      <h2 className="text-base font-medium text-zinc-100 transition-[color] group-hover:text-[var(--accent-text)]">
                         {displayLabel(e.tag, e.label)}
                       </h2>
                     </div>
@@ -70,7 +70,7 @@ export function EntityIndex({ kind, stats }: { kind: EntityKind; stats: EntitySt
                         {e.builders} {e.builders === 1 ? "builder" : "builders"}
                       </span>
                       <span>·</span>
-                      <span className="text-[#a7f300]">{pct(rate)} shipped</span>
+                      <span className="text-[var(--accent-text)]">{pct(rate)} shipped</span>
                     </div>
                   </Link>
                 </li>

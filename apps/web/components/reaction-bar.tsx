@@ -171,7 +171,7 @@ export function ReactionBar({
                 className={cn(
                   "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[10px] uppercase tracking-[0.1em] transition-[border-color,background-color,color,opacity,transform] active:scale-[0.96]",
                   isMine
-                    ? "border-[#a7f300] bg-[#a7f300]/10 text-[#a7f300]"
+                    ? "border-[var(--accent-border)] bg-[var(--accent)]/10 text-[var(--accent-text)]"
                     : "border-white/10 bg-black text-zinc-500 hover:border-white/20 hover:text-zinc-200",
                   pendingKind !== null && "opacity-60",
                 )}
@@ -207,7 +207,7 @@ export function ReactionBar({
               aria-pressed={isMine}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-sm font-medium transition-colors ${
                 isMine
-                  ? "bg-[#a7f300]/10 border-[#a7f300] text-[#a7f300]"
+                  ? "bg-[var(--accent)]/10 border-[var(--accent-border)] text-[var(--accent-text)]"
                   : "border-white/10 text-zinc-300 hover:border-white/25 hover:text-zinc-100"
               }`}
             >

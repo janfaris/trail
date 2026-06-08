@@ -101,7 +101,7 @@ export default function PricingPage() {
         <section className="mx-auto max-w-6xl px-6 lg:px-10 pt-20 pb-12 grid grid-cols-12 gap-x-6 gap-y-6">
           <div className="col-span-12 md:col-span-1 md:pt-2">
             <div className="flex md:flex-col items-center md:items-start gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
-              <span className="text-[#a7f300]">$$</span>
+              <span className="text-[var(--accent-text)]">$$</span>
               <span className="md:rotate-180 md:[writing-mode:vertical-rl] tracking-[0.32em]">
                 Pricing
               </span>
@@ -109,7 +109,7 @@ export default function PricingPage() {
           </div>
           <div className="col-span-12 md:col-span-11">
             <div className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500 mb-5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
               Stripe-only · cancel anytime
             </div>
             <h1 className="font-display text-[44px] sm:text-[56px] leading-[1.0] tracking-[-0.025em] text-zinc-50 mb-6 max-w-[18ch]">
@@ -128,7 +128,7 @@ export default function PricingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {TIERS.map((t) => {
                 const borderCls = t.featured
-                  ? "border border-[#a7f300]/40 shadow-[0_20px_60px_-20px_rgba(167,243,0,0.18)]"
+                  ? "border border-[var(--accent-border)]/40 shadow-[0_20px_60px_-20px_rgba(167,243,0,0.18)]"
                   : "shadow-[var(--trail-shadow-border)]";
                 return (
                   <div
@@ -138,7 +138,7 @@ export default function PricingPage() {
                     <div className="flex items-center justify-between mb-1">
                       <h2 className="font-display text-[24px] text-zinc-50">{t.name}</h2>
                       {t.featured && (
-                        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
                           recommended
                         </span>
                       )}
@@ -156,7 +156,9 @@ export default function PricingPage() {
                     <ul className="space-y-2 text-[13.5px] text-zinc-300 mb-6 flex-1">
                       {t.bullets.map((b) => (
                         <li key={b} className="flex items-start gap-2">
-                          <span className="text-[#a7f300] font-mono text-[12px] mt-1">✓</span>
+                          <span className="text-[var(--accent-text)] font-mono text-[12px] mt-1">
+                            ✓
+                          </span>
                           <span>{b}</span>
                         </li>
                       ))}
@@ -216,7 +218,9 @@ export default function PricingPage() {
                 {FAQ.map((item, i) => (
                   <li key={item.q} className="py-6 grid grid-cols-12 gap-4">
                     <div className="col-span-2 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-600 pt-1">
-                      <span className="text-[#a7f300]">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="text-[var(--accent-text)]">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
                     </div>
                     <div className="col-span-10">
                       <h3 className="text-[16px] text-zinc-100 font-medium mb-2">{item.q}</h3>
@@ -238,7 +242,7 @@ export default function PricingPage() {
               Questions?{" "}
               <a
                 href="mailto:jan@trail.dev"
-                className="text-zinc-200 hover:text-[#a7f300] transition-colors"
+                className="text-zinc-200 hover:text-[var(--accent-text)] transition-colors"
               >
                 jan@trail.dev
               </a>
@@ -251,7 +255,7 @@ export default function PricingPage() {
       <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 lg:px-10 py-8 flex flex-wrap items-center justify-between gap-y-4 text-[12px] font-mono text-zinc-500">
           <div className="flex items-center gap-2">
-            <span className="text-[#a7f300]">/</span>
+            <span className="text-[var(--accent-text)]">/</span>
             <span className="text-zinc-300">trail</span>
             <span className="text-zinc-700">·</span>
             <span>v0.1 preview</span>

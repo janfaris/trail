@@ -120,7 +120,9 @@ export function CreateKitClient() {
                     onClick={() => setSelected(repo.fullName)}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors",
-                      selected === repo.fullName ? "bg-[#a7f300]/10" : "hover:bg-white/[0.03]",
+                      selected === repo.fullName
+                        ? "bg-[var(--accent)]/10"
+                        : "hover:bg-white/[0.03]",
                     )}
                   >
                     <span className="min-w-0">
@@ -169,7 +171,7 @@ export function CreateKitClient() {
           "inline-flex min-h-10 items-center rounded-full px-4 text-[13px] font-medium transition-[background-color,transform] active:scale-[0.97]",
           !selected || submitting
             ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-            : "bg-[#a7f300] text-black hover:bg-[#b6ff14]",
+            : "bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-bright)]",
         )}
       >
         {submitting ? "Building kit…" : selected ? `Build kit from ${selected}` : "Pick a repo"}

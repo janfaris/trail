@@ -92,7 +92,7 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
           href={signalUrl}
           target="_blank"
           rel="noreferrer noopener"
-          className="block bg-black/60 px-3 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-[#a7f300]"
+          className="block bg-black/60 px-3 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-[var(--accent-text)]"
         >
           Open on X
         </a>
@@ -115,10 +115,10 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
     const overlay = (
       <>
         <span className="pointer-events-none absolute inset-0 bg-black/25" />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.25)] backdrop-blur-sm transition-transform group-hover/media:scale-105">
-          <PlayGlyph className="ml-0.5 h-6 w-6 fill-white" />
+        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#000000]/60 shadow-[0_0_0_1px_rgba(255,255,255,0.25)] backdrop-blur-sm transition-transform group-hover/media:scale-105">
+          <PlayGlyph className="ml-0.5 h-6 w-6 fill-[#fff]" />
         </span>
-        <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
+        <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--accent-text)]">
           {overlayLabel}
         </span>
       </>
@@ -183,7 +183,7 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
               />
               <div className="relative mx-auto flex h-full max-w-[min(94vw,1100px)] flex-col">
                 <div className="mb-3 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-zinc-950/92 px-3 py-2">
-                  <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+                  <div className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)]">
                     @{sourceHandle}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -191,14 +191,14 @@ export function FeedPickMedia({ media, sourceHandle, signalUrl }: FeedPickMediaP
                       href={signalUrl}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="inline-flex min-h-8 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
+                      className="inline-flex min-h-8 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color] hover:text-[var(--accent-text)] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
                     >
                       Open on X
                     </a>
                     <button
                       type="button"
                       onClick={() => setLightboxOpen(false)}
-                      className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-black transition-colors hover:bg-[#a7f300]"
+                      className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--on-accent)] transition-colors hover:bg-[var(--accent)]"
                     >
                       Close
                     </button>

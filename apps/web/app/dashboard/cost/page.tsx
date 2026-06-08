@@ -145,12 +145,12 @@ export default async function CostDashboardPage({
   const nextSyncAt = nextQuarterPast(now);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <SiteNav currentPath="/dashboard/cost" />
 
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
         <div className="mb-8 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
-          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
             Trail · cost ledger
           </div>
           <h1 className="mb-2 mt-3 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
@@ -186,7 +186,7 @@ export default async function CostDashboardPage({
                       key={d}
                       href="/pricing"
                       title="Upgrade to Pro to unlock 90-day cost history"
-                      className="inline-flex min-h-10 items-center rounded-full bg-white/[0.04] px-4 font-mono text-xs text-zinc-300 transition-[color,transform] hover:text-[#a7f300] active:scale-[0.97]"
+                      className="inline-flex min-h-10 items-center rounded-full bg-white/[0.04] px-4 font-mono text-xs text-zinc-300 transition-[color,transform] hover:text-[var(--accent-text)] active:scale-[0.97]"
                     >
                       {d}d · pro
                     </Link>
@@ -198,7 +198,7 @@ export default async function CostDashboardPage({
                     href={`/dashboard/cost?window=${d}`}
                     className={`inline-flex min-h-10 items-center rounded-full px-4 font-mono text-xs transition-[box-shadow,color,background-color,transform] active:scale-[0.97] ${
                       active
-                        ? "bg-[#a7f300]/10 text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
+                        ? "bg-[var(--accent)]/10 text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
                         : "bg-white/[0.04] text-zinc-300 hover:text-zinc-100"
                     }`}
                   >
@@ -258,7 +258,10 @@ export default async function CostDashboardPage({
                   </div>
                   <div className="mx-auto max-w-md text-xs text-zinc-600">
                     Connect a vendor in{" "}
-                    <Link href="/settings/connections" className="text-[#a7f300] hover:underline">
+                    <Link
+                      href="/settings/connections"
+                      className="text-[var(--accent-text)] hover:underline"
+                    >
                       /settings/connections
                     </Link>{" "}
                     and ship a PR linked to a session to see real $/PR data here.
@@ -282,7 +285,7 @@ export default async function CostDashboardPage({
                               href={p.prUrl}
                               target="_blank"
                               rel="noreferrer noopener"
-                              className="inline-block max-w-[24ch] truncate text-zinc-300 transition-colors hover:text-[#a7f300]"
+                              className="inline-block max-w-[24ch] truncate text-zinc-300 transition-colors hover:text-[var(--accent-text)]"
                             >
                               {prShortLabel(p.prUrl)}
                             </a>
@@ -320,7 +323,7 @@ export default async function CostDashboardPage({
                         {/* Simple inline bar — no chart lib, matches existing pages. */}
                         <div className="h-1.5 rounded-full bg-zinc-900 overflow-hidden">
                           <div
-                            className="h-full bg-[#a7f300]/70"
+                            className="h-full bg-[var(--accent)]/70"
                             style={{
                               width: `${Math.max(2, Math.min(100, v.share * 100)).toFixed(2)}%`,
                             }}
@@ -388,9 +391,9 @@ function ConnectEmptyState({
           or Codex.
         </p>
 
-        <div className="mb-6 max-w-3xl rounded-[1.5rem] bg-[#a7f300]/5 p-5 shadow-[0_0_0_1px_rgba(167,243,0,0.24)]">
+        <div className="mb-6 max-w-3xl rounded-[1.5rem] bg-[var(--accent)]/5 p-5 shadow-[0_0_0_1px_rgba(167,243,0,0.24)]">
           <div className="mb-2 flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
               Recommended · No keys
             </span>
           </div>
@@ -402,7 +405,7 @@ function ConnectEmptyState({
           <div className="text-[12.5px] leading-relaxed text-zinc-400">
             Tails Claude Code + Codex log files locally. Tokens captured per turn, priced at upload
             time, attributed to the merge commit when you ship.{" "}
-            <Link href="/install" className="text-[#a7f300] hover:underline">
+            <Link href="/install" className="text-[var(--accent-text)] hover:underline">
               Full setup →
             </Link>
           </div>
@@ -478,7 +481,7 @@ function SyncPendingState({
           </div>
           <div className="rounded-2xl bg-black/35 px-3 py-2.5 shadow-[var(--trail-shadow-border)]">
             <div className="mb-1 text-zinc-500">Next sync</div>
-            <div className="text-[#a7f300]">
+            <div className="text-[var(--accent-text)]">
               {nextStamp} <span className="text-zinc-500">· {rel}</span>
             </div>
           </div>
@@ -512,7 +515,7 @@ function BigStat({
       <div
         className={`${
           hero ? "text-3xl font-semibold tabular-nums" : "text-xl font-semibold tabular-nums"
-        } ${accent ? "text-[#a7f300]" : "text-zinc-100"}`}
+        } ${accent ? "text-[var(--accent-text)]" : "text-zinc-100"}`}
       >
         {value}
       </div>

@@ -243,7 +243,7 @@ export function FeedPickEngagement({
               className={cn(
                 "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-[12px] transition-[border-color,background-color,color,transform] active:scale-[0.96]",
                 isMine
-                  ? "border-[#a7f300] bg-[#a7f300]/10 text-[#a7f300]"
+                  ? "border-[var(--accent-border)] bg-[var(--accent)]/10 text-[var(--accent-text)]"
                   : "border-white/10 bg-black text-zinc-500 hover:border-white/20 hover:text-zinc-200",
                 pendingKind !== null && "opacity-60",
               )}
@@ -293,7 +293,7 @@ export function FeedPickEngagement({
                 <button
                   type="submit"
                   disabled={posting}
-                  className="rounded-full bg-zinc-100 px-3 py-1.5 text-[12px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-zinc-100 px-3 py-1.5 text-[12px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {posting ? "Posting..." : "Post"}
                 </button>
@@ -305,7 +305,7 @@ export function FeedPickEngagement({
               <button
                 type="button"
                 onClick={signInRedirect}
-                className="mt-2 inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[12px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+                className="mt-2 inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[12px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
               >
                 Sign in to reply
               </button>

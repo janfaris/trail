@@ -33,7 +33,7 @@ export function UpgradeButton({ label = "Start 14-day trial" }: { label?: string
       <button
         onClick={go}
         disabled={loading}
-        className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium w-full bg-[#a7f300] text-zinc-950 hover:bg-[#b9ff1f] transition-colors disabled:opacity-60"
+        className="inline-flex items-center justify-center h-10 px-4 rounded-md text-sm font-medium w-full bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-bright)] transition-colors disabled:opacity-60"
       >
         {loading ? "Starting checkout…" : label}
       </button>

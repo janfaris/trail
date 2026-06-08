@@ -92,7 +92,7 @@ export function ForkButtons({ shareUrl, forkUrl, setupPrompt }: ForkButtonsProps
             key={t.key}
             type="button"
             onClick={() => handleClick(t)}
-            className="bg-[#0b0b0a] px-3 py-3 text-left transition-[background-color,transform] hover:bg-white/[0.035] active:scale-[0.99]"
+            className="bg-[var(--surface-deep)] px-3 py-3 text-left transition-[background-color,transform] hover:bg-white/[0.035] active:scale-[0.99]"
             title={t.hint}
           >
             <div className="text-[13px] font-medium text-zinc-200">{t.label}</div>

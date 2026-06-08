@@ -132,7 +132,9 @@ export function ReceiptActions({ slug, sessionId, tldr, isOwner, existingRecapSl
           {recapPending ? "Generating…" : "Pulse Recap"}
         </button>
       ) : null}
-      {flash && <span className="font-mono text-[10.5px] text-[#a7f300] ml-1">{flash}</span>}
+      {flash && (
+        <span className="font-mono text-[10.5px] text-[var(--accent-text)] ml-1">{flash}</span>
+      )}
     </div>
   );
 }
