@@ -43,11 +43,12 @@ export default async function CreateKitPage() {
           </div>
           <div className="border-b border-white/[0.08] px-4 py-5 sm:px-5">
             <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-zinc-50">
-              Turn a repo into a Build Kit
+              Turn your repos into Build Kits
             </h1>
             <p className="mt-2 text-[14px] leading-6 text-zinc-400">
               A Build Kit is the reusable setup behind your work — agent rules, stack, and the
-              prompts that worked. Other builders can steal it into their tool in one click.
+              prompts that worked. Pick one repo, or select several to seed a batch at once. Other
+              builders can steal them into their tool in one click.
             </p>
           </div>
           <div className="px-4 py-5 sm:px-5">
