@@ -8,6 +8,7 @@ type NavLink = { href: string; label: string; external?: boolean };
 const PRIMARY_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
   { href: "/create", label: "Create" },
+  { href: "/kits", label: "Kits" },
   { href: "/discover", label: "Builders" },
   { href: "/puerto-rico", label: "Puerto Rico" },
 ];
@@ -15,6 +16,7 @@ const PRIMARY_LINKS: NavLink[] = [
 const SIGNED_IN_LINKS: NavLink[] = [
   { href: "/feed", label: "Feed" },
   { href: "/create", label: "Create" },
+  { href: "/kits", label: "Kits" },
   { href: "/discover", label: "Builders" },
   { href: "/puerto-rico", label: "Puerto Rico" },
 ];
