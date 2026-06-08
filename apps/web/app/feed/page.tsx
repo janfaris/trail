@@ -1,5 +1,6 @@
 import { CopyButton } from "@/components/copy-button";
 import { FollowButton } from "@/components/follow-button";
+import { KitCard } from "@/components/kit-card";
 import { ReactionBar, type ReactionKind } from "@/components/reaction-bar";
 import { RelativeTime } from "@/components/relative-time";
 import { SaveReceiptButton } from "@/components/save-receipt-button";
@@ -7,6 +8,7 @@ import { SiteNav } from "@/components/site-nav";
 import { ToolIcon } from "@/components/tool-icon";
 import { Avatar } from "@/components/ui/avatar";
 import { type RankableSession, normalizeFeedView, rankFeed } from "@/lib/follow";
+import { type KitListItem, listPublicKits } from "@/lib/kit-queries";
 import {
   type RadarReactionKind,
   emptyRadarReactionCounts,
@@ -1936,10 +1938,12 @@ function FeedDiscoveryPanel({
   discovery,
   radarSignals,
   viewerId,
+  kits,
 }: {
   discovery: FeedDiscovery;
   radarSignals: FeedRadarSignal[];
   viewerId: string | null;
+  kits: KitListItem[];
 }) {
   const topBuilders = discovery.builders.slice(0, 4);
   const topStacks = discovery.stacks.slice(0, 6);
@@ -1947,6 +1951,35 @@ function FeedDiscoveryPanel({
   return (
     <div className="space-y-6 text-sm">
       <NetworkPulse stats={discovery.stats} />
+
+      <section className="border-b border-white/[0.08] pb-5">
+        <div className="flex items-baseline justify-between gap-4">
+          <h3 className="font-medium tracking-[-0.01em] text-zinc-200">Build Kits</h3>
+          <Link
+            href="/kits"
+            className="text-[12px] text-zinc-600 underline-offset-4 hover:text-zinc-200 hover:underline"
+          >
+            Browse
+          </Link>
+        </div>
+        <p className="mt-1 text-[12px] leading-5 text-zinc-600">
+          Steal a working setup — rules, stack, and prompts — straight into your tool.
+        </p>
+        {kits.length === 0 ? (
+          <Link
+            href="/create/kit"
+            className="mt-3 inline-flex text-[13px] text-[#a7f300] hover:underline"
+          >
+            Build the first Kit →
+          </Link>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {kits.slice(0, 4).map((kit) => (
+              <KitCard key={kit.id} kit={kit} variant="compact" />
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="border-b border-white/[0.08] pb-5">
         <div className="flex items-baseline justify-between gap-4">
@@ -2146,6 +2179,7 @@ export default async function FeedPage({
   }
 
   const isFollowingView = view === "following";
+  const feedKits = await listPublicKits({ sort: "forks", limit: 4 });
   const timelineItems = buildTimelineItems(rows, radarSignals, isFollowingView);
   const trailPickCount = timelineItems.filter((item) => item.kind === "trail_pick").length;
   const followingHref = viewerId ? "/feed?view=following" : FOLLOWING_SIGN_IN_HREF;
@@ -2274,6 +2308,7 @@ export default async function FeedPage({
                 discovery={discovery}
                 radarSignals={radarSignals}
                 viewerId={viewerId}
+                kits={feedKits}
               />
             </div>
           </aside>
@@ -2283,6 +2318,7 @@ export default async function FeedPage({
               discovery={discovery}
               radarSignals={radarSignals}
               viewerId={viewerId}
+              kits={feedKits}
             />
           </div>
         </div>
