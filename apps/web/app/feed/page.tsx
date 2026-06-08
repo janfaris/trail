@@ -1193,40 +1193,45 @@ function buildTimelineItems(
 
   // Curated Trail Picks fill the gap while native builds are scarce, then recede
   // as real posts arrive: more picks when the feed is empty, fewer as it fills.
+  // The budget caps how many picks we mix in, but placement is purely by recency
+  // (below) so the newest item leads regardless of whether it's a build or a pick.
   const postCount = rows.length;
   const pickBudget =
     postCount === 0 ? 8 : postCount <= 4 ? 4 : postCount <= 12 ? 3 : postCount <= 24 ? 2 : 1;
   const picks = radarSignals.slice(0, pickBudget);
 
-  if (postCount === 0) {
-    return picks.map((signal) => ({ kind: "trail_pick", signal }));
-  }
+  // Merge posts and picks into one chronological stream, newest first, so a fresh
+  // Trail Pick never sits below an older build (and vice versa). Posts rank by
+  // sharedAt (matching rankFeed); picks rank by publishedAt. On a timestamp tie,
+  // builds lead picks so native work stays first-class.
+  type Sortable = { item: TimelineItem; time: number; isPost: boolean };
+  const sortable: Sortable[] = [
+    ...rows.map((row) => ({
+      item: { kind: "post", row } as TimelineItem,
+      time: toEpoch(row.sharedAt ?? row.startedAt),
+      isPost: true,
+    })),
+    ...picks.map((signal) => ({
+      item: { kind: "trail_pick", signal } as TimelineItem,
+      time: toEpoch(signal.publishedAt),
+      isPost: false,
+    })),
+  ];
 
-  // Spread the picks at roughly even intervals so they're interleaved through
-  // the feed rather than front-loaded.
-  const items: TimelineItem[] = [];
-  const gap = Math.max(3, Math.ceil(postCount / (picks.length + 1)));
-  let pickIdx = 0;
-
-  rows.forEach((row, index) => {
-    items.push({ kind: "post", row });
-    if (pickIdx < picks.length && (index + 1) % gap === 0) {
-      const signal = picks[pickIdx];
-      if (signal) items.push({ kind: "trail_pick", signal });
-      pickIdx += 1;
-    }
+  sortable.sort((a, b) => {
+    if (b.time !== a.time) return b.time - a.time;
+    if (a.isPost !== b.isPost) return a.isPost ? -1 : 1;
+    return 0;
   });
 
-  // For a still-thin feed, append any picks that didn't land so the page stays
-  // lively; once there's real volume we drop the remainder to let builds lead.
-  if (postCount < 5) {
-    for (let i = pickIdx; i < picks.length; i++) {
-      const signal = picks[i];
-      if (signal) items.push({ kind: "trail_pick", signal });
-    }
-  }
+  return sortable.map((entry) => entry.item);
+}
 
-  return items;
+/** Epoch millis for a date-ish value; missing/invalid sort oldest. */
+function toEpoch(value: Date | string | null | undefined): number {
+  if (value == null) return Number.NEGATIVE_INFINITY;
+  const ms = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms;
 }
 
 function FeedTabs({
@@ -2235,9 +2240,7 @@ export default async function FeedPage({
 
             <div className="border-b border-white/[0.08] px-4 py-2.5 sm:px-5">
               <div className="flex items-center justify-between gap-4 text-[12px] text-zinc-600">
-                <span>
-                  {rows.length === 0 && trailPickCount > 0 ? "Curated picks" : "Latest builds"}
-                </span>
+                <span>{rows.length === 0 && trailPickCount > 0 ? "Curated picks" : "Latest"}</span>
                 <span className="hidden sm:inline">Newest first</span>
               </div>
             </div>
