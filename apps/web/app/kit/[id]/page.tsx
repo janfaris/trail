@@ -83,9 +83,21 @@ export async function generateMetadata({
   const { id } = await params;
   const kit = await loadKit(id);
   if (!kit) return {};
+  const description =
+    kit.summary ?? `Reproducible setup from ${kit.sourceRepo} — steal it in one click.`;
   return {
     title: `${kit.title} — Build Kit on Trail`,
-    description: kit.summary ?? `Reproducible setup from ${kit.sourceRepo}.`,
+    description,
+    openGraph: {
+      title: `${kit.title} — Build Kit on Trail`,
+      description,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${kit.title} — Build Kit on Trail`,
+      description,
+    },
   };
 }
 

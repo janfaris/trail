@@ -68,6 +68,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           reuseCount: sql`(select count(*)::int from ${schema.kitReuse} where ${schema.kitReuse.kitId} = ${id})`,
         })
         .where(eq(schema.buildKit.id, id));
+
+      // Pull the author back: notify them their kit was stolen. Deduped per
+      // (owner, actor, kit) by a partial unique index, and never self-notify.
+      if (kit.userId !== sess.user.id) {
+        await db
+          .insert(schema.notification)
+          .values({
+            id: crypto.randomUUID(),
+            userId: kit.userId,
+            actorId: sess.user.id,
+            type: "kit_reuse",
+            kitId: id,
+          })
+          .onConflictDoNothing();
+      }
     }
 
     const [row] = await db
