@@ -145,8 +145,8 @@ export function CreateKitClient() {
     return (
       <div className="space-y-4">
         <div className="text-[13px] text-zinc-300">
-          Built <span className="font-mono text-[var(--accent)]">{ok.length}</span> of {results.length}{" "}
-          kits.
+          Built <span className="font-mono text-[var(--accent-text)]">{ok.length}</span> of{" "}
+          {results.length} kits.
         </div>
         <ul className="divide-y divide-white/[0.08] overflow-hidden rounded-xl border border-white/[0.08]">
           {results.map((r) => (
@@ -158,7 +158,7 @@ export function CreateKitClient() {
               {r.id ? (
                 <a
                   href={`/kit/${r.id}`}
-                  className="shrink-0 font-mono text-[12px] text-[var(--accent)] hover:underline"
+                  className="shrink-0 font-mono text-[12px] text-[var(--accent-text)] hover:underline"
                 >
                   {r.skipped ? "already a kit →" : "view kit →"}
                 </a>
