@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 function reproBadge(value: string): { label: string; cls: string } {
-  if (value === "verified") return { label: "verified", cls: "text-[#a7f300]" };
+  if (value === "verified") return { label: "verified", cls: "text-[var(--accent-text)]" };
   if (value === "partial") return { label: "repo-derived", cls: "text-sky-200" };
   return { label: "prompts", cls: "text-zinc-500" };
 }
@@ -37,7 +37,7 @@ export function KitCard({
           <span className="font-mono">{kit.sourceRepo}</span>
           <span className={`font-mono ${repro.cls}`}>{repro.label}</span>
         </div>
-        <p className="mt-1 line-clamp-1 text-[13px] font-medium leading-5 text-zinc-200 group-hover:text-[#a7f300]">
+        <p className="mt-1 line-clamp-1 text-[13px] font-medium leading-5 text-zinc-200 group-hover:text-[var(--accent-text)]">
           {kit.title}
         </p>
         <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-600">
@@ -58,7 +58,7 @@ export function KitCard({
     <Link
       href={`/kit/${kit.id}`}
       className={cn(
-        "group block rounded-2xl border border-white/[0.08] bg-[#0b0b0a] p-4 transition-[border-color,transform] hover:border-white/20 active:scale-[0.99]",
+        "group block rounded-2xl border border-white/[0.08] bg-[var(--surface-deep)] p-4 transition-[border-color,transform] hover:border-white/20 active:scale-[0.99]",
         className,
       )}
     >
@@ -66,7 +66,7 @@ export function KitCard({
         <span className="truncate font-mono">{kit.sourceRepo}</span>
         <span className={`shrink-0 font-mono ${repro.cls}`}>{repro.label}</span>
       </div>
-      <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-zinc-50 group-hover:text-[#a7f300]">
+      <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-zinc-50 group-hover:text-[var(--accent-text)]">
         {kit.title}
       </h3>
       {kit.summary ? (

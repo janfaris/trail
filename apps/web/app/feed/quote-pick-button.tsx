@@ -9,7 +9,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
 const QUOTE_BUTTON_CLASS =
-  "inline-flex min-h-8 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]";
+  "inline-flex min-h-8 items-center gap-1.5 rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]";
 
 type PublishedState = { href: string; title: string };
 
@@ -184,7 +184,7 @@ function QuoteModal({
         {published ? (
           <div className="mt-5 space-y-4">
             <div className="flex items-center gap-2 text-[15px] font-medium text-zinc-100">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#a7f300]/15 text-[#a7f300]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)]/15 text-[var(--accent-text)]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"

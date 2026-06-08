@@ -405,9 +405,9 @@ export function ConnectionsClient({
           merged commit. The default path is local capture; admin-key reconciliation is optional.
         </p>
 
-        <div className="mt-6 max-w-3xl rounded-[1.5rem] bg-[#a7f300]/5 p-5 shadow-[0_0_0_1px_rgba(167,243,0,0.24)]">
+        <div className="mt-6 max-w-3xl rounded-[1.5rem] bg-[var(--accent)]/5 p-5 shadow-[0_0_0_1px_rgba(167,243,0,0.24)]">
           <div className="mb-2 flex items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
               Recommended · No keys
             </span>
           </div>
@@ -426,7 +426,7 @@ export function ConnectionsClient({
           </div>
           <div className="mt-3 font-mono text-[12px] text-zinc-600">
             More setup detail at{" "}
-            <a href="/install" className="text-[#a7f300] hover:underline">
+            <a href="/install" className="text-[var(--accent-text)] hover:underline">
               /install →
             </a>
           </div>
@@ -623,7 +623,7 @@ function VendorCard({
             type="button"
             disabled={busy}
             onClick={(e) => onConnect(e.currentTarget)}
-            className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-xs font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex min-h-10 items-center justify-center rounded-full bg-[var(--accent)] px-4 font-mono text-xs font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
           >
             Connect
           </button>
@@ -807,7 +807,7 @@ function ConnectModal({
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex min-h-10 items-center justify-center rounded-full bg-[#a7f300] px-4 font-mono text-xs font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex min-h-10 items-center justify-center rounded-full bg-[var(--accent)] px-4 font-mono text-xs font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50"
             >
               {busy ? "Saving…" : "Save key"}
             </button>

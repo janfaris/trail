@@ -2,7 +2,7 @@ import { SiteNav } from "@/components/site-nav";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 /* Hallmark · macrostructure: feed-led community landing · genre: technical/editorial · theme: trail-dark-lime
- * paper: oklch(15% 0.01 280) #09090b · accent: oklch(94% 0.27 130) #a7f300
+ * paper: oklch(15% 0.01 280) var(--page-base-2) · accent: oklch(94% 0.27 130) #a7f300
  * display: Fraunces · body: Geist · sections: hero-feed · create-paths · community · proof · footer
  * motion: none — typography only · contrast: pass
  */
@@ -118,7 +118,7 @@ export default async function Home() {
       <main>
         <section className="mx-auto grid max-w-6xl gap-10 px-5 pb-16 pt-16 sm:px-6 md:pt-24 lg:grid-cols-[minmax(0,1fr)_430px] lg:px-10">
           <div className="min-w-0">
-            <div className="mb-8 max-w-fit rounded-full border border-[#a7f300]/20 bg-[#a7f300]/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+            <div className="mb-8 max-w-fit rounded-full border border-[var(--accent-border)]/20 bg-[var(--accent)]/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)]">
               Build feed for AI-native builders
             </div>
 
@@ -140,7 +140,7 @@ export default async function Home() {
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/create"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-zinc-950 transition-colors hover:bg-[#c8ff5e]"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--accent)] px-5 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-bright)]"
               >
                 Post a build
               </Link>
@@ -160,7 +160,7 @@ export default async function Home() {
           </div>
 
           <div className="min-w-0 rounded-3xl border border-white/10 bg-black/30 p-3 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
-            <div className="rounded-2xl border border-white/[0.08] bg-[#0b0b0a]">
+            <div className="rounded-2xl border border-white/[0.08] bg-[var(--surface-deep)]">
               <div className="flex items-center justify-between gap-4 border-b border-white/[0.08] px-4 py-4">
                 <div>
                   <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-600">
@@ -170,7 +170,7 @@ export default async function Home() {
                     Builders are the product.
                   </h2>
                 </div>
-                <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300]">
+                <span className="rounded-full border border-[var(--accent-border)]/30 bg-[var(--accent)]/5 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--accent-text)]">
                   Live loop
                 </span>
               </div>
@@ -183,7 +183,7 @@ export default async function Home() {
                     className="group block px-4 py-4 transition-colors hover:bg-white/[0.025]"
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#a7f300]">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--accent-text)]">
                         {card.label}
                       </span>
                       <span className="rounded-full bg-white/[0.04] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500 group-hover:text-zinc-200">
@@ -216,7 +216,9 @@ export default async function Home() {
                 {createPaths.map((path) => (
                   <article key={path.n} className="bg-zinc-950 p-5">
                     <div className="mb-8 flex items-center justify-between gap-4">
-                      <span className="font-mono text-[11px] text-[#a7f300]">{path.n}</span>
+                      <span className="font-mono text-[11px] text-[var(--accent-text)]">
+                        {path.n}
+                      </span>
                       <span className="h-px flex-1 bg-white/10" />
                     </div>
                     <h3 className="font-display text-[22px] leading-tight text-zinc-50">
@@ -246,7 +248,7 @@ export default async function Home() {
               <div className="mt-8">
                 <Link
                   href="/puerto-rico"
-                  className="inline-flex min-h-10 items-center rounded-full border border-[#a7f300]/40 px-4 font-mono text-[12px] uppercase tracking-[0.14em] text-[#a7f300] transition-colors hover:bg-[#a7f300]/10"
+                  className="inline-flex min-h-10 items-center rounded-full border border-[var(--accent-border)]/40 px-4 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--accent-text)] transition-colors hover:bg-[var(--accent)]/10"
                 >
                   Open the community hub
                 </Link>
@@ -260,7 +262,7 @@ export default async function Home() {
               <div className="mt-5 space-y-4">
                 {communityLoop.map((item, index) => (
                   <div key={item} className="grid grid-cols-[34px_minmax(0,1fr)] gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 font-mono text-[11px] text-[#a7f300]">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 font-mono text-[11px] text-[var(--accent-text)]">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <p className="pt-1 text-[14px] leading-6 text-zinc-400">{item}</p>
@@ -292,7 +294,7 @@ export default async function Home() {
             <div className="grid gap-px overflow-hidden rounded-2xl bg-white/[0.06] shadow-[var(--trail-shadow-border)] md:grid-cols-3">
               {proofLayers.map((layer) => (
                 <article key={layer.label} className="bg-zinc-950 p-5">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent-text)]">
                     {layer.label}
                   </p>
                   <h3 className="mt-4 font-display text-[22px] leading-tight text-zinc-50">
@@ -313,7 +315,7 @@ export default async function Home() {
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/create"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#a7f300] px-5 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-zinc-950 transition-colors hover:bg-[#c8ff5e]"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--accent)] px-5 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-bright)]"
               >
                 Post a build
               </Link>

@@ -25,31 +25,34 @@ export function VelocitySparkline({ weeks }: { weeks: number[] }) {
 
   return (
     <div className="inline-flex items-center gap-2">
-      <svg
-        width={W}
-        height={H}
-        viewBox={`0 0 ${W} ${H}`}
-        aria-hidden
-        className="block"
-      >
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="block">
         <path
           d={path}
           fill="none"
-          stroke="#a7f300"
+          className="stroke-[var(--accent-border)]"
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         {n > 0 && (
-          <circle cx={points[maxIdx][0]} cy={points[maxIdx][1]} r={1.6} fill="#a7f300" />
+          <circle
+            cx={points[maxIdx][0]}
+            cy={points[maxIdx][1]}
+            r={1.6}
+            className="fill-[var(--accent-border)]"
+          />
         )}
         {n > 0 && minIdx !== maxIdx && (
-          <circle cx={points[minIdx][0]} cy={points[minIdx][1]} r={1.6} fill="#a7f300" opacity={0.5} />
+          <circle
+            cx={points[minIdx][0]}
+            cy={points[minIdx][1]}
+            r={1.6}
+            className="fill-[var(--accent-border)]"
+            opacity={0.5}
+          />
         )}
       </svg>
-      <span className="font-mono text-xs text-zinc-400 tabular-nums">
-        {current}/wk
-      </span>
+      <span className="font-mono text-xs text-zinc-400 tabular-nums">{current}/wk</span>
     </div>
   );
 }

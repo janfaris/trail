@@ -145,7 +145,7 @@ export function CreateKitClient() {
     return (
       <div className="space-y-4">
         <div className="text-[13px] text-zinc-300">
-          Built <span className="font-mono text-[#a7f300]">{ok.length}</span> of {results.length}{" "}
+          Built <span className="font-mono text-[var(--accent)]">{ok.length}</span> of {results.length}{" "}
           kits.
         </div>
         <ul className="divide-y divide-white/[0.08] overflow-hidden rounded-xl border border-white/[0.08]">
@@ -158,7 +158,7 @@ export function CreateKitClient() {
               {r.id ? (
                 <a
                   href={`/kit/${r.id}`}
-                  className="shrink-0 font-mono text-[12px] text-[#a7f300] hover:underline"
+                  className="shrink-0 font-mono text-[12px] text-[var(--accent)] hover:underline"
                 >
                   {r.skipped ? "already a kit →" : "view kit →"}
                 </a>
@@ -173,7 +173,7 @@ export function CreateKitClient() {
         <div className="flex flex-wrap gap-3">
           <a
             href="/library"
-            className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-3.5 text-[13px] font-medium text-black hover:bg-[#b6ff14]"
+            className="inline-flex min-h-9 items-center rounded-full bg-[var(--accent)] px-3.5 text-[13px] font-medium text-[var(--on-accent)] hover:bg-[var(--accent-bright)]"
           >
             Open your library →
           </a>
@@ -225,14 +225,14 @@ export function CreateKitClient() {
                       onClick={() => toggle(repo.fullName)}
                       className={cn(
                         "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
-                        isSel ? "bg-[#a7f300]/10" : "hover:bg-white/[0.03]",
+                        isSel ? "bg-[var(--accent)]/10" : "hover:bg-white/[0.03]",
                       )}
                     >
                       <span
                         className={cn(
                           "flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]",
                           isSel
-                            ? "border-[#a7f300] bg-[#a7f300] text-black"
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]"
                             : "border-white/20 text-transparent",
                         )}
                         aria-hidden
@@ -295,7 +295,7 @@ export function CreateKitClient() {
           "inline-flex min-h-10 items-center rounded-full px-4 text-[13px] font-medium transition-[background-color,transform] active:scale-[0.97]",
           count === 0 || submitting
             ? "cursor-not-allowed bg-zinc-800 text-zinc-500"
-            : "bg-[#a7f300] text-black hover:bg-[#b6ff14]",
+            : "bg-[var(--accent)] text-[var(--on-accent)] hover:bg-[var(--accent-bright)]",
         )}
       >
         {submitting

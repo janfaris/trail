@@ -126,14 +126,14 @@ export default async function RecapPage({ params }: Props) {
   const durationLabel = hours > 0 ? `${hours}h ${minutes}m` : minutes > 0 ? `${minutes}m` : "—";
 
   return (
-    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-50">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-50">
       <SiteNav currentPath="/" />
 
       <main className="flex-1">
         <section className="mx-auto max-w-4xl px-4 pb-12 pt-8 sm:px-6 lg:px-10">
           <div className="rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
             <div className="mb-6 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
-              <span className="text-[#a7f300]">trail recap</span>
+              <span className="text-[var(--accent-text)]">trail recap</span>
               <span className="text-zinc-700">·</span>
               <span>{tierLabel}</span>
               <span className="text-zinc-700">·</span>
@@ -168,7 +168,9 @@ export default async function RecapPage({ params }: Props) {
             {(isPulse || isProject) && session?.linkedCommitSha && (
               <div className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[1.5rem] bg-zinc-950/70 px-5 py-4 font-mono text-[12.5px] shadow-[var(--trail-shadow-border)]">
                 <span className="text-zinc-500">commit</span>
-                <span className="text-[#a7f300]">{session.linkedCommitSha.slice(0, 7)}</span>
+                <span className="text-[var(--accent-text)]">
+                  {session.linkedCommitSha.slice(0, 7)}
+                </span>
                 {session.linkedRepo && (
                   <>
                     <span className="text-zinc-700">·</span>
@@ -178,7 +180,7 @@ export default async function RecapPage({ params }: Props) {
                 {(session.receiptStatus === "shipped" || session.outcome === "shipped") && (
                   <>
                     <span className="text-zinc-700">·</span>
-                    <span className="text-[#a7f300]">✓ shipped</span>
+                    <span className="text-[var(--accent-text)]">✓ shipped</span>
                   </>
                 )}
               </div>
@@ -206,7 +208,7 @@ export default async function RecapPage({ params }: Props) {
               <div className="mt-16 rounded-[1.5rem] bg-zinc-950/70 p-5 text-[13px] shadow-[var(--trail-shadow-border)]">
                 <Link
                   href={`/u/${owner.handle}/${session.slug}`}
-                  className="inline-flex items-center gap-2 font-mono text-zinc-400 transition-colors hover:text-[#a7f300]"
+                  className="inline-flex items-center gap-2 font-mono text-zinc-400 transition-colors hover:text-[var(--accent-text)]"
                 >
                   ← Open full session
                 </Link>
@@ -219,7 +221,7 @@ export default async function RecapPage({ params }: Props) {
       <footer>
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-6 font-mono text-[11px] text-zinc-500 lg:px-10">
           <Link href="/" className="hover:text-zinc-300 transition-colors">
-            <span className="text-[#a7f300]">/</span> trail
+            <span className="text-[var(--accent-text)]">/</span> trail
           </Link>
           <span className="text-zinc-700">
             generated {new Date(recap.generatedAt).toISOString().slice(0, 10)}
@@ -247,7 +249,7 @@ function Stat({
         {label}
       </div>
       <div className="font-display text-[28px] leading-none tabular-nums sm:text-[32px]">
-        <span className={accent ? "text-[#a7f300]" : "text-zinc-100"}>{value}</span>
+        <span className={accent ? "text-[var(--accent-text)]" : "text-zinc-100"}>{value}</span>
         {suffix && <span className="ml-1 text-[16px] text-zinc-600">{suffix}</span>}
       </div>
     </div>

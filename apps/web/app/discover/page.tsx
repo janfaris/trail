@@ -491,7 +491,7 @@ export default async function DiscoverPage() {
   const hasBuilders = data.builders.length > 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#070806] text-zinc-50">
+    <div className="flex min-h-screen flex-col bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/discover" />
 
       <main className="w-full flex-1">
@@ -501,7 +501,7 @@ export default async function DiscoverPage() {
             <div className="absolute inset-0 opacity-[0.025] [background-image:linear-gradient(rgba(255,255,255,0.75)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.75)_1px,transparent_1px)] [background-size:44px_44px]" />
             <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#a7f300]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
+                <div className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
                   Builder directory
                 </div>
                 <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.06em] text-white sm:text-6xl">
@@ -669,7 +669,7 @@ export default async function DiscoverPage() {
                   </section>
                 ) : null}
 
-                <section className="overflow-hidden rounded-[1.75rem] bg-[#a7f300] text-zinc-950 shadow-[0_0_0_1px_rgba(167,243,0,0.22),0_20px_56px_rgba(0,0,0,0.26)]">
+                <section className="overflow-hidden rounded-[1.75rem] bg-[var(--accent)] text-[var(--on-accent)] shadow-[0_0_0_1px_rgba(167,243,0,0.22),0_20px_56px_rgba(0,0,0,0.26)]">
                   <div className="p-5">
                     <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-zinc-700">
                       Become discoverable

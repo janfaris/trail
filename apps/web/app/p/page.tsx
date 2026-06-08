@@ -36,12 +36,12 @@ export default async function PlaylistsIndex() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <SiteNav currentPath="/p" />
 
       <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-8 sm:px-6">
         <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
-          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
             Curated proof
           </div>
           <h1 className="mt-4 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
@@ -65,12 +65,14 @@ export default async function PlaylistsIndex() {
               >
                 <Link href={`/p/${r.slug}`} className="group block">
                   <div className="mb-1 flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-                    {r.isOfficial && <span className="text-[#a7f300]">curated by Trail</span>}
+                    {r.isOfficial && (
+                      <span className="text-[var(--accent-text)]">curated by Trail</span>
+                    )}
                     {!r.isOfficial && r.curatorHandle && <span>@{r.curatorHandle}</span>}
                     <span>·</span>
                     <span>{r.itemCount} trails</span>
                   </div>
-                  <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[#a7f300]">
+                  <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[var(--accent-text)]">
                     {r.title}
                   </h3>
                   {r.description && (

@@ -394,7 +394,7 @@ export function CommentThread({
             </p>
             <a
               href={signInHref}
-              className="mt-3 inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+              className="mt-3 inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
             >
               Sign in to comment
             </a>
@@ -464,7 +464,7 @@ function SubmitButton({ pending, children }: { pending: boolean; children: strin
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-zinc-100 px-3 py-2 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-full bg-zinc-100 px-3 py-2 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Posting..." : children}
     </button>

@@ -11,16 +11,13 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db/client";
 import type { RecapPayload } from "@/lib/recap/aggregate";
 
-const BG = "#09090b";
+const BG = "var(--page-base-2)";
 const FG = "#fafafa";
 const ACCENT = "#a7f300";
 const MUTED = "#71717a";
 const BORDER = "#27272a";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ slug: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   const recap = await db.query.recap.findFirst({
@@ -57,102 +54,100 @@ export async function GET(
   const topTool = payload.topTools[0]?.name;
 
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: "1200px",
+        height: "675px",
+        background: BG,
+        color: FG,
+        display: "flex",
+        flexDirection: "column",
+        padding: "64px 72px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      {/* Header */}
       <div
         style={{
-          width: "1200px",
-          height: "675px",
-          background: BG,
-          color: FG,
           display: "flex",
-          flexDirection: "column",
-          padding: "64px 72px",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          alignItems: "center",
+          gap: "14px",
+          fontSize: "16px",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: MUTED,
+          fontFamily: "monospace",
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            fontSize: "16px",
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: MUTED,
-            fontFamily: "monospace",
-          }}
-        >
-          <span style={{ color: ACCENT }}>TRAIL RECAP</span>
-          <span style={{ color: BORDER }}>·</span>
-          <span>{tierLabel}</span>
-          {owner?.handle && (
-            <>
-              <span style={{ color: BORDER }}>·</span>
-              <span>@{owner.handle}</span>
-            </>
-          )}
-        </div>
-
-        {/* Headline */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: headline.length > 60 ? "52px" : "68px",
-            lineHeight: 1.05,
-            letterSpacing: "-0.025em",
-            color: FG,
-            marginTop: "48px",
-            maxWidth: "1000px",
-          }}
-        >
-          {headline.length > 110 ? headline.slice(0, 107) + "…" : headline}
-        </div>
-
-        {/* Spacer */}
-        <div style={{ flex: 1, display: "flex" }} />
-
-        {/* Stat row */}
-        <div
-          style={{
-            display: "flex",
-            gap: "56px",
-            paddingTop: "32px",
-            borderTop: `1px solid ${BORDER}`,
-            fontFamily: "monospace",
-          }}
-        >
-          <Stat label="SHIPPED" value={String(payload.shippedCount)} accent />
-          <Stat label="SESSIONS" value={String(payload.sessionCount)} />
-          {topModel && <Stat label="MODEL" value={topModel} />}
-          {topTool && <Stat label="TOOL" value={topTool} />}
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: "28px",
-            fontSize: "16px",
-            color: MUTED,
-            fontFamily: "monospace",
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-          }}
-        >
-          <span>
-            <span style={{ color: ACCENT }}>/</span> trail
-          </span>
-          {session?.linkedCommitSha && (
-            <span>
-              {session.linkedRepo ?? "commit"} · {session.linkedCommitSha.slice(0, 7)}
-            </span>
-          )}
-        </div>
+        <span style={{ color: ACCENT }}>TRAIL RECAP</span>
+        <span style={{ color: BORDER }}>·</span>
+        <span>{tierLabel}</span>
+        {owner?.handle && (
+          <>
+            <span style={{ color: BORDER }}>·</span>
+            <span>@{owner.handle}</span>
+          </>
+        )}
       </div>
-    ),
+
+      {/* Headline */}
+      <div
+        style={{
+          display: "flex",
+          fontSize: headline.length > 60 ? "52px" : "68px",
+          lineHeight: 1.05,
+          letterSpacing: "-0.025em",
+          color: FG,
+          marginTop: "48px",
+          maxWidth: "1000px",
+        }}
+      >
+        {headline.length > 110 ? headline.slice(0, 107) + "…" : headline}
+      </div>
+
+      {/* Spacer */}
+      <div style={{ flex: 1, display: "flex" }} />
+
+      {/* Stat row */}
+      <div
+        style={{
+          display: "flex",
+          gap: "56px",
+          paddingTop: "32px",
+          borderTop: `1px solid ${BORDER}`,
+          fontFamily: "monospace",
+        }}
+      >
+        <Stat label="SHIPPED" value={String(payload.shippedCount)} accent />
+        <Stat label="SESSIONS" value={String(payload.sessionCount)} />
+        {topModel && <Stat label="MODEL" value={topModel} />}
+        {topTool && <Stat label="TOOL" value={topTool} />}
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "28px",
+          fontSize: "16px",
+          color: MUTED,
+          fontFamily: "monospace",
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+        }}
+      >
+        <span>
+          <span style={{ color: ACCENT }}>/</span> trail
+        </span>
+        {session?.linkedCommitSha && (
+          <span>
+            {session.linkedRepo ?? "commit"} · {session.linkedCommitSha.slice(0, 7)}
+          </span>
+        )}
+      </div>
+    </div>,
     { width: 1200, height: 675 },
   );
 }

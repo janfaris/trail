@@ -197,7 +197,7 @@ function ActivityItem({ row }: { row: ActivityRow }) {
       className={cn(
         "group grid gap-4 rounded-2xl p-4 shadow-[var(--trail-shadow-border)] transition-[box-shadow,transform] hover:-translate-y-0.5 sm:grid-cols-[44px,1fr,auto]",
         unread
-          ? "bg-[#a7f300]/[0.06] shadow-[0_0_0_1px_rgba(167,243,0,0.28),0_20px_60px_rgba(0,0,0,0.3)]"
+          ? "bg-[var(--accent)]/[0.06] shadow-[0_0_0_1px_rgba(167,243,0,0.28),0_20px_60px_rgba(0,0,0,0.3)]"
           : "bg-zinc-950/70 hover:shadow-[var(--trail-shadow-border-hover)]",
       )}
     >
@@ -211,11 +211,11 @@ function ActivityItem({ row }: { row: ActivityRow }) {
       </span>
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a7f300]">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)]">
             {copy.eyebrow}
           </span>
           {unread ? (
-            <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300]" aria-label="Unread" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" aria-label="Unread" />
           ) : null}
         </span>
         <span className="mt-1 block text-[15px] font-semibold text-zinc-100">{copy.title}</span>
@@ -302,12 +302,12 @@ export default async function NotificationsPage() {
   const earlier = activities.filter((row) => row.readAt);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.08),transparent_34rem),linear-gradient(180deg,#050505,#09090b_45%,#050505)] text-zinc-100">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(167,243,0,0.08),transparent_34rem),linear-gradient(180deg,var(--page-base),var(--page-base-2)_45%,var(--page-base))] text-zinc-100">
       <SiteNav currentPath="/notifications" />
       <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-10">
         <div className="grid gap-5 lg:grid-cols-[0.85fr,1.35fr]">
           <aside className="rounded-3xl bg-black/45 p-6 shadow-[var(--trail-shadow-border)]">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#a7f300]">
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
               Trail relay
             </div>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-zinc-50 sm:text-5xl">
@@ -322,7 +322,9 @@ export default async function NotificationsPage() {
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   Unread
                 </div>
-                <div className="mt-2 text-3xl font-semibold text-[#a7f300]">{unreadCount}</div>
+                <div className="mt-2 text-3xl font-semibold text-[var(--accent-text)]">
+                  {unreadCount}
+                </div>
               </div>
               <div className="bg-zinc-950/90 p-4">
                 <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
@@ -335,7 +337,7 @@ export default async function NotificationsPage() {
               <button
                 type="submit"
                 disabled={unreadCount === 0}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#a7f300] px-4 text-[13px] font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[var(--accent)] px-4 text-[13px] font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:active:scale-100"
               >
                 Mark all read
               </button>
@@ -357,7 +359,7 @@ export default async function NotificationsPage() {
                 </p>
                 <Link
                   href="/feed"
-                  className="mt-6 inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-[13px] font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
+                  className="mt-6 inline-flex min-h-10 items-center rounded-full bg-zinc-950 px-4 text-[13px] font-medium text-zinc-200 shadow-[var(--trail-shadow-border)] transition-[box-shadow,color,transform] hover:text-[var(--accent-text)] hover:shadow-[var(--trail-shadow-border-hover)] active:scale-[0.97]"
                 >
                   Open the feed
                 </Link>

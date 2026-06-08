@@ -4,11 +4,11 @@ import { SettingsTabs } from "./SettingsTabs";
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <SiteNav currentPath="/settings" />
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
         <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
-          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
             Builder account
           </div>
           <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -122,7 +122,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!viewer) {
     return (
-      <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0a]">
+      <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--surface-deep)]">
         <div className="border-b border-white/[0.08] px-4 py-4">
           <p className="text-[12px] text-zinc-600">Join the build feed</p>
           <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
@@ -135,7 +135,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
             have them.
           </p>
           <Link
-            className="inline-flex rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
+            className="inline-flex rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-[var(--accent)]"
             href="/api/auth/sign-in/github?callbackURL=%2Fcreate"
           >
             Sign in with GitHub
@@ -147,17 +147,17 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!viewer.handle) {
     return (
-      <section className="rounded-2xl border border-[#a7f300]/20 bg-[#a7f300]/[0.035] p-4">
-        <p className="text-[12px] text-[#a7f300]">Finish your identity</p>
+      <section className="rounded-2xl border border-[var(--accent-border)]/20 bg-[var(--accent)]/[0.035] p-4">
+        <p className="text-[12px] text-[var(--accent-text)]">Finish your identity</p>
         <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
           Claim a Trail handle before publishing.
         </h2>
-        <p className="mt-2 text-sm text-[#d9ff91]/75">
+        <p className="mt-2 text-sm text-[var(--accent-text)]/75">
           Public build posts need a stable builder profile so people can follow, reply, and share
           your work.
         </p>
         <Link
-          className="mt-4 inline-flex rounded-full border border-[#a7f300]/25 px-4 py-2 text-sm font-medium text-[#d9ff91] transition hover:bg-[#a7f300]/10"
+          className="mt-4 inline-flex rounded-full border border-[var(--accent-border)]/25 px-4 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:bg-[var(--accent)]/10"
           href="/settings"
         >
           Add public handle
@@ -168,22 +168,24 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!selectedDraft && result?.ok) {
     return (
-      <section className="rounded-2xl border border-[#a7f300]/20 bg-[#a7f300]/[0.035] p-4">
-        <p className="text-[12px] text-[#a7f300]">Published to the feed</p>
+      <section className="rounded-2xl border border-[var(--accent-border)]/20 bg-[var(--accent)]/[0.035] p-4">
+        <p className="text-[12px] text-[var(--accent-text)]">Published to the feed</p>
         <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
           {result.title}
         </h2>
-        <p className="mt-2 text-sm text-[#d9ff91]/75">Now share the post while it is fresh.</p>
-        {copyStatus ? <p className="mt-2 text-xs text-[#a7f300]">{copyStatus}</p> : null}
+        <p className="mt-2 text-sm text-[var(--accent-text)]/75">
+          Now share the post while it is fresh.
+        </p>
+        {copyStatus ? <p className="mt-2 text-xs text-[var(--accent-text)]">{copyStatus}</p> : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
+            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-[var(--accent)]"
             href={result.href}
           >
             Open post
           </Link>
           <button
-            className="rounded-full border border-[#a7f300]/25 px-4 py-2 text-sm font-medium text-[#d9ff91] transition hover:bg-[#a7f300]/10"
+            className="rounded-full border border-[var(--accent-border)]/25 px-4 py-2 text-sm font-medium text-[var(--accent-text)] transition hover:bg-[var(--accent)]/10"
             onClick={() => void copyShareUrl(result.shareUrl)}
             type="button"
           >
@@ -196,7 +198,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
 
   if (!selectedDraft) {
     return (
-      <section className="rounded-2xl border border-white/[0.08] bg-[#0b0b0a] p-4">
+      <section className="rounded-2xl border border-white/[0.08] bg-[var(--surface-deep)] p-4">
         <p className="text-[12px] text-zinc-600">No proof drafts ready</p>
         <h2 className="mt-1 text-lg font-medium tracking-[-0.02em] text-zinc-100">
           Post manually now, or import an agent run later.
@@ -207,7 +209,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
-            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300]"
+            className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-[var(--accent)]"
             href="/create"
           >
             Write a build post
@@ -224,7 +226,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0a]">
+    <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--surface-deep)]">
       <div className="border-b border-white/[0.08] p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -245,7 +247,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
             <button
               className={`min-w-[13rem] rounded-xl border p-3 text-left transition ${
                 draft.id === selectedDraft.id
-                  ? "border-[#a7f300]/45 bg-[#a7f300]/[0.045]"
+                  ? "border-[var(--accent-border)]/45 bg-[var(--accent)]/[0.045]"
                   : "border-white/10 bg-black/20 hover:border-white/25"
               }`}
               key={draft.id}
@@ -276,7 +278,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         <label className="block">
           <span className="text-[12px] text-zinc-600">Outcome headline</span>
           <input
-            className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-base font-medium text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/55"
+            className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-base font-medium text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[var(--accent-border)]/55"
             maxLength={120}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="What did you ship, debug, or learn?"
@@ -288,7 +290,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
         <label className="block">
           <span className="text-[12px] text-zinc-600">Social caption</span>
           <textarea
-            className="mt-2 min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[#a7f300]/55"
+            className="mt-2 min-h-28 w-full resize-y rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-[var(--accent-border)]/55"
             maxLength={700}
             onChange={(event) => setSummary(event.target.value)}
             placeholder="Add the context that makes this useful to other builders."
@@ -339,7 +341,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
           <div
             className={`rounded-xl border p-4 text-sm ${
               result.ok
-                ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#d9ff91]"
+                ? "border-[var(--accent-border)]/30 bg-[var(--accent)]/10 text-[var(--accent-text)]"
                 : "border-red-400/25 bg-red-500/10 text-red-100"
             }`}
           >
@@ -347,8 +349,12 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-medium">Published to the feed.</p>
-                  <p className="text-[#d9ff91]/75">Now share the post while it is fresh.</p>
-                  {copyStatus ? <p className="mt-1 text-xs text-[#a7f300]">{copyStatus}</p> : null}
+                  <p className="text-[var(--accent-text)]/75">
+                    Now share the post while it is fresh.
+                  </p>
+                  {copyStatus ? (
+                    <p className="mt-1 text-xs text-[var(--accent-text)]">{copyStatus}</p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -358,7 +364,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
                     Open
                   </Link>
                   <button
-                    className="rounded-full border border-[#a7f300]/25 px-4 py-2 font-medium text-[#d9ff91]"
+                    className="rounded-full border border-[var(--accent-border)]/25 px-4 py-2 font-medium text-[var(--accent-text)]"
                     onClick={() => void copyShareUrl(result.shareUrl)}
                     type="button"
                   >
@@ -387,7 +393,7 @@ export function FeedComposer({ viewer, drafts }: FeedComposerProps) {
             Private and reviewed only. Pending/redacted sessions stay locked until you clear them.
           </p>
           <button
-            className="rounded-full bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-[#a7f300] disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-zinc-100 px-5 py-2.5 text-sm font-medium text-[var(--on-accent)] transition hover:bg-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPending || !title.trim()}
             type="submit"
           >

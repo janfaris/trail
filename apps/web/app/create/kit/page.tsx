@@ -26,10 +26,10 @@ export default async function CreateKitPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080808] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/create" />
       <main className="mx-auto w-full max-w-[640px] px-0 sm:px-4">
-        <div className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[#0b0b0a] sm:border-x">
+        <div className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[var(--surface-deep)] sm:border-x">
           <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3">
             <Link
               href="/create"

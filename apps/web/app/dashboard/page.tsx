@@ -108,14 +108,14 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_14%_0%,rgba(167,243,0,0.08),transparent_26rem),linear-gradient(180deg,#050505,#09090b_38%,#050505)] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_14%_0%,rgba(167,243,0,0.08),transparent_26rem),linear-gradient(180deg,var(--page-base),var(--page-base-2)_38%,var(--page-base))] text-zinc-100">
       <SiteNav currentPath="/dashboard" />
 
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
         <div className="mb-8 overflow-hidden rounded-[2rem] bg-black/45 shadow-[var(--trail-shadow-border)]">
           <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
                 Trail · Builder Studio
               </div>
               <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[0.96] tracking-[-0.07em] text-zinc-50 sm:text-6xl">
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link
                   href="/feed"
-                  className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+                  className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
                 >
                   Open feed
                 </Link>
@@ -164,7 +164,7 @@ export default async function DashboardPage() {
             <div className="flex flex-wrap justify-center gap-2">
               <Link
                 href="/create"
-                className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+                className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
               >
                 Post a build
               </Link>
@@ -204,7 +204,11 @@ function Stat({
       <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">{label}</div>
       <div
         className={`mt-1 text-3xl font-semibold tabular-nums ${
-          tone === "lime" ? "text-[#a7f300]" : tone === "amber" ? "text-amber-300" : "text-zinc-100"
+          tone === "lime"
+            ? "text-[var(--accent-text)]"
+            : tone === "amber"
+              ? "text-amber-300"
+              : "text-zinc-100"
         }`}
       >
         {value}

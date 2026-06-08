@@ -34,7 +34,7 @@ export function FeaturedSessionCard({
         title={title}
         className="group flex items-center gap-4 border border-zinc-900 bg-zinc-950 rounded-md p-4 hover:border-white/20 hover:bg-zinc-900/40 transition-colors"
       >
-        <span className="text-[10px] uppercase tracking-[0.18em] text-[#a7f300] font-mono shrink-0">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)] font-mono shrink-0">
           ★
         </span>
         <div className="flex-1 min-w-0">
@@ -56,7 +56,7 @@ export function FeaturedSessionCard({
             )}
           </div>
         </div>
-        <span className="text-xs font-mono text-zinc-600 group-hover:text-[#a7f300] shrink-0">
+        <span className="text-xs font-mono text-zinc-600 group-hover:text-[var(--accent-text)] shrink-0">
           →
         </span>
       </Link>
@@ -68,9 +68,9 @@ export function FeaturedSessionCard({
     <Link
       href={`/u/${handle}/${session.slug}`}
       title={title}
-      className="group block border border-white/10 bg-zinc-900/40 rounded-md p-8 md:p-10 hover:border-[#a7f300]/60 hover:bg-zinc-900/70 transition-colors"
+      className="group block border border-white/10 bg-zinc-900/40 rounded-md p-8 md:p-10 hover:border-[var(--accent-border)]/60 hover:bg-zinc-900/70 transition-colors"
     >
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[#a7f300] font-mono mb-4">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--accent-text)] font-mono mb-4">
         <span>★ Featured</span>
       </div>
       <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-zinc-50 leading-[1.15] group-hover:text-white">
@@ -96,7 +96,9 @@ export function FeaturedSessionCard({
         {session.durationSeconds != null && (
           <span className="tabular-nums">{formatDuration(session.durationSeconds)}</span>
         )}
-        <span className="ml-auto text-zinc-300 group-hover:text-[#a7f300]">View session →</span>
+        <span className="ml-auto text-zinc-300 group-hover:text-[var(--accent-text)]">
+          View session →
+        </span>
       </div>
     </Link>
   );

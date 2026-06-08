@@ -67,7 +67,7 @@ export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder='Try: "pricing research" or "how I fixed the cursor parser"'
           autoFocus
-          className="w-full bg-zinc-900/50 border border-white/10 rounded-md px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#a7f300] focus:ring-1 focus:ring-[#a7f300]/40 font-mono text-sm"
+          className="w-full bg-zinc-900/50 border border-white/10 rounded-md px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[var(--accent-border)] focus:ring-1 focus:ring-[var(--accent)]/40 font-mono text-sm"
         />
       </form>
 
@@ -102,7 +102,7 @@ export function SearchBox({ initialQuery = "" }: { initialQuery?: string }) {
               </div>
               <Link
                 href={`/u/${h.handle}/${h.slug}`}
-                className="block text-zinc-50 font-semibold tracking-tight text-lg leading-snug hover:text-[#a7f300] transition-colors"
+                className="block text-zinc-50 font-semibold tracking-tight text-lg leading-snug hover:text-[var(--accent-text)] transition-colors"
               >
                 {h.title}
               </Link>

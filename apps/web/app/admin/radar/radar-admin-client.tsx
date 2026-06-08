@@ -168,12 +168,12 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
   }, [data]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_16%_0%,rgba(167,243,0,0.08),transparent_26rem),#050505] px-4 py-10 text-zinc-200">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_16%_0%,rgba(167,243,0,0.08),transparent_26rem),var(--page-base)] px-4 py-10 text-zinc-200">
       <div className="mx-auto max-w-5xl">
         <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
                 Radar operations
               </div>
               <h1 className="mt-4 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
@@ -237,8 +237,8 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                         {data.xApiUsage.scheduledRunsPerDay} scheduled runs/day.
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-[#a7f300]/10 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
-                      <div className="text-xs uppercase tracking-wide text-[#a7f300]">
+                    <div className="rounded-2xl bg-[var(--accent)]/10 px-3 py-2 text-right shadow-[0_0_0_1px_rgba(167,243,0,0.28)]">
+                      <div className="text-xs uppercase tracking-wide text-[var(--accent-text)]">
                         Scheduled requests/day
                       </div>
                       <div className="mt-0.5 text-lg font-semibold text-zinc-100">
@@ -346,7 +346,7 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium shadow-[0_0_0_1px_currentColor] ${
                             source.active
-                              ? "border-[#a7f300]/30 bg-[#a7f300]/10 text-[#a7f300]"
+                              ? "border-[var(--accent-border)]/30 bg-[var(--accent)]/10 text-[var(--accent-text)]"
                               : "border-zinc-700 bg-zinc-800/70 text-zinc-500"
                           }`}
                         >
@@ -364,7 +364,7 @@ export default function RadarAdminClient({ adminLabel }: { adminLabel: string })
                       <td className="px-3 py-2 text-right">
                         <Link
                           href={`/radar?source=${encodeURIComponent(source.handle)}`}
-                          className="text-[#a7f300] hover:text-[#c8ff4d]"
+                          className="text-[var(--accent-text)] hover:text-[var(--accent-text)]"
                         >
                           View
                         </Link>

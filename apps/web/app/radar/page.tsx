@@ -303,13 +303,13 @@ export default async function RadarPage({
     <div className="min-h-screen bg-black text-zinc-50">
       <SiteNav currentPath="/radar" />
 
-      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.045),transparent_26%),linear-gradient(180deg,rgba(24,24,27,0.18),rgba(0,0,0,0)_220px),#000]">
+      <main className="bg-[radial-gradient(circle_at_12%_0%,rgba(167,243,0,0.045),transparent_26%),linear-gradient(180deg,rgba(24,24,27,0.18),rgba(0,0,0,0)_220px),var(--page-base)]">
         <section className="mx-auto grid max-w-6xl gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,760px)_300px] xl:px-8 xl:py-6">
           <div className="space-y-4">
             <section className="rounded-[26px] bg-zinc-950/82 p-4 shadow-[var(--trail-shadow-border)] sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
                     AI Radar
                   </div>
                   <h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-white sm:text-4xl">
@@ -367,7 +367,7 @@ export default async function RadarPage({
               <section className="grid gap-4">
                 <div className="flex items-end justify-between gap-4 px-1">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
                       Latest pulls
                     </p>
                     <h2 className="mt-1 text-2xl font-semibold tracking-[-0.045em] text-zinc-50">
@@ -379,7 +379,7 @@ export default async function RadarPage({
                   </div>
                   <Link
                     href="/feed"
-                    className="hidden rounded-full px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)] sm:inline-flex"
+                    className="hidden rounded-full px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[var(--accent-text)] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.2)] sm:inline-flex"
                   >
                     Open feed
                   </Link>
@@ -413,7 +413,7 @@ export default async function RadarPage({
                       href={filterHref({ category: activeCategory, source: source.handle })}
                       key={source.handle}
                       className={`block px-4 py-3 transition-[background-color] hover:bg-black/38 ${
-                        activeSource === source.handle ? "bg-[#a7f300]/[0.07]" : ""
+                        activeSource === source.handle ? "bg-[var(--accent)]/[0.07]" : ""
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -436,8 +436,8 @@ export default async function RadarPage({
               </div>
             </section>
 
-            <section className="rounded-[24px] bg-[#a7f300]/[0.055] p-4 shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a7f300]">
+            <section className="rounded-[24px] bg-[var(--accent)]/[0.055] p-4 shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-text)]">
                 Proof loop
               </div>
               <p className="mt-3 text-sm leading-6 text-zinc-300">
@@ -474,8 +474,8 @@ function FilterPill({
       href={href}
       className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 font-mono text-[10px] uppercase tracking-[0.12em] transition-[background-color,box-shadow,color,transform] active:scale-[0.96] ${
         active
-          ? "bg-[#a7f300] text-black"
-          : "bg-zinc-950 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
+          ? "bg-[var(--accent)] text-black"
+          : "bg-zinc-950 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] hover:text-[var(--accent-text)] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.22)]"
       }`}
     >
       {children}
@@ -492,7 +492,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
       <div className="grid gap-px bg-zinc-900/55 lg:grid-cols-[minmax(0,1fr)_238px]">
         <div className="bg-zinc-950/96 p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em]">
-            <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 text-[#a7f300]">
+            <span className="rounded-full bg-[var(--accent)]/10 px-2.5 py-1 text-[var(--accent-text)]">
               {radarCategoryLabel(signal.category)}
             </span>
             <span className="text-zinc-500">@{signal.sourceHandle}</span>
@@ -504,7 +504,7 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
           </div>
 
           <a href={signal.url} target="_blank" rel="noreferrer" className="mt-4 block">
-            <h3 className="text-pretty text-2xl font-semibold leading-tight tracking-[-0.045em] text-zinc-50 transition hover:text-[#a7f300]">
+            <h3 className="text-pretty text-2xl font-semibold leading-tight tracking-[-0.045em] text-zinc-50 transition hover:text-[var(--accent-text)]">
               {signal.title}
             </h3>
             <p className="mt-3 text-pretty text-sm leading-6 text-zinc-400">{signal.summary}</p>
@@ -568,13 +568,13 @@ function SignalCard({ signal }: { signal: RadarSignalRow }) {
               href={signal.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-zinc-100 px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.96]"
             >
               Open X signal
             </a>
             <Link
               href="/feed#feed-composer"
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-10 w-full items-center justify-center rounded-full px-4 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 transition-[background-color,color,transform] hover:bg-zinc-900 hover:text-[var(--accent-text)] active:scale-[0.96]"
             >
               Publish proof
             </Link>
@@ -604,7 +604,7 @@ function EmptyRadarState({ tableAvailable }: { tableAvailable: boolean }) {
   return (
     <section className="rounded-[28px] border border-dashed border-zinc-800 bg-zinc-950/68 p-6 text-center">
       <div className="mx-auto max-w-xl">
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a7f300]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent-text)]">
           {tableAvailable ? "No matching signals" : "Radar not hydrated yet"}
         </p>
         <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-white">
@@ -614,7 +614,7 @@ function EmptyRadarState({ tableAvailable }: { tableAvailable: boolean }) {
           The product path is automatic curation, not pasted URLs. The first ingestion runs from
           your machine because that is where xurl is authenticated.
         </p>
-        <code className="mt-5 block rounded-2xl bg-black p-4 text-left font-mono text-[12px] leading-6 text-[#a7f300]">
+        <code className="mt-5 block rounded-2xl bg-black p-4 text-left font-mono text-[12px] leading-6 text-[var(--accent-text)]">
           pnpm -F @trail/web run radar:fetch -- --apply --limit=10
         </code>
       </div>

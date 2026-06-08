@@ -14,7 +14,7 @@ export function ProfileIntroCard() {
         </button>
       </form>
 
-      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent-text)]">
         This is a Trail builder profile
       </div>
       <p className="max-w-3xl pr-6 text-sm leading-relaxed text-zinc-300">
@@ -25,7 +25,7 @@ export function ProfileIntroCard() {
       <div className="mt-4 flex flex-wrap gap-2">
         <Link
           href="/create"
-          className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300] px-4 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+          className="inline-flex min-h-9 items-center rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
         >
           Post a build
         </Link>

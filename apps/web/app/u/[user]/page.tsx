@@ -481,7 +481,7 @@ export default async function UserProfile({ params }: PageProps) {
     : null;
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#060706] text-zinc-100">
+    <div className="min-h-screen overflow-hidden bg-[var(--surface-deep)] text-zinc-100">
       <SiteNav />
       <div
         aria-hidden
@@ -489,7 +489,7 @@ export default async function UserProfile({ params }: PageProps) {
       />
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 opacity-[0.025] [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:44px_44px]"
+        className="pointer-events-none fixed inset-0 opacity-[0.025] [background-image:linear-gradient(var(--grid-line)_1px,transparent_1px),linear-gradient(90deg,var(--grid-line)_1px,transparent_1px)] [background-size:44px_44px]"
       />
 
       <main className="relative mx-auto max-w-7xl px-4 pt-8 pb-24 sm:px-6 lg:px-8">
@@ -506,11 +506,11 @@ export default async function UserProfile({ params }: PageProps) {
         <section className="relative overflow-hidden rounded-[2rem] bg-zinc-950/88 shadow-[var(--trail-shadow-border)]">
           <div
             aria-hidden
-            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#a7f300] via-zinc-100 to-zinc-700"
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent)] via-zinc-100 to-zinc-700"
           />
           <div
             aria-hidden
-            className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#a7f300]/[0.06] blur-3xl"
+            className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[var(--accent)]/[0.06] blur-3xl"
           />
           <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.75fr)] lg:p-10">
             <div className="min-w-0">
@@ -519,7 +519,7 @@ export default async function UserProfile({ params }: PageProps) {
                   <Avatar src={avatar} alt={handle} size={80} fallback={handle} />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-[#a7f300]/30 bg-[#a7f300]/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-[#a7f300]">
+                      <span className="rounded-full border border-[var(--accent-border)]/30 bg-[var(--accent)]/10 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-[var(--accent-text)]">
                         Builder proof
                       </span>
                       <VerifiedBadge status={verifiedBuilder} />
@@ -540,7 +540,7 @@ export default async function UserProfile({ params }: PageProps) {
                     ) : (
                       <Link
                         href={`/api/auth/sign-in/github?callbackURL=/u/${handle}`}
-                        className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-sm font-semibold text-black transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
+                        className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.96]"
                       >
                         Follow
                       </Link>
@@ -589,7 +589,7 @@ export default async function UserProfile({ params }: PageProps) {
                   {isSelf && missingIdentityFields.length > 0 ? (
                     <Link
                       href="/settings"
-                      className="border-t border-white/10 px-4 py-3 text-xs font-mono text-[#a7f300] transition-colors hover:text-zinc-50 sm:col-span-2"
+                      className="border-t border-white/10 px-4 py-3 text-xs font-mono text-[var(--accent-text)] transition-colors hover:text-zinc-50 sm:col-span-2"
                     >
                       Complete profile: {missingIdentityFields.join(", ")} →
                     </Link>
@@ -619,7 +619,7 @@ export default async function UserProfile({ params }: PageProps) {
               </div>
 
               <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-zinc-400">
-                <span className="rounded-full border border-[#a7f300]/25 bg-[#a7f300]/10 px-3 py-1 text-[#a7f300]">
+                <span className="rounded-full border border-[var(--accent-border)]/25 bg-[var(--accent)]/10 px-3 py-1 text-[var(--accent-text)]">
                   {reputation.label} · {formatCount(reputation.score)}
                 </span>
                 <span className="rounded-full bg-white/[0.04] px-3 py-1">
@@ -635,7 +635,7 @@ export default async function UserProfile({ params }: PageProps) {
                 {isSelf && (
                   <Link
                     href={`/u/${handle}/spend`}
-                    className="rounded-full bg-zinc-900/80 px-3 py-1 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)]"
+                    className="rounded-full bg-zinc-900/80 px-3 py-1 text-zinc-400 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition-[box-shadow,color] hover:text-[var(--accent-text)] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)]"
                     title="Private — only you can see this"
                   >
                     Spend →
@@ -695,7 +695,7 @@ export default async function UserProfile({ params }: PageProps) {
                     <Link
                       key={stack.tag}
                       href={stackHref(stack.tag)}
-                      className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-[#a7f300]"
+                      className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-[var(--accent-text)]"
                     >
                       <span>{stack.tag}</span>
                       <span className="text-zinc-600">{stack.count}</span>
@@ -711,7 +711,7 @@ export default async function UserProfile({ params }: PageProps) {
                   Pinned build
                 </p>
                 {heroSession && (
-                  <span className="rounded-full bg-[#a7f300] px-2 py-0.5 text-[10px] font-mono font-semibold text-black">
+                  <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-mono font-semibold text-black">
                     {sessionStatusLabel(heroSession)}
                   </span>
                 )}
@@ -719,7 +719,7 @@ export default async function UserProfile({ params }: PageProps) {
               {heroSession ? (
                 <div className="rounded-[1.25rem] bg-zinc-950/80 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
                   <div className="flex items-start justify-between gap-3">
-                    <ToolIcon name={heroSession.tool} className="mt-1 text-[#a7f300]" />
+                    <ToolIcon name={heroSession.tool} className="mt-1 text-[var(--accent-text)]" />
                     {isSelf && (
                       <FeatureToggle
                         sessionId={heroSession.id}
@@ -728,7 +728,7 @@ export default async function UserProfile({ params }: PageProps) {
                     )}
                   </div>
                   <Link href={`/u/${handle}/${heroSession.slug}`} className="group mt-4 block">
-                    <h2 className="text-2xl font-semibold leading-tight tracking-[-0.03em] text-zinc-50 group-hover:text-[#a7f300]">
+                    <h2 className="text-2xl font-semibold leading-tight tracking-[-0.03em] text-zinc-50 group-hover:text-[var(--accent-text)]">
                       {sessionTitle(heroSession)}
                     </h2>
                     <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-zinc-400">
@@ -752,7 +752,7 @@ export default async function UserProfile({ params }: PageProps) {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
                       href={`/u/${handle}/${heroSession.slug}`}
-                      className="inline-flex min-h-10 flex-1 items-center justify-center rounded-full bg-[#a7f300]/10 px-3 text-xs font-mono text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.24)] transition-[background-color,transform] hover:bg-[#a7f300]/20 active:scale-[0.96]"
+                      className="inline-flex min-h-10 flex-1 items-center justify-center rounded-full bg-[var(--accent)]/10 px-3 text-xs font-mono text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.24)] transition-[background-color,transform] hover:bg-[var(--accent)]/20 active:scale-[0.96]"
                     >
                       Open post
                     </Link>
@@ -844,7 +844,7 @@ export default async function UserProfile({ params }: PageProps) {
                   </div>
                   <Link
                     href="/feed"
-                    className="hidden rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-[#a7f300] sm:inline-flex"
+                    className="hidden rounded-full bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-[var(--accent-text)] sm:inline-flex"
                   >
                     Open feed
                   </Link>
@@ -864,7 +864,7 @@ export default async function UserProfile({ params }: PageProps) {
                       <li key={s.id} className="border-b border-white/10 last:border-b-0">
                         <article className="group grid gap-4 px-4 py-5 transition-colors hover:bg-zinc-900/45 sm:grid-cols-[3.5rem_1fr] sm:px-5">
                           <div className="hidden sm:flex sm:flex-col sm:items-center">
-                            <span className="h-10 w-10 rounded-full border border-white/10 bg-black/40 p-2 text-[#a7f300]">
+                            <span className="h-10 w-10 rounded-full border border-white/10 bg-black/40 p-2 text-[var(--accent-text)]">
                               <ToolIcon name={s.tool} />
                             </span>
                             <span className="mt-3 h-full w-px bg-zinc-800 group-last:hidden" />
@@ -888,7 +888,7 @@ export default async function UserProfile({ params }: PageProps) {
                               )}
                             </div>
                             <Link href={`/u/${handle}/${s.slug}`} className="mt-2 block">
-                              <h4 className="text-lg font-semibold tracking-tight text-zinc-100 transition-colors group-hover:text-[#a7f300]">
+                              <h4 className="text-lg font-semibold tracking-tight text-zinc-100 transition-colors group-hover:text-[var(--accent-text)]">
                                 {title}
                               </h4>
                               <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-500">
@@ -952,7 +952,9 @@ export default async function UserProfile({ params }: PageProps) {
               <div className="mt-4 space-y-3 text-sm text-zinc-400">
                 <div className="flex items-center justify-between">
                   <span>Builder signal</span>
-                  <span className="font-mono text-[#a7f300]">{formatCount(reputation.score)}</span>
+                  <span className="font-mono text-[var(--accent-text)]">
+                    {formatCount(reputation.score)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Lessons extracted</span>
@@ -968,7 +970,11 @@ export default async function UserProfile({ params }: PageProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Verified builder</span>
-                  <span className={verifiedBuilder.verified ? "text-[#a7f300]" : "text-zinc-500"}>
+                  <span
+                    className={
+                      verifiedBuilder.verified ? "text-[var(--accent-text)]" : "text-zinc-500"
+                    }
+                  >
                     {verifiedBuilder.verified ? "Active" : "Pending"}
                   </span>
                 </div>
@@ -1076,7 +1082,7 @@ export default async function UserProfile({ params }: PageProps) {
               <div className="mt-4 flex flex-wrap gap-2">
                 <Link
                   href={`/u/${handle}/interview`}
-                  className="inline-flex items-center gap-1 rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 px-3 py-2 text-xs font-mono text-[#a7f300] transition-colors hover:bg-[#a7f300]/20"
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-border)]/40 bg-[var(--accent)]/10 px-3 py-2 text-xs font-mono text-[var(--accent-text)] transition-colors hover:bg-[var(--accent)]/20"
                 >
                   Recruiter view
                   <ArrowUpRightIcon size={12} />
