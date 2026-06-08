@@ -1968,7 +1968,7 @@ function FeedDiscoveryPanel({
         {kits.length === 0 ? (
           <Link
             href="/create/kit"
-            className="mt-3 inline-flex text-[13px] text-[#a7f300] hover:underline"
+            className="mt-3 inline-flex text-[13px] text-[var(--accent-text)] hover:underline"
           >
             Build the first Kit →
           </Link>

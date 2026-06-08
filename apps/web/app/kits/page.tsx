@@ -21,12 +21,12 @@ export default async function KitsHubPage() {
   const hasAny = mostForked.length > 0 || fresh.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/kits" />
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
         <div className="flex flex-col gap-4 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
               Hardware store
             </div>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
@@ -39,7 +39,7 @@ export default async function KitsHubPage() {
           </div>
           <Link
             href="/create/kit"
-            className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-[#a7f300] px-4 text-[13px] font-medium text-black transition-[background-color,transform] hover:bg-[#b6ff14] active:scale-[0.97]"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-[var(--accent)] px-4 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
           >
             Build a Kit →
           </Link>
@@ -53,7 +53,7 @@ export default async function KitsHubPage() {
             </p>
             <Link
               href="/create/kit"
-              className="mt-4 inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-[13px] font-medium text-black hover:bg-[#b6ff14]"
+              className="mt-4 inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 text-[13px] font-medium text-[var(--on-accent)] hover:bg-[var(--accent-bright)]"
             >
               Build a Kit from a repo →
             </Link>
