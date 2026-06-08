@@ -15,7 +15,7 @@ export function Markdown({ children, className }: { children: string; className?
               {...rest}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-[#a7f300] underline-offset-4 hover:underline"
+              className="text-[var(--accent-text)] underline-offset-4 hover:underline"
             >
               {children}
             </a>

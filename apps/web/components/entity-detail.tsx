@@ -78,7 +78,7 @@ export function EntityDetailView({
                     size={24}
                     fallback={b.name ?? b.handle}
                   />
-                  <span className="text-sm text-zinc-200 group-hover:text-[#a7f300]">
+                  <span className="text-sm text-zinc-200 group-hover:text-[var(--accent-text)]">
                     @{b.handle}
                   </span>
                   <span className="text-[11px] font-mono text-zinc-500">
@@ -106,7 +106,7 @@ export function EntityDetailView({
                   {r.outcome && r.outcome !== "unknown" ? (
                     <>
                       <span>·</span>
-                      <span className={r.outcome === "shipped" ? "text-[#a7f300]" : ""}>
+                      <span className={r.outcome === "shipped" ? "text-[var(--accent-text)]" : ""}>
                         {r.outcome}
                       </span>
                     </>
@@ -122,7 +122,7 @@ export function EntityDetailView({
                   {r.positiveReactions > 0 ? (
                     <>
                       <span>·</span>
-                      <span className="text-[#a7f300]">↑{r.positiveReactions}</span>
+                      <span className="text-[var(--accent-text)]">↑{r.positiveReactions}</span>
                     </>
                   ) : null}
                   {r.negativeReactions > 0 ? (
@@ -132,7 +132,7 @@ export function EntityDetailView({
                     </>
                   ) : null}
                 </div>
-                <h3 className="text-base font-medium text-zinc-100 group-hover:text-[#a7f300] transition-colors">
+                <h3 className="text-base font-medium text-zinc-100 group-hover:text-[var(--accent-text)] transition-colors">
                   {r.title ?? r.slug}
                 </h3>
                 {r.summary ? (
@@ -154,7 +154,7 @@ export function EntityDetailView({
               <Link
                 key={`${rel.kind}:${rel.tag}`}
                 href={entityHref(rel.kind, rel.tag)}
-                className="text-[11px] font-mono text-zinc-400 bg-zinc-900 px-2 py-1 rounded hover:text-[#a7f300]"
+                className="text-[11px] font-mono text-zinc-400 bg-zinc-900 px-2 py-1 rounded hover:text-[var(--accent-text)]"
               >
                 {displayLabel(rel.tag, rel.label)}
                 <span className="text-zinc-600"> · {rel.sessions}</span>

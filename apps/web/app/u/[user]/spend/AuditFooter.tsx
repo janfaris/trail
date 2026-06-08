@@ -107,7 +107,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
         </button>
         <Link
           href="/pricing"
-          className="font-mono text-xs text-zinc-500 transition-colors hover:text-[#a7f300]"
+          className="font-mono text-xs text-zinc-500 transition-colors hover:text-[var(--accent-text)]"
         >
           Upgrade →
         </Link>
@@ -122,7 +122,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
       >
         <Link
           href="/settings"
-          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#a7f300]/10 px-4 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[#a7f300]/15 active:scale-[0.97]"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent)]/10 px-4 font-mono text-xs text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[var(--accent)]/15 active:scale-[0.97]"
         >
           Enable in /settings →
         </Link>
@@ -140,7 +140,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
         <button
           type="button"
           onClick={run}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#a7f300]/10 px-4 font-mono text-xs text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[#a7f300]/15 active:scale-[0.97]"
+          className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent)]/10 px-4 font-mono text-xs text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.32)] transition-[background-color,transform] hover:bg-[var(--accent)]/15 active:scale-[0.97]"
         >
           Run AI Audit
         </button>
@@ -184,7 +184,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
           <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
             AI Audit
           </div>
-          <div className="text-3xl font-semibold tracking-tight text-[#a7f300] tabular-nums">
+          <div className="text-3xl font-semibold tracking-tight text-[var(--accent-text)] tabular-nums">
             {fmtUsd(r.totalPotentialSavingsUsd)}/mo
           </div>
           <div className="mt-1 text-[12px] text-zinc-500">
@@ -222,7 +222,7 @@ export function AuditFooter({ userPlan, optedIn, windowDays, existingAudit }: Pr
               </div>
               <p className="text-[13px] text-zinc-400 leading-relaxed">{f.recommendation}</p>
             </div>
-            <div className="shrink-0 font-mono text-sm tabular-nums text-[#a7f300] sm:text-right">
+            <div className="shrink-0 font-mono text-sm tabular-nums text-[var(--accent-text)] sm:text-right">
               {fmtUsd(f.estimatedMonthlySavingsUsd)}/mo
             </div>
           </li>

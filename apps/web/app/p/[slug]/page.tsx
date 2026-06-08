@@ -63,12 +63,12 @@ export default async function PlaylistPage({ params }: Props) {
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <SiteNav currentPath="/p" />
 
       <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-8 sm:px-6">
         <section className="mb-6 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
-          <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[#a7f300]">
+          <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent-text)]">
             <span>Playlist</span>
             {p.isOfficial && <span>· Curated by Trail</span>}
           </div>
@@ -83,7 +83,10 @@ export default async function PlaylistPage({ params }: Props) {
             {curator?.handle && (
               <>
                 {" · curated by "}
-                <Link href={`/u/${curator.handle}`} className="text-zinc-300 hover:text-[#a7f300]">
+                <Link
+                  href={`/u/${curator.handle}`}
+                  className="text-zinc-300 hover:text-[var(--accent-text)]"
+                >
                   @{curator.handle}
                 </Link>
               </>
@@ -122,7 +125,7 @@ export default async function PlaylistPage({ params }: Props) {
                       {it.outcome === "shipped" && (
                         <>
                           <span>·</span>
-                          <span className="text-[#a7f300]">shipped</span>
+                          <span className="text-[var(--accent-text)]">shipped</span>
                         </>
                       )}
                       <span>·</span>
@@ -134,7 +137,7 @@ export default async function PlaylistPage({ params }: Props) {
                         </>
                       )}
                     </div>
-                    <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[#a7f300]">
+                    <h3 className="text-base font-medium text-zinc-100 transition-colors group-hover:text-[var(--accent-text)]">
                       {it.title ?? it.sessionSlug}
                     </h3>
                     {it.summary && (
@@ -142,7 +145,7 @@ export default async function PlaylistPage({ params }: Props) {
                     )}
                   </Link>
                   {it.note && (
-                    <p className="mt-3 border-l-2 border-[#a7f300]/40 pl-3 text-sm italic text-zinc-300">
+                    <p className="mt-3 border-l-2 border-[var(--accent-border)]/40 pl-3 text-sm italic text-zinc-300">
                       {it.note}
                     </p>
                   )}

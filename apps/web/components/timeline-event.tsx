@@ -14,7 +14,7 @@ function Rail({ at, idx }: { at?: string; idx: number }) {
     <div className="hidden md:flex md:flex-col md:items-end md:pr-5 md:pt-1 select-none">
       <a
         href={`#event-${idx}`}
-        className="text-[11px] font-mono text-zinc-600 hover:text-[#a7f300] tabular-nums tracking-tight transition-colors"
+        className="text-[11px] font-mono text-zinc-600 hover:text-[var(--accent-text)] tabular-nums tracking-tight transition-colors"
       >
         #{idx.toString().padStart(2, "0")}
       </a>
@@ -64,7 +64,7 @@ export function TimelineEvent({
       return (
         <section id={anchor} className={`scroll-mt-24 ${grid}`}>
           <Rail at={data.at} idx={idx} />
-          <div className="rounded-md border border-white/10 border-l-2 border-l-[#a7f300]/60 bg-zinc-900/40 p-5">
+          <div className="rounded-md border border-white/10 border-l-2 border-l-[var(--accent-border)]/60 bg-zinc-900/40 p-5">
             <Kind>completion</Kind>
             <Markdown>{data.text}</Markdown>
           </div>

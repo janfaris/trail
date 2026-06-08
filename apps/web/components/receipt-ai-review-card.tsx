@@ -25,7 +25,7 @@ const VERDICT_LABELS: Record<ReceiptAiReviewVerdict, string> = {
 };
 
 const VERDICT_CLASSES: Record<ReceiptAiReviewVerdict, string> = {
-  shipped: "text-[#a7f300]",
+  shipped: "text-[var(--accent-text)]",
   partial: "text-sky-200",
   failed: "text-red-200",
   "needs-proof": "text-amber-200",
@@ -88,7 +88,7 @@ export function ReceiptAiReviewCard({
               type="button"
               onClick={generate}
               disabled={pending}
-              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? "Checking..." : "Run AI check"}
             </button>
@@ -105,7 +105,7 @@ export function ReceiptAiReviewCard({
       : ["Read the outcome, inspect the cited proof, then ask the builder what to fork next."];
 
   return (
-    <div className="border-l border-[#a7f300]/30 pl-3">
+    <div className="border-l border-[var(--accent-border)]/30 pl-3">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(16rem,0.92fr)]">
         <div>
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-zinc-600">

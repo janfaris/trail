@@ -70,7 +70,7 @@ async function loadKit(id: string): Promise<KitRow | null> {
 }
 
 function reproLabel(value: string): { label: string; cls: string } {
-  if (value === "verified") return { label: "Verified setup", cls: "text-[#a7f300]" };
+  if (value === "verified") return { label: "Verified setup", cls: "text-[var(--accent-text)]" };
   if (value === "partial") return { label: "Repo-derived setup", cls: "text-sky-200" };
   return { label: "Prompts only", cls: "text-zinc-400" };
 }
@@ -127,10 +127,10 @@ export default async function KitPage({ params }: { params: Promise<{ id: string
   const signInHref = `/api/auth/sign-in/github?callbackURL=${encodeURIComponent(`/kit/${id}`)}`;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/feed" />
       <main className="mx-auto w-full max-w-[640px] px-0 sm:px-4">
-        <article className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[#0b0b0a] sm:border-x">
+        <article className="min-h-[calc(100vh-3.5rem)] border-white/[0.08] bg-[var(--surface-deep)] sm:border-x">
           <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3">
             <Link
               href="/create/kit"
@@ -178,7 +178,7 @@ export default async function KitPage({ params }: { params: Promise<{ id: string
                 href={`https://github.com/${kit.sourceRepo}`}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="font-mono text-zinc-400 hover:text-[#a7f300]"
+                className="font-mono text-zinc-400 hover:text-[var(--accent-text)]"
               >
                 {kit.sourceRepo}
               </a>

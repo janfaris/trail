@@ -21,8 +21,8 @@ const STEPS = [
 export function EmptyBuildPostCard() {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-zinc-950 p-6 md:p-8">
-      <div className="mb-3 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[#a7f300]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+      <div className="mb-3 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent-text)]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
         Your profile is ready for its first build
       </div>
       <h2 className="mb-2 text-2xl font-medium tracking-tight text-zinc-50">
@@ -51,7 +51,7 @@ export function EmptyBuildPostCard() {
       <div className="mt-8 flex flex-wrap gap-2 border-t border-white/10 pt-5">
         <Link
           href="/create"
-          className="inline-flex min-h-10 items-center rounded-full bg-[#a7f300] px-4 text-sm font-semibold text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.97]"
+          className="inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
         >
           Post a build
         </Link>

@@ -618,8 +618,8 @@ function FacetGroup({
               href={buildHref(sp, paramKey, isActive ? null : option.value)}
               className={`rounded-full border px-2.5 py-1 font-mono text-[11px] transition ${
                 isActive
-                  ? "border-[#a7f300] bg-[#a7f300] text-zinc-950"
-                  : "border-zinc-800 bg-black/25 text-zinc-300 hover:border-[#a7f300]/50 hover:text-white"
+                  ? "border-[var(--accent-border)] bg-[var(--accent)] text-zinc-950"
+                  : "border-zinc-800 bg-black/25 text-zinc-300 hover:border-[var(--accent-border)]/50 hover:text-white"
               }`}
             >
               {option.value}
@@ -652,7 +652,7 @@ function SectionHeader({
 }) {
   return (
     <div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#a7f300]">
+      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--accent-text)]">
         {kicker}
       </div>
       <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-white">{title}</h2>
@@ -694,12 +694,12 @@ function LessonCard({
   return (
     <article
       id={`lesson-${lesson.id}`}
-      className="group scroll-mt-24 overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),#080908] shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]"
+      className="group scroll-mt-24 overflow-hidden rounded-[2rem] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),var(--surface-deep)] shadow-[var(--trail-shadow-border)] transition-[box-shadow] hover:shadow-[var(--trail-shadow-border-hover)]"
     >
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <div className="p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[10px]">
-            <span className="rounded-full bg-[#a7f300]/10 px-2.5 py-1 uppercase tracking-[0.14em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
+            <span className="rounded-full bg-[var(--accent)]/10 px-2.5 py-1 uppercase tracking-[0.14em] text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
               {lesson.transferabilityScore}/5 stealable
             </span>
             <span className="text-zinc-500">#{String(index + 1).padStart(2, "0")}</span>
@@ -719,7 +719,7 @@ function LessonCard({
           </div>
 
           <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.02] p-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-950 text-[#a7f300] shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-950 text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
               <ToolIcon name={lesson.tool} size={18} />
             </div>
             <div className="min-w-0">
@@ -734,20 +734,20 @@ function LessonCard({
           </div>
 
           <Link href={href}>
-            <h3 className="mt-5 text-2xl font-semibold leading-tight tracking-[-0.055em] text-white transition-[color] group-hover:text-[#a7f300]">
+            <h3 className="mt-5 text-2xl font-semibold leading-tight tracking-[-0.055em] text-white transition-[color] group-hover:text-[var(--accent-text)]">
               {lesson.title}
             </h3>
           </Link>
 
           <div className="mt-5 rounded-2xl bg-black/30 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.07)]">
-            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
               What to steal
             </div>
             <p className="mt-2 text-base leading-7 text-lime-50/85">{lesson.whatToSteal}</p>
           </div>
 
           <div className="mt-3 grid gap-px overflow-hidden rounded-2xl bg-white/[0.05] md:grid-cols-2">
-            <div className="bg-[#080908] p-4">
+            <div className="bg-[var(--surface-deep)] p-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
                 Use when
               </div>
@@ -796,7 +796,9 @@ function LessonCard({
           <details className="group mt-4 rounded-2xl bg-black/25 p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500 transition-[color] hover:text-zinc-200">
               Proof, if you need it
-              <span className="text-[#a7f300] transition group-open:translate-x-0.5">-&gt;</span>
+              <span className="text-[var(--accent-text)] transition group-open:translate-x-0.5">
+                -&gt;
+              </span>
             </summary>
             <p className="mt-3 text-sm leading-6 text-zinc-300">{lesson.proof}</p>
             {proofSignals.length > 0 ? (
@@ -817,7 +819,7 @@ function LessonCard({
                   <Link
                     key={idx}
                     href={`${href}#event-${idx}`}
-                    className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.16)] transition-[box-shadow] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.32)]"
+                    className="rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.16)] transition-[box-shadow] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.32)]"
                   >
                     event #{idx}
                   </Link>
@@ -831,7 +833,7 @@ function LessonCard({
               <Link
                 key={tag}
                 href={buildHref({}, "tag", tag)}
-                className="rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] text-zinc-400 transition-[background-color,color] hover:bg-white/[0.08] hover:text-[#a7f300]"
+                className="rounded-full bg-white/[0.04] px-2.5 py-1 font-mono text-[10px] text-zinc-400 transition-[background-color,color] hover:bg-white/[0.08] hover:text-[var(--accent-text)]"
               >
                 {tag}
               </Link>
@@ -841,7 +843,7 @@ function LessonCard({
           <div className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-4">
             <Link
               href={href}
-              className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-black transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.96]"
+              className="inline-flex min-h-10 items-center rounded-full bg-zinc-100 px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.96]"
             >
               Open proof
             </Link>
@@ -865,7 +867,7 @@ function LessonCard({
             />
             <Link
               href={discussHref}
-              className="inline-flex min-h-10 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color,transform] hover:text-[#a7f300] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)] active:scale-[0.96]"
+              className="inline-flex min-h-10 items-center rounded-full px-3 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-300 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-[box-shadow,color,transform] hover:text-[var(--accent-text)] hover:shadow-[0_0_0_1px_rgba(167,243,0,0.24)] active:scale-[0.96]"
             >
               Discuss
             </Link>
@@ -890,7 +892,7 @@ function PatternCard({ pattern }: { pattern: PatternRow }) {
           {formatCount(pattern.lessons)} lessons
         </span>
       </div>
-      <h3 className="mt-3 text-lg font-semibold tracking-[-0.04em] text-white transition-[color] group-hover:text-[#a7f300]">
+      <h3 className="mt-3 text-lg font-semibold tracking-[-0.04em] text-white transition-[color] group-hover:text-[var(--accent-text)]">
         {titleize(pattern.label)}
       </h3>
       <p className="mt-2 text-sm leading-5 text-zinc-400">
@@ -920,7 +922,7 @@ function SearchBox({ sp }: { sp: SP }) {
       </label>
       <button
         type="submit"
-        className="h-12 rounded-full bg-[#a7f300] px-5 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-950 transition-[background-color,transform] hover:bg-[#c8ff5e] active:scale-[0.96]"
+        className="h-12 rounded-full bg-[var(--accent)] px-5 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.96]"
       >
         Search lessons
       </button>
@@ -940,7 +942,7 @@ function PersonalizedChips({ tags, sp }: { tags: Facet[]; sp: SP }) {
           <Link
             key={tag.value}
             href={buildHref(sp, "tag", tag.value)}
-            className="rounded-full border border-lime-300/20 px-2.5 py-1 font-mono text-[11px] text-lime-100/80 transition hover:border-lime-200/60 hover:text-[#a7f300]"
+            className="rounded-full border border-lime-300/20 px-2.5 py-1 font-mono text-[11px] text-lime-100/80 transition hover:border-lime-200/60 hover:text-[var(--accent-text)]"
           >
             {tag.value}
           </Link>
@@ -963,7 +965,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
   return (
     <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
       <section className="rounded-[1.75rem] bg-zinc-950/90 p-5 shadow-[var(--trail-shadow-border)]">
-        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#a7f300]">
+        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--accent-text)]">
           Prompt moves
         </div>
         <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">
@@ -985,7 +987,7 @@ function InsightRail({ lessons }: { lessons: LessonRow[] }) {
       </section>
 
       <section className="rounded-[1.75rem] bg-zinc-950/90 p-5 shadow-[var(--trail-shadow-border)]">
-        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#a7f300]">
+        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-[var(--accent-text)]">
           Failure modes
         </div>
         <h2 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white">
@@ -1023,7 +1025,7 @@ export default async function LearnPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#070806] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/learn" />
 
       <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
@@ -1032,7 +1034,7 @@ export default async function LearnPage({
           <div className="absolute inset-0 opacity-[0.025] [background-image:linear-gradient(rgba(255,255,255,0.75)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.75)_1px,transparent_1px)] [background-size:38px_38px]" />
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#a7f300]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)]/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.18)]">
                 Trail Lessons
               </div>
               <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-[0.95] tracking-[-0.07em] text-white sm:text-6xl">

@@ -123,7 +123,7 @@ export default async function SettingsPage() {
               name="spendAuditOptIn"
               type="checkbox"
               defaultChecked={me.spendAuditOptIn}
-              className="mt-0.5 size-4 rounded bg-zinc-900 accent-[#a7f300]"
+              className="mt-0.5 size-4 rounded bg-zinc-900 accent-[var(--accent)]"
             />
             <span className="text-sm leading-6 text-zinc-300">Opt in to AI Spend Audit</span>
           </label>
@@ -132,7 +132,7 @@ export default async function SettingsPage() {
         <div className="pt-2">
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center rounded-full bg-[#a7f300] px-5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.97]"
+            className="inline-flex min-h-11 items-center rounded-full bg-[var(--accent)] px-5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
           >
             Save changes
           </button>

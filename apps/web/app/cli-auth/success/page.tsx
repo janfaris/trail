@@ -5,13 +5,13 @@ const TOKEN_RE = /^[a-f0-9]{32,64}$/i;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_0%,rgba(167,243,0,0.1),transparent_24rem),#050505] p-6 text-zinc-100">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_0%,rgba(167,243,0,0.1),transparent_24rem),var(--page-base)] p-6 text-zinc-100">
       <div className="w-full max-w-md">
         <Link
           href="/"
           className="mb-8 inline-flex font-mono text-[15px] font-semibold tracking-tight"
         >
-          <span className="text-[#a7f300]">/</span>trail
+          <span className="text-[var(--accent-text)]">/</span>trail
         </Link>
         <div className="rounded-[2rem] bg-zinc-950/70 p-8 shadow-[var(--trail-shadow-border)]">
           {children}
@@ -68,13 +68,13 @@ export default async function CliAuthSuccessPage({
   return (
     <Shell>
       <div className="mb-4 flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
-        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a7f300]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent-text)]">
           authorized
         </span>
       </div>
       <h1 className="mb-2 text-lg font-semibold tracking-tight">
-        Logged in as <span className="text-[#a7f300]">@{result.userHandle}</span>
+        Logged in as <span className="text-[var(--accent-text)]">@{result.userHandle}</span>
       </h1>
       <p className="text-sm leading-relaxed text-zinc-400">
         You can close this tab and return to your terminal.

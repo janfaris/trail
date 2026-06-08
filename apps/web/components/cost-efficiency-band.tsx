@@ -120,7 +120,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
           </div>
           <Link
             href="/settings/connections"
-            className="inline-flex items-center justify-center rounded-md bg-[#a7f300] hover:bg-[#b9ff1f] text-zinc-950 text-xs font-mono font-semibold h-8 px-3 transition-colors"
+            className="inline-flex items-center justify-center rounded-md bg-[var(--accent)] hover:bg-[var(--accent-bright)] text-[var(--on-accent)] text-xs font-mono font-semibold h-8 px-3 transition-colors"
           >
             {hasAnyConnection ? "Manage connections →" : "Connect a vendor →"}
           </Link>
@@ -147,7 +147,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
         </h3>
         <Link
           href="/dashboard/cost"
-          className="text-[11px] font-mono text-zinc-500 hover:text-[#a7f300] transition-colors"
+          className="text-[11px] font-mono text-zinc-500 hover:text-[var(--accent-text)] transition-colors"
         >
           Full cost breakdown →
         </Link>
@@ -159,7 +159,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
           <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 mb-1">
             $/PR · 30d
           </div>
-          <div className="text-2xl font-semibold tabular-nums text-[#a7f300]">
+          <div className="text-2xl font-semibold tabular-nums text-[var(--accent-text)]">
             {fmtMoney(costPerPr)}
           </div>
         </div>
@@ -209,7 +209,7 @@ export async function CostEfficiencyBand({ userId }: { userId: string }) {
                   title={`${VENDOR_LABEL[v]} · ${connected ? "connected" : "not connected"}`}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${
                     connected
-                      ? "border-[#a7f300]/40 bg-[#a7f300]/10 text-[#a7f300]"
+                      ? "border-[var(--accent-border)]/40 bg-[var(--accent)]/10 text-[var(--accent-text)]"
                       : "border-zinc-900 bg-zinc-950 text-zinc-700"
                   }`}
                 >

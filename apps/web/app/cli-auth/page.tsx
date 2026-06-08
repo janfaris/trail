@@ -5,13 +5,13 @@ const TOKEN_RE = /^[a-f0-9]{32,64}$/i;
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_0%,rgba(167,243,0,0.1),transparent_24rem),#050505] p-6 text-zinc-100">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_0%,rgba(167,243,0,0.1),transparent_24rem),var(--page-base)] p-6 text-zinc-100">
       <div className="w-full max-w-md">
         <Link
           href="/"
           className="mb-8 inline-flex font-mono text-[15px] font-semibold tracking-tight"
         >
-          <span className="text-[#a7f300]">/</span>trail
+          <span className="text-[var(--accent-text)]">/</span>trail
         </Link>
         <div className="rounded-[2rem] bg-zinc-950/70 p-8 shadow-[var(--trail-shadow-border)]">
           {children}
@@ -33,7 +33,7 @@ function InvalidShell() {
       <h1 className="mb-2 text-lg font-semibold tracking-tight">Invalid CLI request</h1>
       <p className="text-sm leading-relaxed text-zinc-400">
         This page must be opened by the Trail CLI. Run{" "}
-        <code className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[#a7f300]">
+        <code className="rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[var(--accent-text)]">
           trail login
         </code>{" "}
         in your terminal.
@@ -81,7 +81,7 @@ export default async function CliAuthPage({
   return (
     <Shell>
       <div className="mb-4 flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#a7f300] shadow-[0_0_8px_#a7f300]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
           authorize cli
         </span>
@@ -93,7 +93,7 @@ export default async function CliAuthPage({
       </p>
       <Link
         href={signInUrl}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#a7f300] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a7f300]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
       >
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" role="img">
           <title>GitHub</title>

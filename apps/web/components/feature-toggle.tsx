@@ -26,7 +26,7 @@ export function FeatureToggle({
       title={isFeatured ? "Hide from profile" : "Show on profile"}
       className={
         "text-base leading-none px-1.5 py-0.5 rounded hover:bg-zinc-800 transition-colors " +
-        (isFeatured ? "text-[#a7f300]" : "text-zinc-600 hover:text-zinc-300") +
+        (isFeatured ? "text-[var(--accent-text)]" : "text-zinc-600 hover:text-zinc-300") +
         (pending ? " opacity-50" : "")
       }
     >

@@ -108,7 +108,7 @@ export default async function CreatePage({
                 </Link>
                 <Link
                   href="/create/kit"
-                  className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300]/10 px-3.5 text-xs font-medium text-[#a7f300] transition-[background-color,transform] hover:bg-[#a7f300]/20 active:translate-y-px"
+                  className="inline-flex min-h-9 items-center rounded-full bg-[var(--accent)]/10 px-3.5 text-xs font-medium text-[var(--accent-text)] transition-[background-color,transform] hover:bg-[var(--accent)]/20 active:translate-y-px"
                 >
                   Build a Kit from a repo →
                 </Link>

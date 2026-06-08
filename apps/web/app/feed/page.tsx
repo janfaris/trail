@@ -1285,7 +1285,7 @@ function FeedIdentityRail({
           </p>
           <TrailLink
             href={signInHref("/feed")}
-            className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[#a7f300] px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#b9ff1f] active:scale-[0.97]"
+            className="mt-3 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-[var(--accent)] px-4 text-sm font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent-bright)] active:scale-[0.97]"
           >
             Sign in with GitHub
           </TrailLink>
@@ -1365,7 +1365,7 @@ function FeedIdentityRail({
 
       <TrailLink
         href="/create"
-        className="mt-5 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+        className="mt-5 inline-flex min-h-9 w-full items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
       >
         Post a build
       </TrailLink>
@@ -1380,7 +1380,7 @@ function FeedIdentityRail({
             <span className="flex items-center gap-2 text-[14px] font-medium tracking-[-0.01em]">
               {item.label}
               {item.badge ? (
-                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-[#a7f300] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
+                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-semibold leading-4 text-zinc-950">
                   {formatCount(unread)}
                 </span>
               ) : null}
@@ -1426,7 +1426,7 @@ function NetworkPulse({ stats }: { stats: FeedStats }) {
       {stats.receipts === 0 ? (
         <p className="mt-3 text-[13px] leading-5 text-zinc-500">
           No public builds yet.{" "}
-          <Link href="/create" className="text-[#a7f300] hover:underline">
+          <Link href="/create" className="text-[var(--accent-text)] hover:underline">
             Post the first build.
           </Link>
         </p>
@@ -1506,7 +1506,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
               <span>{manualPost ? "posted a build" : "shared a build"}</span>
               <span className="text-zinc-800">·</span>
               <span className="inline-flex items-center gap-1 font-mono text-[11px] text-zinc-500">
-                <ToolIcon name={r.tool} size={12} className="text-[#a7f300]" />
+                <ToolIcon name={r.tool} size={12} className="text-[var(--accent-text)]" />
                 {formatToolName(r.tool)}
               </span>
             </div>
@@ -1599,7 +1599,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
         {r.lessonCount > 0 ? (
           <Link
             href={`${currentReceiptHref}#lessons`}
-            className="mt-3 block border-l border-[#a7f300]/30 pl-3 transition-colors hover:border-[#a7f300]/70"
+            className="mt-3 block border-l border-[var(--accent-border)]/30 pl-3 transition-colors hover:border-[var(--accent-border)]/70"
           >
             <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-500">
               <span>Steal this move</span>
@@ -1724,7 +1724,7 @@ function FeedPostCard({ row: r, viewerId }: { row: FeedRow; viewerId: string | n
             <span className="mx-0.5 hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden />
             <Link
               href={currentReceiptHref}
-              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+              className="inline-flex min-h-8 items-center rounded-full bg-zinc-100 px-3 text-[13px] font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
             >
               Open post
             </Link>
@@ -1748,14 +1748,14 @@ function TrailPickFeedCard({
   const discussionPrompt = signal.testPrompt.trim();
 
   return (
-    <article className="border-b border-white/[0.08] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),#0b0b0a] px-4 py-5 sm:px-5">
+    <article className="border-b border-white/[0.08] bg-[linear-gradient(135deg,rgba(167,243,0,0.045),transparent_34%),var(--surface-deep)] px-4 py-5 sm:px-5">
       <div className="flex items-start gap-3">
-        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#a7f300]/10 font-mono text-[11px] font-semibold text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
+        <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/10 font-mono text-[11px] font-semibold text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.16)]">
           TP
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-600">
-            <span className="font-medium text-[#a7f300]">Trail Pick</span>
+            <span className="font-medium text-[var(--accent-text)]">Trail Pick</span>
             <span className="text-zinc-800">·</span>
             <span>{sourceLabel}</span>
             <span className="text-zinc-800">·</span>
@@ -1783,7 +1783,7 @@ function TrailPickFeedCard({
             />
           ) : null}
 
-          <div className="mt-3 border-l border-[#a7f300]/30 pl-3">
+          <div className="mt-3 border-l border-[var(--accent-border)]/30 pl-3">
             <div className="text-[12px] text-zinc-500">Why builders care</div>
             <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-400">
               {signal.whyBuildersCare}
@@ -1897,7 +1897,7 @@ function EmptyTimeline({
           ) : (
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">
               Browse{" "}
-              <Link href="/discover" className="text-[#a7f300] hover:underline">
+              <Link href="/discover" className="text-[var(--accent-text)] hover:underline">
                 Builders
               </Link>{" "}
               to find people shipping in your stack.
@@ -1915,7 +1915,7 @@ function EmptyTimeline({
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <Link
               href={viewerId ? "/create" : signInHref("/create")}
-              className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+              className="inline-flex min-h-9 items-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
             >
               Share a build
             </Link>
@@ -1995,7 +1995,7 @@ function FeedDiscoveryPanel({
           <div className="mt-3 space-y-2 text-[13px] leading-5 text-zinc-600">
             <p>No builders to recommend yet — be one of the first.</p>
             <div className="flex flex-wrap gap-x-3 gap-y-1">
-              <Link href="/create" className="text-[#a7f300] hover:underline">
+              <Link href="/create" className="text-[var(--accent-text)] hover:underline">
                 Post a build
               </Link>
               <Link href="/discover" className="text-zinc-400 hover:text-zinc-200">
@@ -2157,7 +2157,7 @@ export default async function FeedPage({
     rows.length > 0 ? `${rows.length} ${rows.length === 1 ? "build" : "builds"}` : null;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-zinc-50">
+    <div className="min-h-screen bg-[var(--surface-deep)] text-zinc-50">
       <SiteNav currentPath="/feed" />
 
       <main className="min-h-[calc(100vh-3.5rem)] w-full">
@@ -2166,8 +2166,8 @@ export default async function FeedPage({
             <FeedIdentityRail viewer={viewer} personalization={personalization} />
           </aside>
 
-          <section className="min-w-0 border-x border-white/[0.08] bg-[#0b0b0a] lg:min-h-[calc(100vh-3.5rem)]">
-            <div className="border-b border-white/[0.08] bg-[#0b0b0a]">
+          <section className="min-w-0 border-x border-white/[0.08] bg-[var(--surface-deep)] lg:min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-white/[0.08] bg-[var(--surface-deep)]">
               <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -2224,7 +2224,7 @@ export default async function FeedPage({
                 <div className="mt-3 flex flex-wrap gap-3">
                   <TrailLink
                     href={FOLLOWING_SIGN_IN_HREF}
-                    className="inline-flex min-h-9 items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-zinc-950 transition-[background-color,transform] hover:bg-[#a7f300] active:scale-[0.97]"
+                    className="inline-flex min-h-9 items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-medium text-[var(--on-accent)] transition-[background-color,transform] hover:bg-[var(--accent)] active:scale-[0.97]"
                   >
                     Sign in to follow
                   </TrailLink>

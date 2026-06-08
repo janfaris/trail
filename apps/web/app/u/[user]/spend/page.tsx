@@ -108,12 +108,12 @@ export default async function SpendPage({
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),#050505] text-zinc-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,rgba(167,243,0,0.08),transparent_24rem),var(--page-base)] text-zinc-100">
       <SiteNav />
 
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 lg:px-10">
         <header className="mb-8 rounded-[2rem] bg-black/55 p-6 shadow-[var(--trail-shadow-border)] sm:p-8">
-          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[#a7f300]">
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--accent-text)]">
             Trail · spend audit
           </div>
           <h1 className="mb-2 mt-3 text-4xl font-semibold leading-none tracking-[-0.07em] text-white sm:text-5xl">
@@ -132,7 +132,7 @@ export default async function SpendPage({
                   href={`/u/${user}/spend?window=${d}`}
                   className={`inline-flex min-h-10 items-center rounded-full px-4 font-mono text-xs transition-[box-shadow,color,background-color,transform] active:scale-[0.97] ${
                     active
-                      ? "bg-[#a7f300]/10 text-[#a7f300] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
+                      ? "bg-[var(--accent)]/10 text-[var(--accent-text)] shadow-[0_0_0_1px_rgba(167,243,0,0.3)]"
                       : "bg-white/[0.04] text-zinc-300 hover:text-zinc-100"
                   }`}
                 >
@@ -213,7 +213,7 @@ export default async function SpendPage({
             <ul className="text-sm space-y-2">
               <li className="flex justify-between">
                 <span className="text-zinc-400">Hit ratio</span>
-                <span className="font-mono tabular-nums text-[#a7f300]">
+                <span className="font-mono tabular-nums text-[var(--accent-text)]">
                   {fmtPct(cache.hitRatio)}
                 </span>
               </li>
@@ -272,7 +272,7 @@ export default async function SpendPage({
                     <td className="px-3 py-2.5 text-zinc-200">
                       <Link
                         href={`/u/${user}/${r.slug}`}
-                        className="inline-block max-w-[28ch] truncate transition-colors hover:text-[#a7f300]"
+                        className="inline-block max-w-[28ch] truncate transition-colors hover:text-[var(--accent-text)]"
                         title={r.title ?? r.slug}
                       >
                         {r.title ?? r.slug}

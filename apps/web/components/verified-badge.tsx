@@ -41,7 +41,7 @@ export function VerifiedBadge({
   return (
     <span
       title={title}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full border border-[#a7f300]/40 bg-[#a7f300]/10 font-medium text-[#a7f300] ${
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--accent-border)]/40 bg-[var(--accent)]/10 font-medium text-[var(--accent-text)] ${
         compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs"
       }`}
     >

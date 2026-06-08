@@ -25,7 +25,7 @@ function Badge({ status }: { status: ShippedStatus }) {
   let cls = "text-zinc-400";
   if (s === "shipped") {
     label = "Shipped";
-    cls = "text-[#a7f300]";
+    cls = "text-[var(--accent-text)]";
   } else if (s === "draft") {
     label = "Draft";
     cls = "text-amber-200";
@@ -82,7 +82,7 @@ export function ReceiptBlock({
               href={`https://github.com/${linkedRepo}/commit/${linkedCommitSha}`}
               target="_blank"
               rel="noreferrer noopener"
-              className="font-mono text-[11px] text-zinc-600 transition-colors hover:text-[#a7f300]"
+              className="font-mono text-[11px] text-zinc-600 transition-colors hover:text-[var(--accent-text)]"
             >
               {linkedRepo}@{linkedCommitSha.slice(0, 7)}
             </a>

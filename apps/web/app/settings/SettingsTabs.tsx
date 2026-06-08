@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const TABS: Array<{ href: string; label: string }> = [
   { href: "/settings", label: "Profile" },
   { href: "/settings/connections", label: "Connections" },
+  { href: "/settings/appearance", label: "Appearance" },
 ];
 
 export function SettingsTabs() {

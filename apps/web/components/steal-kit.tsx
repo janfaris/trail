@@ -147,7 +147,7 @@ export function StealKit({
             type="button"
             onClick={() => handleTool(tool)}
             title={tool.hint}
-            className="bg-[#0b0b0a] px-3 py-3 text-left transition-[background-color,transform] hover:bg-white/[0.035] active:scale-[0.99]"
+            className="bg-[var(--surface-deep)] px-3 py-3 text-left transition-[background-color,transform] hover:bg-white/[0.035] active:scale-[0.99]"
           >
             <div className="text-[13px] font-medium text-zinc-200">{tool.label}</div>
             <div className="mt-0.5 text-[12px] text-zinc-600">
@@ -168,7 +168,7 @@ export function StealKit({
             track("download");
             flash("download");
           }}
-          className={cn("hover:text-zinc-200", done === "download" && "text-[#a7f300]")}
+          className={cn("hover:text-zinc-200", done === "download" && "text-[var(--accent-text)]")}
         >
           {done === "download" ? "Downloaded" : "Download kit (.md)"}
         </button>
@@ -186,7 +186,7 @@ export function StealKit({
                 track("copy");
                 flash("copy");
               }}
-              className={cn("hover:text-zinc-200", done === "copy" && "text-[#a7f300]")}
+              className={cn("hover:text-zinc-200", done === "copy" && "text-[var(--accent-text)]")}
             >
               {done === "copy" ? "Copied" : "Copy rules only"}
             </button>
@@ -195,7 +195,7 @@ export function StealKit({
       </div>
       {!signedIn ? (
         <p className="mt-3 text-[12px] text-zinc-600">
-          <a href={signInHref} className="text-[#a7f300] hover:underline">
+          <a href={signInHref} className="text-[var(--accent-text)] hover:underline">
             Sign in
           </a>{" "}
           to steal this build into your tool.
