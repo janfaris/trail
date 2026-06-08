@@ -1,3 +1,4 @@
+import { BuilderKitsSection } from "@/components/builder-kits-section";
 import { CopyButton } from "@/components/copy-button";
 import { CostEfficiencyBand, CostEfficiencyBandSkeleton } from "@/components/cost-efficiency-band";
 import { EmptyBuildPostCard } from "@/components/empty-build-post-card";
@@ -814,6 +815,8 @@ export default async function UserProfile({ params }: PageProps) {
                 </div>
               </section>
             )}
+
+            <BuilderKitsSection userId={userRow.id} isSelf={isSelf} />
 
             {all.length === 0 ? (
               isSelf ? (
