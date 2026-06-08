@@ -7,6 +7,7 @@ import { FileDiff } from "@/components/file-diff";
 import { FollowButton } from "@/components/follow-button";
 import { ForkButton } from "@/components/fork-button";
 import { ForkButtons } from "@/components/fork-buttons";
+import { MakeKitButton } from "@/components/make-kit-button";
 import { OpenDetailsOnHash } from "@/components/open-details-on-hash";
 import { ReactionBar } from "@/components/reaction-bar";
 import { ReceiptActions } from "@/components/receipt-actions";
@@ -243,6 +244,31 @@ export default async function SessionView({
       columns: { id: true },
     });
     isFollowing = Boolean(followRow);
+  }
+
+  // Build Kit linked to this receipt, if any. Defensive: the build_kit table may
+  // not be pushed yet (db:push) — fall back to null so the page never 500s.
+  let sessionKit: {
+    id: string;
+    reproducibility: string;
+    reuseCount: number;
+    visibility: string;
+  } | null = null;
+  try {
+    const [kitRow] = await db
+      .select({
+        id: schema.buildKit.id,
+        reproducibility: schema.buildKit.reproducibility,
+        reuseCount: schema.buildKit.reuseCount,
+        visibility: schema.buildKit.visibility,
+      })
+      .from(schema.buildKit)
+      .where(eq(schema.buildKit.sessionId, sessionRow.id))
+      .orderBy(desc(schema.buildKit.createdAt))
+      .limit(1);
+    sessionKit = kitRow ?? null;
+  } catch {
+    sessionKit = null;
   }
 
   const events = await db
@@ -663,6 +689,48 @@ export default async function SessionView({
               Share
             </a>
           </div>
+
+          {/* Steal this build — the reframe's primary utility surface. Either a
+              link to the existing kit, or an owner affordance to make one from
+              the linked repo. Hidden when there's neither a kit nor a repo. */}
+          {sessionKit && (sessionKit.visibility === "public" || isOwner) ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] bg-[#a7f300]/[0.04] px-4 py-3 sm:px-5">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-zinc-100">Steal this build</div>
+                <div className="text-[12px] text-zinc-500">
+                  Rules + stack + prompts ·{" "}
+                  <span className="font-mono tabular-nums">
+                    {formatCount(sessionKit.reuseCount)}
+                  </span>{" "}
+                  {sessionKit.reuseCount === 1 ? "fork" : "forks"}
+                </div>
+              </div>
+              <Link
+                href={`/kit/${sessionKit.id}`}
+                className="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#a7f300] px-3.5 text-[13px] font-medium text-black transition-[background-color,transform] hover:bg-[#b6ff14] active:scale-[0.97]"
+              >
+                Open Build Kit →
+              </Link>
+            </div>
+          ) : isOwner && !manualPost && sessionRow.linkedRepo ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-4 py-3 sm:px-5">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-zinc-100">
+                  Make this build stealable
+                </div>
+                <div className="text-[12px] text-zinc-500">
+                  Capture the rules + stack from{" "}
+                  <span className="font-mono">{sessionRow.linkedRepo}</span> as a Build Kit.
+                </div>
+              </div>
+              <MakeKitButton
+                repo={sessionRow.linkedRepo}
+                sessionId={sessionRow.id}
+                signedIn={Boolean(viewer?.user?.id)}
+                signInHref={signInHref(`/u/${user}/${slug}`)}
+              />
+            </div>
+          ) : null}
 
           {/* Conversation — sits right under the post, X-style. */}
           <div id="conversation" className="scroll-mt-24 space-y-4 px-4 py-4 sm:px-5">

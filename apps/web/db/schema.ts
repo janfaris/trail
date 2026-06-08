@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
+import type { KitRuleFile, KitStackManifest } from "../lib/kit-types";
 import type { ReceiptAiReview } from "../lib/receipt-ai-review-types";
 
 export type RadarSignalMetrics = {
@@ -538,6 +539,69 @@ export const savedReceipt = pgTable(
   (t) => ({
     pairIdx: uniqueIndex("saved_receipt_user_session_idx").on(t.userId, t.sessionId),
     userCreatedIdx: index("saved_receipt_user_created_idx").on(t.userId, t.createdAt),
+  }),
+);
+
+// ──────────────────────────────────────────────────────────────────────────
+// Build Kits — the reproducible setup behind a build (agent rules + stack +
+// prompts), captured server-side from a GitHub repo with the user's stored
+// OAuth token. The receipt proves the work happened; the kit lets another
+// builder steal the working setup in one click. `sessionId` is optional so a
+// kit can be made straight from a repo without an attached agent session.
+// ──────────────────────────────────────────────────────────────────────────
+export const buildKit = pgTable(
+  "build_kit",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Optional link to a receipt/session this kit was derived from.
+    sessionId: text("session_id").references(() => trailSession.id, { onDelete: "set null" }),
+    sourceRepo: text("source_repo").notNull(), // "<owner>/<repo>"
+    sourceCommitSha: text("source_commit_sha"),
+    defaultBranch: text("default_branch"),
+    isPrivateRepo: boolean("is_private_repo").notNull().default(false),
+    title: text("title").notNull(),
+    summary: text("summary"),
+    rulesFiles: jsonb("rules_files").$type<KitRuleFile[]>().notNull().default(sql`'[]'::jsonb`),
+    stackManifest: jsonb("stack_manifest").$type<KitStackManifest>(),
+    orderedPrompts: jsonb("ordered_prompts").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // "verified" | "partial" | "prompts-only" — see lib/kit-types.ts.
+    reproducibility: text("reproducibility").notNull().default("prompts-only"),
+    reuseCount: integer("reuse_count").notNull().default(0),
+    visibility: text("visibility").notNull().default("public"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userCreatedIdx: index("build_kit_user_created_idx").on(t.userId, t.createdAt),
+    sessionIdx: index("build_kit_session_idx").on(t.sessionId),
+    repoIdx: index("build_kit_repo_idx").on(t.sourceRepo),
+    reuseIdx: index("build_kit_reuse_idx").on(t.reuseCount),
+  }),
+);
+
+// Kit reuse is the core "this helped me build" signal — every steal into an
+// agent (or download/copy). Mirrors lesson_reuse: unique per (kit, user, target)
+// so the denormalized reuse_count stays honest across repeated clicks.
+export const kitReuse = pgTable(
+  "kit_reuse",
+  {
+    id: text("id").primaryKey(),
+    kitId: text("kit_id")
+      .notNull()
+      .references(() => buildKit.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    target: text("target").notNull(), // "cursor" | "claude" | "codex" | "download" | "copy" | ...
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tripleIdx: uniqueIndex("kit_reuse_kit_user_target_idx").on(t.kitId, t.userId, t.target),
+    kitIdx: index("kit_reuse_kit_idx").on(t.kitId, t.createdAt),
+    userIdx: index("kit_reuse_user_idx").on(t.userId, t.createdAt),
   }),
 );
 

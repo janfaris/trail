@@ -99,12 +99,20 @@ export default async function CreatePage({
               learn from it, and reply.
             </p>
             {session?.user ? (
-              <Link
-                href="/import"
-                className="mt-3 inline-flex min-h-9 items-center rounded-full bg-white/[0.05] px-3.5 text-xs font-medium text-zinc-200 transition-[background-color,color,transform] hover:bg-white/[0.09] hover:text-zinc-50 active:translate-y-px"
-              >
-                Bulk import from your GitHub →
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/import"
+                  className="inline-flex min-h-9 items-center rounded-full bg-white/[0.05] px-3.5 text-xs font-medium text-zinc-200 transition-[background-color,color,transform] hover:bg-white/[0.09] hover:text-zinc-50 active:translate-y-px"
+                >
+                  Bulk import from your GitHub →
+                </Link>
+                <Link
+                  href="/create/kit"
+                  className="inline-flex min-h-9 items-center rounded-full bg-[#a7f300]/10 px-3.5 text-xs font-medium text-[#a7f300] transition-[background-color,transform] hover:bg-[#a7f300]/20 active:translate-y-px"
+                >
+                  Build a Kit from a repo →
+                </Link>
+              </div>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
