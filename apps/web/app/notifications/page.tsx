@@ -28,6 +28,8 @@ type ActivityRow = {
   commentBody: string | null;
   commentDeletedAt: Date | string | null;
   lessonTitle: string | null;
+  kitId: string | null;
+  kitTitle: string | null;
 };
 
 type CountRow = { count: number | string };
@@ -134,6 +136,16 @@ function activityCopy(row: ActivityRow) {
     };
   }
 
+  if (row.type === "kit_reuse") {
+    return {
+      eyebrow: "Kit forked",
+      title: `${actor} stole your Build Kit`,
+      body: row.kitTitle
+        ? `"${row.kitTitle}" is now powering another builder's setup.`
+        : "Another builder reused your setup. Ship another to stay on the radar.",
+    };
+  }
+
   return {
     eyebrow: "Activity",
     title: `${actor} created new Trail activity`,
@@ -147,12 +159,17 @@ function activityAction(row: ActivityRow) {
   if (row.type === "session_comment") return "Open thread";
   if (row.type === "session_reaction") return "View receipt";
   if (row.type === "lesson_reuse") return "Open lesson";
+  if (row.type === "kit_reuse") return "Open kit";
   return "Open";
 }
 
 function activityHref(row: ActivityRow) {
   if (row.type === "follow" && row.actorHandle) {
     return `/u/${row.actorHandle}`;
+  }
+
+  if (row.type === "kit_reuse" && row.kitId) {
+    return `/kit/${row.kitId}`;
   }
 
   if (row.ownerHandle && row.sessionSlug) {
@@ -236,18 +253,23 @@ export default async function NotificationsPage() {
         owner.handle AS "ownerHandle",
         c.body AS "commentBody",
         c.deleted_at AS "commentDeletedAt",
-        l.title AS "lessonTitle"
+        l.title AS "lessonTitle",
+        k.id AS "kitId",
+        k.title AS "kitTitle"
       FROM notification n
       LEFT JOIN "user" actor ON actor.id = n.actor_id
       LEFT JOIN trail_session s ON s.id = n.session_id
       LEFT JOIN "user" owner ON owner.id = s.user_id
       LEFT JOIN session_comment c ON c.id = n.comment_id
       LEFT JOIN session_lesson l ON l.id = n.lesson_id
+      LEFT JOIN build_kit k ON k.id = n.kit_id
       WHERE n.user_id = ${viewerId}
         AND (n.type <> 'follow' OR actor.handle IS NOT NULL)
         AND (n.type <> 'lesson_reuse' OR l.id IS NOT NULL)
+        AND (n.type <> 'kit_reuse' OR k.id IS NOT NULL)
         AND (
           n.type = 'follow'
+          OR n.type = 'kit_reuse'
           OR (
             s.id IS NOT NULL
             AND owner.handle IS NOT NULL

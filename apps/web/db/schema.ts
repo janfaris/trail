@@ -625,6 +625,9 @@ export const notification = pgTable(
     lessonId: text("lesson_id").references(() => sessionLesson.id, {
       onDelete: "cascade",
     }),
+    kitId: text("kit_id").references(() => buildKit.id, {
+      onDelete: "cascade",
+    }),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -636,6 +639,7 @@ export const notification = pgTable(
     ),
     sessionIdx: index("notification_session_idx").on(t.sessionId, t.createdAt),
     lessonIdx: index("notification_lesson_idx").on(t.lessonId, t.createdAt),
+    kitIdx: index("notification_kit_idx").on(t.kitId, t.createdAt),
     reactionActivityUniq: uniqueIndex("notification_reaction_activity_uniq")
       .on(t.userId, t.actorId, t.sessionId, t.type)
       .where(sql`${t.type} = 'session_reaction'`),
@@ -645,6 +649,9 @@ export const notification = pgTable(
     lessonReuseActivityUniq: uniqueIndex("notification_lesson_reuse_activity_uniq")
       .on(t.userId, t.actorId, t.lessonId, t.type)
       .where(sql`${t.type} = 'lesson_reuse'`),
+    kitReuseActivityUniq: uniqueIndex("notification_kit_reuse_activity_uniq")
+      .on(t.userId, t.actorId, t.kitId, t.type)
+      .where(sql`${t.type} = 'kit_reuse'`),
   }),
 );
 
