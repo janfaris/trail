@@ -95,25 +95,9 @@ export default async function CreatePage({
               Create
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-              Post what shipped with enough proof and context that another builder can trust it,
-              learn from it, and reply.
+              Turn a repo into a reusable Build Kit others can steal — or post a build with proof
+              and context. Both publish under your GitHub identity.
             </p>
-            {session?.user ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link
-                  href="/import"
-                  className="inline-flex min-h-9 items-center rounded-full bg-white/[0.05] px-3.5 text-xs font-medium text-zinc-200 transition-[background-color,color,transform] hover:bg-white/[0.09] hover:text-zinc-50 active:translate-y-px"
-                >
-                  Bulk import from your GitHub →
-                </Link>
-                <Link
-                  href="/create/kit"
-                  className="inline-flex min-h-9 items-center rounded-full bg-[var(--accent)]/10 px-3.5 text-xs font-medium text-[var(--accent-text)] transition-[background-color,transform] hover:bg-[var(--accent)]/20 active:translate-y-px"
-                >
-                  Build a Kit from a repo →
-                </Link>
-              </div>
-            ) : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
             <span className="rounded-full px-3 py-1.5 shadow-[var(--trail-shadow-border)]">
@@ -153,12 +137,65 @@ export default async function CreatePage({
               />
             </div>
           ) : (
-            <BuildPostForm
-              defaultCommunity={defaultCommunity}
-              defaultQuestion={defaultQuestion}
-              defaultXUrl={defaultXUrl}
-              quotedPick={quotedPickContext}
-            />
+            <div className="space-y-8">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/create/kit"
+                  className="group relative overflow-hidden rounded-[1.5rem] border border-[var(--accent)]/40 bg-[var(--accent)]/[0.06] p-5 transition-[border-color,transform] hover:border-[var(--accent)]/70 active:translate-y-px sm:p-6"
+                >
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent-text)]">
+                    Recommended
+                  </div>
+                  <h2 className="mt-3 font-display text-2xl leading-tight tracking-[-0.03em] text-zinc-50 sm:text-3xl">
+                    Build a Kit
+                  </h2>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+                    Pick a repo (or several) and Trail captures its rules, stack, and prompts as a
+                    reusable setup others can steal in one click. No install.
+                  </p>
+                  <span className="mt-5 inline-flex min-h-10 items-center rounded-full bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--on-accent)] transition-[filter] group-hover:brightness-110">
+                    Build a Kit from a repo →
+                  </span>
+                </Link>
+
+                <Link
+                  href="/import"
+                  className="group rounded-[1.5rem] border border-white/10 bg-white/[0.02] p-5 transition-[border-color,transform] hover:border-white/25 active:translate-y-px sm:p-6"
+                >
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    Seed in bulk
+                  </div>
+                  <h2 className="mt-3 font-display text-2xl leading-tight tracking-[-0.03em] text-zinc-50 sm:text-3xl">
+                    Import from GitHub
+                  </h2>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+                    Bring your shipped work over in a batch, then turn repos into kits and receipts.
+                  </p>
+                  <span className="mt-5 inline-flex min-h-10 items-center rounded-full bg-white/[0.06] px-4 text-sm font-medium text-zinc-100 transition-colors group-hover:bg-white/[0.12]">
+                    Bulk import →
+                  </span>
+                </Link>
+              </div>
+
+              <div className="border-t border-white/10 pt-6">
+                <div className="mb-4 flex items-baseline justify-between gap-4">
+                  <div>
+                    <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-500">
+                      Or write a build post
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-zinc-500">
+                      No repo? Post the outcome with a proof link or note.
+                    </p>
+                  </div>
+                </div>
+                <BuildPostForm
+                  defaultCommunity={defaultCommunity}
+                  defaultQuestion={defaultQuestion}
+                  defaultXUrl={defaultXUrl}
+                  quotedPick={quotedPickContext}
+                />
+              </div>
+            </div>
           )}
         </section>
       </div>
