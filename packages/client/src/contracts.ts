@@ -13,6 +13,11 @@ export const UploadSessionResponse = z.object({
   // Final persisted visibility of the published session. The CLI uses this
   // to avoid over-promising "badge is live" on private/pending receipts.
   visibility: z.enum(["public", "private", "pending"]).optional(),
+  // Phase 1b sharing scope chosen by the uploader, independent of the
+  // moderation `visibility` above. 'unlisted' = link-only (hidden from every
+  // public listing); 'private' = owner-only. Absent on older servers — treat a
+  // missing value as 'public'.
+  audience: z.enum(["public", "unlisted", "private"]).optional(),
   // Human-readable reasons the session was held in pending review (entropy /
   // sensitive-content gates). Empty/absent when published directly.
   pendingReviewReasons: z.array(z.string()).optional(),

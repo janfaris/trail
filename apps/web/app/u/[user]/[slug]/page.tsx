@@ -141,7 +141,28 @@ export async function generateMetadata({
       isNotNull(schema.trailSession.sharedAt),
     ),
   });
-  if (!sessionRow) return {};
+  if (!sessionRow) {
+    // Phase 1b — unlisted receipts are link-only. Surface a minimal, noindex
+    // preview so a shared link stays readable in chat/DMs without leaking the
+    // post into search engines or the public-only OG-image route (which 404s
+    // for non-public rows).
+    const unlisted = await db.query.trailSession.findFirst({
+      where: and(
+        eq(schema.trailSession.userId, userRow.id),
+        eq(schema.trailSession.slug, slug),
+        eq(schema.trailSession.audience, "unlisted"),
+        isNotNull(schema.trailSession.sharedAt),
+      ),
+      columns: { title: true, slug: true, summary: true, visibility: true },
+    });
+    if (!unlisted || unlisted.visibility === "redacted") return {};
+    const unlistedTitle = unlisted.title || unlisted.slug;
+    return {
+      title: `${unlistedTitle} — @${user} on Trail`,
+      description: unlisted.summary || `Unlisted receipt by @${user}`,
+      robots: { index: false, follow: false },
+    };
+  }
   const firstPrompt = await db.query.event.findFirst({
     where: eq(schema.event.sessionId, sessionRow.id),
     orderBy: asc(schema.event.idx),
@@ -221,7 +242,16 @@ export default async function SessionView({
 
   const isOwner = viewer?.user?.id === userRow.id;
   const isPubliclyShared = sessionRow.visibility === "public" && sessionRow.sharedAt != null;
-  if (!isPubliclyShared && !isOwner) return notFound();
+  // Phase 1b — unlisted receipts are link-only: viewable by anyone with the URL
+  // but excluded from every public listing (they carry moderation
+  // visibility='private', so the listing queries already skip them). Grant
+  // access here based on the sharing-scope `audience`. private rows stay
+  // owner-only (audience='private' or any non-unlisted non-public row).
+  const isUnlistedShared =
+    sessionRow.audience === "unlisted" &&
+    sessionRow.sharedAt != null &&
+    sessionRow.visibility !== "redacted";
+  if (!isPubliclyShared && !isUnlistedShared && !isOwner) return notFound();
   const manualPost = isManualBuildPost(sessionRow.postKind);
   // Twitter-style: manual posts are editable by the owner for a short window
   // after publishing, then locked. Server-enforced in editOwnBuildPost.

@@ -85,10 +85,44 @@ function profileUrlFrom(r: { profileUrl?: string; url: string }): string {
 // only claims the badge is "live" when the receipt is BOTH verified-shipped and
 // public, matching the server's badge predicate. Private/pending shipped
 // receipts and drafts get honest, softer copy.
+// Phase 1b — sharing scope chosen via --unlisted/--team/--private. Orthogonal
+// to the server's moderation visibility; sent as the `x-trail-audience` header.
+type ShareAudience = "public" | "unlisted" | "private";
+
+function resolveAudience(opts: { unlisted?: boolean; team?: boolean; private?: boolean }): ShareAudience {
+  const unlisted = Boolean(opts.unlisted || opts.team);
+  const isPrivate = Boolean(opts.private);
+  if (unlisted && isPrivate) {
+    console.error(chalk.red("✗"), "--private is mutually exclusive with --unlisted/--team");
+    process.exit(1);
+  }
+  if (isPrivate) return "private";
+  if (unlisted) return "unlisted";
+  return "public";
+}
+
+// Public is the default server behavior, so omit the header to stay compatible
+// with older web servers that do not read x-trail-audience.
+function audienceHeaders(audience: ShareAudience): Record<string, string> {
+  return audience === "public" ? {} : { "x-trail-audience": audience };
+}
+
+function printAudienceScope(audience: ShareAudience, indent = ""): void {
+  if (audience === "unlisted") {
+    console.log(
+      indent + chalk.cyan("scope:"),
+      "unlisted — anyone with the link can view; hidden from public feeds (/feed, /discover, profile)",
+    );
+  } else if (audience === "private") {
+    console.log(indent + chalk.cyan("scope:"), "private — only you can view this receipt");
+  }
+}
+
 function printBadgeNudge(
   r: {
     receiptStatus?: "shipped" | "draft" | "unverified";
     visibility?: string;
+    audience?: string;
     profileUrl?: string;
     url: string;
   },
@@ -100,6 +134,11 @@ function printBadgeNudge(
   if (r.receiptStatus === "shipped") {
     if (r.visibility === "public") {
       console.log(indent + chalk.green("★"), `Verified shipped — your Verified Builder badge is live: ${profile}`);
+    } else if (r.audience === "unlisted") {
+      console.log(
+        indent + chalk.yellow("★"),
+        `Verified shipped, but this receipt is unlisted (link-only) so it won't show on your public badge yet: ${profile}`,
+      );
     } else if (r.visibility === "private" || r.visibility === "pending") {
       const where = r.visibility === "private" ? "private" : "in pending review";
       console.log(
@@ -321,6 +360,9 @@ interface BulkShareOpts {
   diffs: boolean;
   toolArgs: boolean;
   allowSuspects: boolean;
+  unlisted: boolean;
+  team: boolean;
+  private: boolean;
   baseUrl: string;
 }
 
@@ -423,14 +465,17 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
   }
   printLinkageFeedback(git, { bulk: true });
 
+  const audience = resolveAudience(opts);
   const client = createTrailClient({
     baseUrl: opts.baseUrl,
     getAuthCookie: () => cookie,
     extraHeaders: {
       ...(opts.allowSuspects ? { "x-trail-allow-suspects": "true" } : {}),
+      ...audienceHeaders(audience),
       ...linkHeaders,
     },
   });
+  if (audience !== "public") printAudienceScope(audience);
 
   const succeeded: Array<{ id: string; url: string; profileUrl?: string }> = [];
   for (let i = 0; i < prepared.length; i++) {
@@ -479,6 +524,9 @@ export function shareCommand(): Command {
     .option("--no-diffs", "drop file_diff events", false)
     .option("--no-tool-args", "drop tool_call args+results (keep tool names)", false)
     .option("--allow-suspects", "publish even if the entropy guard found unknown high-entropy tokens", false)
+    .option("--unlisted", "publish link-only: viewable by anyone with the URL, hidden from public feeds (Pro)", false)
+    .option("--team", "alias for --unlisted (share privately with teammates via link)", false)
+    .option("--private", "publish owner-only: only you can view the receipt (Pro)", false)
     .option("--base-url <url>", "Trail web base URL", process.env.TRAIL_API_URL || DEFAULT_TRAIL_API_URL)
     .action(async (idArg: string | undefined, opts: {
       all: boolean;
@@ -491,6 +539,9 @@ export function shareCommand(): Command {
       diffs: boolean;
       toolArgs: boolean;
       allowSuspects: boolean;
+      unlisted: boolean;
+      team: boolean;
+      private: boolean;
       baseUrl: string;
     }) => {
       // Treat a literal `trail share latest` subcommand the same as --latest.
@@ -607,11 +658,13 @@ export function shareCommand(): Command {
       }
       printLinkageFeedback(git);
 
+      const audience = resolveAudience(opts);
       const client = createTrailClient({
         baseUrl: opts.baseUrl,
         getAuthCookie: () => cookie,
         extraHeaders: {
           ...(opts.allowSuspects ? { "x-trail-allow-suspects": "true" } : {}),
+          ...audienceHeaders(audience),
           ...linkHeaders,
         },
       });
@@ -642,9 +695,10 @@ export function shareCommand(): Command {
 
       db.prepare(`UPDATE sessions SET share_slug = ? WHERE id = ?`).run(result.value.slug, sid);
 
-      const r = result.value as { url: string; slug: string; visibility?: string; pendingReviewReasons?: string[]; profileUrl?: string; receiptStatus?: "shipped" | "draft" | "unverified" };
+      const r = result.value as { url: string; slug: string; visibility?: string; audience?: string; pendingReviewReasons?: string[]; profileUrl?: string; receiptStatus?: "shipped" | "draft" | "unverified" };
       console.log(chalk.green("✓"), "Receipt created:", r.url);
       console.log(chalk.dim("Status:"), formatReceiptStatus(r.receiptStatus));
+      printAudienceScope((r.audience as ShareAudience | undefined) ?? audience);
       if (r.visibility === "pending" && r.pendingReviewReasons?.length) {
         console.log(chalk.yellow("hold:"), "session is in pending review:");
         for (const reason of r.pendingReviewReasons) {

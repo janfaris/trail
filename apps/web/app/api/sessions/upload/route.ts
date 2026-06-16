@@ -39,6 +39,7 @@ const COST_ELIGIBLE_TOOL_VENDOR: Record<string, "anthropic" | "openai"> = {
   codex: "openai",
 };
 type UploadVisibility = NonNullable<UploadSessionResponse["visibility"]>;
+type ShareAudience = NonNullable<UploadSessionResponse["audience"]>;
 
 function normalizeModelId(raw: string): string {
   // Strip leading vendor prefixes ("anthropic/claude-sonnet-4-5" →
@@ -164,15 +165,47 @@ export async function POST(req: NextRequest) {
   const pendingReasons = [...entropyReasons, ...flagReasons];
   const visibility: UploadVisibility = pendingReasons.length > 0 ? "pending" : "public";
 
+  // Phase 1b — sharing scope (audience) is orthogonal to the moderation
+  // `visibility` axis. public = listed; unlisted = link-only (hidden from every
+  // public listing); private = owner-only. Legacy clients send
+  // `x-trail-visibility: private`; map that to audience=private for back-compat.
+  const audienceHeader = req.headers.get("x-trail-audience")?.toLowerCase();
+  const legacyPrivate = req.headers.get("x-trail-visibility")?.toLowerCase() === "private";
+  const desiredAudience: ShareAudience =
+    audienceHeader === "unlisted" || audienceHeader === "team"
+      ? "unlisted"
+      : audienceHeader === "private" || legacyPrivate
+        ? "private"
+        : "public";
+
   // Task 7 — paywall gate. Free plan: max 3 public receipts, no private.
-  // Pending/redacted are not counted. Pro is unlimited. This is a fast-fail
+  // Pending/redacted are not counted. Pro is unlimited. Non-public audiences
+  // (unlisted/private) route through the private bucket (pro-only), so free
+  // workspaces can't use --team/--unlisted/--private. This is a fast-fail
   // check; intended-public uploads are enforced again when promoted after
   // receipt generation under the per-user quota lock.
-  const desiredVisibility: UploadVisibility =
-    req.headers.get("x-trail-visibility")?.toLowerCase() === "private" ? "private" : visibility;
-  const publishAfterReceipt = desiredVisibility === "public";
-  const initialVisibility: UploadVisibility = publishAfterReceipt ? "private" : desiredVisibility;
-  const paywall = await checkPaywall(session.user.id, { visibility: desiredVisibility });
+  const publishAfterReceipt = desiredAudience === "public" && pendingReasons.length === 0;
+  // Moderation visibility actually persisted at insert, plus the initial
+  // shared_at:
+  //  - public  : staged 'private' then promoted to 'public' after the receipt
+  //              passes the locked quota gate (promote sets shared_at); flagged
+  //              uploads are held 'pending'.
+  //  - unlisted: live immediately via shared_at while moderation visibility
+  //              stays 'private' (so it never enters a public listing); flagged
+  //              uploads are held 'pending' with no shared_at until reviewed.
+  //  - private : owner-only, never shared.
+  let initialVisibility: UploadVisibility;
+  let initialSharedAt: Date | null = null;
+  if (desiredAudience === "public") {
+    initialVisibility = publishAfterReceipt ? "private" : visibility;
+  } else if (desiredAudience === "unlisted") {
+    initialVisibility = pendingReasons.length > 0 ? "pending" : "private";
+    initialSharedAt = pendingReasons.length > 0 ? null : new Date();
+  } else {
+    initialVisibility = "private";
+  }
+  const paywallVisibility: UploadVisibility = desiredAudience === "public" ? visibility : "private";
+  const paywall = await checkPaywall(session.user.id, { visibility: paywallVisibility });
   if (!paywall.allowed) {
     const baseUrl = process.env.BETTER_AUTH_URL || "http://localhost:3000";
     return NextResponse.json(
@@ -368,6 +401,8 @@ export async function POST(req: NextRequest) {
     promptCount,
     failedToolCalls,
     visibility: initialVisibility,
+    audience: desiredAudience,
+    sharedAt: initialSharedAt,
     pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : null,
     toolsUsed: ai?.tools_used && ai.tools_used.length > 0 ? ai.tools_used : null,
     frameworks: ai?.frameworks && ai.frameworks.length > 0 ? ai.frameworks : null,
@@ -531,6 +566,10 @@ export async function POST(req: NextRequest) {
     // first staged privately, then promoted only after receipt generation passes
     // the locked quota gate.
     visibility: persistedVisibility,
+    // Phase 1b — echo the sharing scope so the CLI prints accurate post-share
+    // guidance (unlisted = link-only, private = owner-only) instead of assuming
+    // public.
+    audience: desiredAudience,
     pendingReviewReasons: pendingReasons.length > 0 ? pendingReasons : undefined,
     publishBlockedReason,
     profileUrl: `${baseUrl}/u/${userRow.handle}`,
