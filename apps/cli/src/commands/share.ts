@@ -6,9 +6,17 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { Session, type Session as SessionT } from "@trail/schema";
-import { anonymize, type EntropySuspect } from "@trail/anonymize";
+import {
+  anonymize,
+  type EntropySuspect,
+  type RedactionCategory,
+  type RedactionCategoryDetail,
+  type RedactionItem,
+  type RedactionReport,
+} from "@trail/anonymize";
 import { createTrailClient, DEFAULT_TRAIL_API_URL } from "@trail/client";
 import { db } from "../db.js";
+import type { StoredCaptureReport } from "../lib/capture-redact.js";
 import { getAuthCookie, clearAuth } from "../lib/auth-storage.js";
 import { detectGitContext, type GitContext } from "../git-context.js";
 
@@ -149,6 +157,31 @@ function loadLocalSession(id: string): { session: SessionT; alreadyRedacted: boo
   return { session: Session.parse(built), alreadyRedacted: row.redactedAt != null };
 }
 
+/**
+ * Read the masked redaction breakdown that was recorded when this session was
+ * captured (see saveSession in db.ts). Returns null when the session predates
+ * report persistence or has no stored breakdown. The stored data contains only
+ * masked previews — never raw secret material — so it is safe to print.
+ */
+function loadCaptureReport(id: string): StoredCaptureReport | null {
+  const row = db
+    .prepare(`SELECT redaction_report AS redactionReport FROM sessions WHERE id = ?`)
+    .get(id) as { redactionReport: string | null } | undefined;
+  if (!row?.redactionReport) return null;
+  try {
+    const parsed = JSON.parse(row.redactionReport) as Partial<StoredCaptureReport>;
+    if (typeof parsed.total !== "number" || !Array.isArray(parsed.categories)) return null;
+    return {
+      total: parsed.total,
+      byCategory: parsed.byCategory ?? {},
+      categories: parsed.categories,
+      suspectCount: parsed.suspectCount ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function confirm(prompt: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
@@ -204,10 +237,186 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+const CATEGORY_LABELS: Record<RedactionCategory, string> = {
+  secret: "Secrets / API keys",
+  "credential-url": "Credential URLs",
+  path: "Absolute paths",
+  email: "Email addresses",
+  "internal-host": "Internal hostnames",
+};
+
+const CATEGORY_HELP: Record<RedactionCategory, string> = {
+  secret: "tokens, keys, and other credentials",
+  "credential-url": "user:password embedded in connection strings",
+  path: "absolute filesystem paths that reveal your username/machine",
+  email: "email addresses",
+  "internal-host": "internal hostnames and private network identifiers",
+};
+
+function categoryLabel(cat: RedactionCategory): string {
+  return CATEGORY_LABELS[cat] ?? cat;
+}
+
+/**
+ * Prints the auditable "here's exactly what we removed" breakdown to the
+ * terminal: one block per category with the total count and a few masked
+ * preview samples. Previews come from the report and never contain the raw
+ * secret, so this is safe to show, log, or pipe. Counts are exact even when
+ * the number of shown samples is capped.
+ */
+function printRedactionReport(
+  report: { total: number; categories: RedactionCategoryDetail[] },
+  opts: { indent?: string } = {},
+): void {
+  const indent = opts.indent ?? "";
+  if (report.total === 0) {
+    console.log(
+      indent + chalk.green("✓ redaction report"),
+      chalk.dim("nothing matched — no secrets, paths, emails, or hosts detected"),
+    );
+    return;
+  }
+
+  const catCount = report.categories.length;
+  console.log(
+    indent + chalk.bold("redaction report"),
+    chalk.dim(
+      `— exactly what will be stripped before upload (${report.total} item${
+        report.total === 1 ? "" : "s"
+      } across ${catCount} categor${catCount === 1 ? "y" : "ies"})`,
+    ),
+  );
+
+  for (const cat of report.categories) {
+    console.log(
+      `${indent}  ${chalk.cyan(categoryLabel(cat.category).padEnd(19))} ${chalk.bold(
+        String(cat.count),
+      )} ${chalk.dim(`(${CATEGORY_HELP[cat.category] ?? cat.category})`)}`,
+    );
+    for (const item of cat.samples) {
+      console.log(
+        `${indent}    ${chalk.dim("•")} ${chalk.magenta(item.label)}  ${item.preview}  ${chalk.dim(
+          `${item.length} char${item.length === 1 ? "" : "s"} · ${item.location}`,
+        )}`,
+      );
+    }
+    const hidden = cat.count - cat.samples.length;
+    if (hidden > 0) {
+      console.log(`${indent}    ${chalk.dim(`… and ${hidden} more`)}`);
+    }
+  }
+}
+
+/**
+ * The full auditable share preview. Shows, in trust order:
+ *
+ *   1. The breakdown recorded when the session was CAPTURED — the real removal
+ *      event. Trail scrubs on write, so this is "exactly what was stripped
+ *      before anything touched your disk." This is the report the user cares
+ *      about when deciding whether it's safe to publish.
+ *   2. A short verification line confirming the outgoing payload carries only
+ *      masked placeholders.
+ *
+ * Capture and share run the SAME detectors, so a second pass over
+ * already-redacted data can only ever re-match the masked placeholders it
+ * produced earlier (e.g. `/Users/anon`) — never raw values. We therefore do
+ * NOT surface that pass as "more to remove" for already-scrubbed sessions; that
+ * would be a false alarm and erode the very trust this preview exists to build.
+ * For legacy rows captured before redaction-at-capture, the live pass IS the
+ * real scan and is shown as the primary report.
+ */
+function printShareRedactionPreview(
+  captureReport: StoredCaptureReport | null,
+  liveReport: RedactionReport,
+  alreadyRedacted: boolean,
+): void {
+  if (captureReport) {
+    if (captureReport.total > 0) {
+      console.log(
+        chalk.dim(
+          "Removed when this session was captured — before anything was written to disk:",
+        ),
+      );
+      printRedactionReport(captureReport);
+      console.log(
+        chalk.green("  ✓"),
+        chalk.dim(
+          "re-scanned at share time — the payload below carries only masked placeholders, no raw values",
+        ),
+      );
+    } else {
+      // Capture recorded a clean session: nothing sensitive was ever stored.
+      printRedactionReport(captureReport);
+    }
+    return;
+  }
+  // No stored capture breakdown at all (row captured before report persistence).
+  if (!alreadyRedacted) {
+    // Legacy raw row: the live pass is the real, primary scan of raw content.
+    printRedactionReport(liveReport);
+    return;
+  }
+  // Redacted at capture but captured before the breakdown was persisted.
+  if (liveReport.total === 0) {
+    console.log(
+      chalk.green("✓ redaction report"),
+      chalk.dim("this session was scrubbed at capture; no detailed breakdown was recorded"),
+    );
+  } else {
+    printRedactionReport(liveReport);
+  }
+}
+
+/**
+ * Merges per-session category details into a single aggregate breakdown for the
+ * bulk dry-run view. Counts sum across sessions; sample previews are capped and
+ * tagged with a short session prefix so each preview stays traceable.
+ */
+function mergeCategoriesAcrossReports(
+  entries: Array<{ id: string; categories: RedactionCategoryDetail[] }>,
+  maxSamplesPerCategory = 5,
+): RedactionCategoryDetail[] {
+  const order: RedactionCategory[] = [
+    "secret",
+    "credential-url",
+    "path",
+    "email",
+    "internal-host",
+  ];
+  const counts = new Map<RedactionCategory, number>();
+  const samples = new Map<RedactionCategory, RedactionItem[]>();
+
+  for (const entry of entries) {
+    const prefix = entry.id.slice(0, 8);
+    for (const cat of entry.categories) {
+      counts.set(cat.category, (counts.get(cat.category) ?? 0) + cat.count);
+      const bucket = samples.get(cat.category) ?? [];
+      for (const sample of cat.samples) {
+        if (bucket.length >= maxSamplesPerCategory) break;
+        bucket.push({ ...sample, location: `${prefix}:${sample.location}` });
+      }
+      samples.set(cat.category, bucket);
+    }
+  }
+
+  return order
+    .filter((cat) => (counts.get(cat) ?? 0) > 0)
+    .map((cat) => ({
+      category: cat,
+      count: counts.get(cat) ?? 0,
+      samples: samples.get(cat) ?? [],
+    }));
+}
+
 function renderPreviewHtml(
   original: SessionT,
   scrubbed: SessionT,
-  report: { total: number; byCategory: Record<string, number>; suspects: EntropySuspect[] },
+  report: {
+    total: number;
+    byCategory: Record<string, number>;
+    categories?: RedactionCategoryDetail[];
+    suspects: EntropySuspect[];
+  },
 ): string {
   const left = escapeHtml(JSON.stringify(original, null, 2));
   const right = escapeHtml(JSON.stringify(scrubbed, null, 2));
@@ -216,6 +425,27 @@ function renderPreviewHtml(
     .map(
       ([k, n]) =>
         `<span class="pill">${escapeHtml(k)}: ${n}</span>`,
+    )
+    .join(" ");
+  const redactionRows = (report.categories ?? [])
+    .flatMap((cat) =>
+      cat.samples.map((item) => {
+        const hidden = cat.count - cat.samples.length;
+        return `<tr><td>${escapeHtml(categoryLabel(cat.category))}</td><td><code class="marker">${escapeHtml(
+          item.label,
+        )}</code></td><td><code>${escapeHtml(item.preview)}</code></td><td>${item.length}</td><td>${escapeHtml(
+          item.location,
+        )}</td></tr>`;
+      }),
+    )
+    .join("");
+  const redactionFootnotes = (report.categories ?? [])
+    .filter((cat) => cat.count > cat.samples.length)
+    .map(
+      (cat) =>
+        `<span class="pill">${escapeHtml(categoryLabel(cat.category))}: +${
+          cat.count - cat.samples.length
+        } more not shown</span>`,
     )
     .join(" ");
   const suspectRows = report.suspects
@@ -242,12 +472,25 @@ function renderPreviewHtml(
   th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #1f1f1f}
   th{color:#a1a1aa;font-weight:normal;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
   code{background:#111;padding:1px 4px;border-radius:3px;color:#fca5a5}
+  code.marker{color:#a7f300}
   .warn{color:#fbbf24}
   .ok{color:#a7f300}
 </style></head>
 <body>
 <h1>Trail · share preview</h1>
 <div class="meta">${report.total} redactions applied · ${cats || '<span class="ok">no named matches</span>'}</div>
+
+${
+  redactionRows
+    ? `<h2>Redaction report — exactly what will be removed</h2>
+       <p class="meta">Previews are masked — the raw values never appear here or in the upload.</p>
+       <table>
+         <thead><tr><th>Category</th><th>Marker</th><th>Masked preview</th><th>Length</th><th>Location</th></tr></thead>
+         <tbody>${redactionRows}</tbody>
+       </table>
+       ${redactionFootnotes ? `<div class="meta" style="margin-top:8px">${redactionFootnotes}</div>` : ""}`
+    : ""
+}
 
 <h2>Original (local-only — never uploaded)  &nbsp;→&nbsp;  Anonymized payload (uploads if you confirm)</h2>
 <div class="grid">
@@ -338,6 +581,7 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
     scrubbed: SessionT;
     redactionCount: number;
     suspectCount: number;
+    categories: RedactionCategoryDetail[];
   };
   const prepared: Prepared[] = [];
   const skipped: Array<{ id: string; reason: string }> = [];
@@ -354,12 +598,17 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
       noToolArgs: !opts.toolArgs,
     });
     const { session: scrubbed, report } = anonymize(scoped);
+    // Prefer the breakdown recorded at capture (the real removal event); fall
+    // back to the live pass for legacy rows with no stored breakdown.
+    const captureReport = loadCaptureReport(sid);
+    const useCapture = captureReport != null && captureReport.total > 0;
     prepared.push({
       id: sid,
       original: loaded.session,
       scrubbed,
-      redactionCount: report.total,
+      redactionCount: useCapture ? captureReport.total : report.total,
       suspectCount: report.suspects.length,
+      categories: useCapture ? captureReport.categories : report.categories,
     });
   }
 
@@ -377,6 +626,16 @@ async function runBulkShare(opts: BulkShareOpts): Promise<void> {
     chalk.cyan("bulk"),
     `${prepared.length} session(s), ${totalRedactions} redaction(s), ${totalSuspects} entropy suspect(s)`,
   );
+
+  // Aggregate, auditable breakdown across every session that would upload.
+  // Shown on --dry-run and before the interactive confirm; skipped under --yes.
+  const aggregateCategories = mergeCategoriesAcrossReports(
+    prepared.map((p) => ({ id: p.id, categories: p.categories })),
+  );
+
+  if (opts.dryRun || !opts.yes) {
+    printRedactionReport({ total: totalRedactions, categories: aggregateCategories });
+  }
 
   if (opts.dryRun) {
     console.log(chalk.yellow("--dry-run: not uploading. Bulk preview:"));
@@ -545,13 +804,26 @@ export function shareCommand(): Command {
       // anonymize() pass is a fallback for sessions captured pre-redaction.
       // For redacted-at-capture rows it will be a near no-op (idempotent).
       const { session: scrubbed, report } = anonymize(scoped);
+      // The breakdown recorded at capture is the real removal event (Trail
+      // scrubs on write). Prefer it for every display surface; fall back to the
+      // live pass for legacy rows that have no stored breakdown.
+      const captureReport = loadCaptureReport(sid);
+      const displayReport =
+        captureReport && captureReport.total > 0
+          ? {
+              total: captureReport.total,
+              byCategory: captureReport.byCategory,
+              categories: captureReport.categories,
+              suspects: report.suspects,
+            }
+          : report;
       if (alreadyRedacted) {
         console.log(chalk.dim("scrub"), "session already redacted at capture-time");
       }
       console.log(
         chalk.cyan("scrub"),
-        `${report.total} redactions:`,
-        Object.entries(report.byCategory)
+        `${displayReport.total} redactions:`,
+        Object.entries(displayReport.byCategory)
           .filter(([, n]) => n > 0)
           .map(([k, n]) => `${n} ${k}`)
           .join(", ") || "none",
@@ -568,6 +840,14 @@ export function shareCommand(): Command {
         }
       }
 
+      // Auditable, human-readable breakdown of exactly what was stripped.
+      // Printed on --dry-run and before the interactive confirm so the user can
+      // trust the scrub before anything leaves their machine. Skipped under
+      // --yes (an explicit, non-interactive opt-out of review).
+      if (opts.dryRun || !opts.yes) {
+        printShareRedactionPreview(captureReport, report, alreadyRedacted);
+      }
+
       if (opts.dryRun) {
         console.log(chalk.yellow("--dry-run: not uploading. Anonymized payload:"));
         console.log(JSON.stringify(scrubbed, null, 2));
@@ -577,7 +857,7 @@ export function shareCommand(): Command {
       // Browser preview (default on, unless --no-preview or --yes was set).
       if (opts.preview && !opts.yes) {
         const previewPath = path.join(tmpdir(), `trail-preview-${session.id.slice(0, 8)}-${Date.now()}.html`);
-        writeFileSync(previewPath, renderPreviewHtml(session, scrubbed, report), "utf8");
+        writeFileSync(previewPath, renderPreviewHtml(session, scrubbed, displayReport), "utf8");
         console.log(chalk.dim("preview:"), previewPath);
         openInBrowser(previewPath);
       }
