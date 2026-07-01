@@ -23,6 +23,18 @@ trail share <id>       # anonymize + upload a session
 
 Open https://gettrail.vercel.app/dashboard/cost to see $/PR across your shipped work.
 
+## Work locally (no network)
+
+Everything you capture stays in `~/.trail/db.sqlite`. Find, replay, and recap it without signing in:
+
+```bash
+trail search "auth bug"     # ranked full-text search across all local sessions
+trail show <id>             # replay a session's timeline in the terminal
+trail show <id> --event 7   # jump straight to one event (prompt, diff, tool call)
+trail show <id> --full      # expand every prompt, diff, and tool I/O
+trail recap --week          # private summary: sessions, tools, and totals (last 7 days)
+```
+
 ## What gets captured
 
 - Per-turn input / output / cached tokens
@@ -55,6 +67,9 @@ trail logout             Clear local credentials
 trail whoami             Show current user
 trail record [--once]    Tail tool log directories (background daemon)
 trail list [--limit N]   List local sessions
+trail search <query>     Full-text search local sessions (--remote, --json)
+trail show <id>          Replay a session timeline (--event N, --full, --json)
+trail recap [--week]     Private local summary of what you shipped (--days N, --json)
 trail view <id>          Show a session in the local viewer
 trail share <id>         Anonymize and upload a session, return public URL
 trail status             Show daemon status
