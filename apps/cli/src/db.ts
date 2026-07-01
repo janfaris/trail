@@ -30,6 +30,7 @@ db.exec(`
     source_path TEXT,
     redacted_at TEXT,
     redaction_count INTEGER,
+    redaction_report TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
@@ -47,7 +48,7 @@ db.exec(`
 `);
 
 // Idempotent migration for DBs created before redaction-at-capture landed.
-for (const col of ["redacted_at TEXT", "redaction_count INTEGER"]) {
+for (const col of ["redacted_at TEXT", "redaction_count INTEGER", "redaction_report TEXT"]) {
   try {
     db.exec(`ALTER TABLE sessions ADD COLUMN ${col}`);
   } catch (err) {
@@ -82,13 +83,14 @@ export function transaction<T>(fn: () => T): T {
 import type { Session } from "@trail/schema";
 
 const upsertSession: StatementSync = db.prepare(`
-  INSERT INTO sessions (id, user, tool, started_at, ended_at, repo, source_path, redacted_at, redaction_count, updated_at)
-  VALUES (@id, @user, @tool, @startedAt, @endedAt, @repo, @sourcePath, @redactedAt, @redactionCount, datetime('now'))
+  INSERT INTO sessions (id, user, tool, started_at, ended_at, repo, source_path, redacted_at, redaction_count, redaction_report, updated_at)
+  VALUES (@id, @user, @tool, @startedAt, @endedAt, @repo, @sourcePath, @redactedAt, @redactionCount, @redactionReport, datetime('now'))
   ON CONFLICT(id) DO UPDATE SET
     ended_at = excluded.ended_at,
     repo = COALESCE(excluded.repo, sessions.repo),
     redacted_at = excluded.redacted_at,
     redaction_count = excluded.redaction_count,
+    redaction_report = excluded.redaction_report,
     updated_at = datetime('now')
 `);
 
@@ -101,13 +103,17 @@ const insertFts: StatementSync = db.prepare(
   "INSERT INTO events_fts (session_id, payload) VALUES (?, ?)",
 );
 
-import { redactSessionForCapture } from "./lib/capture-redact.js";
+import { redactSessionForCapture, toStoredCaptureReport } from "./lib/capture-redact.js";
 
 export function saveSession(session: Session, sourcePath: string): void {
   // Redact BEFORE any data touches SQLite. Local DB compromise must not
   // expose raw API keys / emails / credential URLs. share.ts keeps a second
   // anonymize() pass as a fallback for legacy rows captured pre-redaction.
-  const { session: redacted, redactedAt, redactionCount } = redactSessionForCapture(session);
+  const { session: redacted, redactedAt, redactionCount, report } =
+    redactSessionForCapture(session);
+  // Persist the masked breakdown (no raw values) so `trail share --dry-run`
+  // can show the user exactly what was stripped at capture time.
+  const redactionReport = JSON.stringify(toStoredCaptureReport(report));
   transaction(() => {
     upsertSession.run({
       id: redacted.id,
@@ -119,6 +125,7 @@ export function saveSession(session: Session, sourcePath: string): void {
       sourcePath,
       redactedAt,
       redactionCount,
+      redactionReport,
     });
     deleteEvents.run(redacted.id);
     deleteFts.run(redacted.id);
