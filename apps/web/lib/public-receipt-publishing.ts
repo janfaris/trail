@@ -41,6 +41,7 @@ export async function promoteSessionToPublicReceipt(args: {
             outcome = case when ${args.outcome !== undefined} then ${args.outcome ?? null} else outcome end,
             post_kind = 'agent_session',
             visibility = 'public',
+            audience = 'public',
             shared_at = coalesce(shared_at, now())
           where id = ${args.sessionId}
             and user_id = (select id from current_viewer)

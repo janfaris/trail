@@ -159,6 +159,14 @@ export const trailSession = pgTable(
     // happy path; 'pending' is held for owner confirmation (LLM PII flag);
     // 'private' is owner-hidden; 'redacted' is post-publish strike.
     visibility: text("visibility").notNull().default("public"),
+    // Phase 1b sharing scope — orthogonal to the moderation `visibility` axis
+    // above. 'public' = listed in feed/discover/profile; 'unlisted' = link-only
+    // (viewable by anyone with the URL, excluded from every public listing);
+    // 'private' = owner-only. Non-public audiences are persisted with moderation
+    // visibility != 'public', so they drop out of all public listing queries
+    // automatically; the receipt route consults `audience` to grant link access
+    // to unlisted rows.
+    audience: text("audience").notNull().default("public"),
     pendingReviewReasons: jsonb("pending_review_reasons").$type<string[]>(),
     redactedAt: timestamp("redacted_at"),
     // Phase 1 taxonomy — LLM-extracted facets surfaced at /learn.

@@ -198,9 +198,12 @@ export async function bulkSetVisibility(ids: string[], visibility: Visibility) {
     return { ok: true, updated };
   }
 
+  // Making a row private must also reset its sharing scope to 'private' so a
+  // previously-unlisted receipt's link stops resolving (the receipt route grants
+  // link access only while audience='unlisted'). 'pending' leaves audience as-is.
   await db
     .update(schema.trailSession)
-    .set({ visibility })
+    .set(visibility === "private" ? { visibility, audience: "private" } : { visibility })
     .where(inArray(schema.trailSession.id, owned));
   const me = await db.query.user.findFirst({ where: eq(schema.user.id, u.id) });
   if (me?.handle) {
